@@ -1,0 +1,20 @@
+[
+  {
+    "id": "proj_01",
+    "title": "Full-Stack SaaS Job Board with Search & Alerts",
+    "category": "IT",
+    "difficulty": "Intermediate",
+    "description": "Build a responsive web app with job filtering, application submission, and email notification webhooks.",
+    "skills_covered": ["React", "Python", "SQL", "REST APIs"],
+    "deliverables": ["GitHub repository link", "Live deployed demo URL", "Architecture documentation"]
+  },
+  {
+    "id": "proj_02",
+    "title": "Customer Churn Prediction Engine",
+    "category": "IT",
+    "difficulty": "Advanced",
+    "description": "Train a Random Forest / XGBoost model on Telecom customer data to identify churn risk factors and deploy via FastAPI.",
+    "skills_covered": ["Python", "Machine Learning", "Scikit-Learn", "FastAPI"],
+    "deliverables": ["Jupyter notebook with EDA", "Trained ML model pipeline", "API integration"]
+  }
+]

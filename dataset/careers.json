@@ -1,0 +1,172 @@
+[
+  {
+    "id": "car_it_01",
+    "title": "Full Stack Software Engineer",
+    "category": "IT",
+    "description": "Designs, develops, and maintains both frontend client interfaces and backend server architectures for modern scalable applications.",
+    "average_salary": "$90,000 - $140,000 / yr",
+    "growth_rate": "25% (Much faster than average)",
+    "required_skills": [
+      { "skill_name": "JavaScript", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "React", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "Python", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "SQL", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Git", "weight": 0.7, "target_score": 70 }
+    ],
+    "common_roles": ["Frontend Engineer", "Backend Developer", "Node.js Developer", "Web Architect"],
+    "entry_requirements": "Bachelor's degree in CS or equivalent portfolio of full-stack projects."
+  },
+  {
+    "id": "car_it_02",
+    "title": "Data Scientist & ML Engineer",
+    "category": "IT",
+    "description": "Extracts actionable insights from large datasets and builds predictive statistical models using Machine Learning algorithms.",
+    "average_salary": "$105,000 - $155,000 / yr",
+    "growth_rate": "35% (Extremely High)",
+    "required_skills": [
+      { "skill_name": "Python", "weight": 1.0, "target_score": 90 },
+      { "skill_name": "SQL", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "Machine Learning", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "Statistics", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Data Visualization", "weight": 0.7, "target_score": 70 }
+    ],
+    "common_roles": ["Data Analyst", "Machine Learning Engineer", "AI Researcher", "BI Architect"],
+    "entry_requirements": "Strong foundation in mathematics, statistics, and programming."
+  },
+  {
+    "id": "car_it_03",
+    "title": "DevOps & Cloud Engineer",
+    "category": "IT",
+    "description": "Automates deployment pipelines, manages cloud infrastructure (AWS/Azure), and ensures high availability and security.",
+    "average_salary": "$100,000 - $150,000 / yr",
+    "growth_rate": "28% (Very High)",
+    "required_skills": [
+      { "skill_name": "Docker & Kubernetes", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "Linux", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "CI/CD", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "Python", "weight": 0.7, "target_score": 70 },
+      { "skill_name": "Cloud Architecture", "weight": 0.8, "target_score": 75 }
+    ],
+    "common_roles": ["Site Reliability Engineer (SRE)", "Cloud Solutions Architect", "Systems Administrator"],
+    "entry_requirements": "Experience with Linux administration, containerization, and cloud providers."
+  },
+  {
+    "id": "car_it_04",
+    "title": "UI/UX Product Designer",
+    "category": "IT",
+    "description": "Creates intuitive user-centric interfaces, interactive wireframes, and design systems to deliver seamless visual experiences.",
+    "average_salary": "$85,000 - $125,000 / yr",
+    "growth_rate": "16% (Faster than average)",
+    "required_skills": [
+      { "skill_name": "UI/UX Design", "weight": 1.0, "target_score": 90 },
+      { "skill_name": "Figma & Wireframing", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "User Research", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Design Systems", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Prototyping", "weight": 0.7, "target_score": 70 }
+    ],
+    "common_roles": ["Product Designer", "UX Researcher", "Interaction Designer", "Visual Designer"],
+    "entry_requirements": "Design portfolio showcasing wireframes, user testing, and visual prototypes."
+  },
+  {
+    "id": "car_it_05",
+    "title": "Cybersecurity Analyst",
+    "category": "IT",
+    "description": "Monitors network traffic, conducts vulnerability testing, and defends organization systems against cyber threats.",
+    "average_salary": "$95,000 - $145,000 / yr",
+    "growth_rate": "32% (Much faster than average)",
+    "required_skills": [
+      { "skill_name": "Network Security", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "Ethical Hacking", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "Linux", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Incident Response", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Cryptography", "weight": 0.7, "target_score": 70 }
+    ],
+    "common_roles": ["SOC Analyst", "Penetration Tester", "Security Engineer", "Information Security Officer"],
+    "entry_requirements": "Knowledge of networking protocols, OS security, and CompTIA Security+/CEH."
+  },
+  {
+    "id": "car_nonit_01",
+    "title": "Digital Marketing Strategist",
+    "category": "Non-IT",
+    "description": "Plans and executes multi-channel online campaigns, SEO optimization, social media strategies, and ROI performance tracking.",
+    "average_salary": "$65,000 - $105,000 / yr",
+    "growth_rate": "19% (High Growth)",
+    "required_skills": [
+      { "skill_name": "SEO & SEM", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "Content Strategy", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "Marketing Analytics", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "Social Media Marketing", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Copywriting", "weight": 0.7, "target_score": 70 }
+    ],
+    "common_roles": ["Growth Marketer", "SEO Specialist", "Content Marketing Manager", "PPC Specialist"],
+    "entry_requirements": "Degree in Marketing, Communications, or demonstrated campaign case studies."
+  },
+  {
+    "id": "car_nonit_02",
+    "title": "Product Manager",
+    "category": "Non-IT",
+    "description": "Defines product vision, prioritizes feature roadmaps, aligns engineering and design teams, and manages user feedback loops.",
+    "average_salary": "$110,000 - $165,000 / yr",
+    "growth_rate": "24% (Very High)",
+    "required_skills": [
+      { "skill_name": "Product Strategy", "weight": 1.0, "target_score": 90 },
+      { "skill_name": "Agile & Scrum", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "User Research", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Data Analytics", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Stakeholder Management", "weight": 0.9, "target_score": 85 }
+    ],
+    "common_roles": ["Associate PM", "Senior Product Manager", "Product Owner", "Group Product Manager"],
+    "entry_requirements": "Cross-functional background with proven experience delivering products from zero to one."
+  },
+  {
+    "id": "car_nonit_03",
+    "title": "Financial Analyst & Risk Specialist",
+    "category": "Non-IT",
+    "description": "Evaluates financial statements, builds forecasting models, conducts risk assessments, and advises corporate investment strategies.",
+    "average_salary": "$80,000 - $125,000 / yr",
+    "growth_rate": "15% (Steady Growth)",
+    "required_skills": [
+      { "skill_name": "Financial Modeling", "weight": 1.0, "target_score": 90 },
+      { "skill_name": "Accounting Principles", "weight": 0.9, "target_score": 85 },
+      { "skill_name": "Excel & Valuation", "weight": 0.9, "target_score": 85 },
+      { "skill_name": "Risk Analysis", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Statistics", "weight": 0.7, "target_score": 70 }
+    ],
+    "common_roles": ["Corporate Financial Analyst", "Investment Analyst", "Risk Management Specialist", "Treasury Analyst"],
+    "entry_requirements": "Degree in Finance, Accounting, Economics, or progress toward CFA."
+  },
+  {
+    "id": "car_nonit_04",
+    "title": "Human Resources & Talent Manager",
+    "category": "Non-IT",
+    "description": "Oversees talent acquisition, employee engagement, compensation structures, performance evaluations, and HR compliance.",
+    "average_salary": "$70,000 - $110,000 / yr",
+    "growth_rate": "14% (Average Growth)",
+    "required_skills": [
+      { "skill_name": "Talent Acquisition", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "Employee Relations", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "HR Compliance", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Performance Management", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Communication", "weight": 0.9, "target_score": 85 }
+    ],
+    "common_roles": ["HR Business Partner", "Talent Acquisition Specialist", "HR Generalist", "People Ops Manager"],
+    "entry_requirements": "Degree in Human Resources, Business Administration, or SHRM certification."
+  },
+  {
+    "id": "car_nonit_05",
+    "title": "Healthcare Operations Administrator",
+    "category": "Non-IT",
+    "description": "Manages medical facility operations, clinical workflows, patient care compliance, and healthcare facility budgets.",
+    "average_salary": "$85,000 - $130,000 / yr",
+    "growth_rate": "28% (Much faster than average)",
+    "required_skills": [
+      { "skill_name": "Healthcare Management", "weight": 1.0, "target_score": 85 },
+      { "skill_name": "Regulatory Compliance", "weight": 0.9, "target_score": 80 },
+      { "skill_name": "Facility Budgeting", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Patient Quality Care", "weight": 0.8, "target_score": 75 },
+      { "skill_name": "Operations Logistics", "weight": 0.8, "target_score": 75 }
+    ],
+    "common_roles": ["Clinic Administrator", "Health Services Manager", "Hospital Operations Supervisor"],
+    "entry_requirements": "Degree in Health Administration (MHA/BSHA) or Healthcare Operations."
+  }
+]

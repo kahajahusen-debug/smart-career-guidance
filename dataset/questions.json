@@ -1,0 +1,67 @@
+[
+  {
+    "id": "q_py_01",
+    "skill_id": "sk_py",
+    "skill_name": "Python",
+    "difficulty": 1,
+    "category": "IT",
+    "question_text": "What keyword is used to define a function in Python?",
+    "options": ["func", "def", "function", "define"],
+    "correct_option_index": 1,
+    "explanation": "'def' keyword starts the declaration of a function in Python."
+  },
+  {
+    "id": "q_py_02",
+    "skill_id": "sk_py",
+    "skill_name": "Python",
+    "difficulty": 2,
+    "category": "IT",
+    "question_text": "Which built-in Python data structure is ordered and immutable?",
+    "options": ["List", "Dictionary", "Tuple", "Set"],
+    "correct_option_index": 2,
+    "explanation": "Tuples preserve element order and cannot be mutated after creation."
+  },
+  {
+    "id": "q_py_03",
+    "skill_id": "sk_py",
+    "skill_name": "Python",
+    "difficulty": 3,
+    "category": "IT",
+    "question_text": "What does a Python list comprehension `[x**2 for x in range(5) if x % 2 == 0]` evaluate to?",
+    "options": ["[0, 1, 4, 9, 16]", "[0, 4, 16]", "[1, 9]", "[0, 2, 4]"],
+    "correct_option_index": 1,
+    "explanation": "Even numbers in range(5) are 0, 2, and 4. Squaring them produces [0, 4, 16]."
+  },
+  {
+    "id": "q_py_04",
+    "skill_id": "sk_py",
+    "skill_name": "Python",
+    "difficulty": 4,
+    "category": "IT",
+    "question_text": "What is the primary purpose of a decorator in Python?",
+    "options": [
+      "To define HTML styles inside code",
+      "To modify or extend the behavior of a function without altering its code",
+      "To encrypt Python source files",
+      "To convert lists into generators"
+    ],
+    "correct_option_index": 1,
+    "explanation": "Decorators wrap functions to execute code before and after the wrapped call."
+  },
+  {
+    "id": "q_py_05",
+    "skill_id": "sk_py",
+    "skill_name": "Python",
+    "difficulty": 5,
+    "category": "IT",
+    "question_text": "How does Python's Global Interpreter Lock (GIL) affect multi-threading?",
+    "options": [
+      "It speeds up execution across all CPU cores",
+      "It prevents two threads from executing Python bytecode simultaneously in a single process",
+      "It disables garbage collection",
+      "It converts synchronous functions into async coroutines automatically"
+    ],
+    "correct_option_index": 1,
+    "explanation": "The GIL ensures memory safety by allowing only one native thread to execute Python bytecode at a time."
+  }
+]
