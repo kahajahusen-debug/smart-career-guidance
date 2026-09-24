@@ -4,15 +4,11 @@ import {
   fetchCareers, 
   fetchQuestions, 
   fetchSampleJobs, 
-  fetchPortfolioProjects,
-  checkHealth
+  fetchPortfolioProjects
 } from '../services/api';
 import { 
   Briefcase, 
-  BookOpen, 
-  CheckCircle2, 
   ExternalLink, 
-  Sparkles, 
   FolderGit2, 
   HelpCircle,
   TrendingUp,
@@ -21,7 +17,6 @@ import {
 } from 'lucide-react';
 
 export default function HomePage({ activeCategory }) {
-  const [healthData, setHealthData] = useState(null);
   const [careers, setCareers] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -37,21 +32,19 @@ export default function HomePage({ activeCategory }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [hRes, cRes, qRes, jRes, pRes] = await Promise.all([
-        checkHealth().catch(() => null),
+      const [cRes, qRes, jRes, pRes] = await Promise.all([
         fetchCareers(activeCategory).catch(() => ({ careers: [] })),
         fetchQuestions(activeCategory, selectedDifficulty).catch(() => ({ questions: [] })),
         fetchSampleJobs(activeCategory).catch(() => ({ jobs: [] })),
         fetchPortfolioProjects(activeCategory).catch(() => ({ projects: [] }))
       ]);
 
-      setHealthData(hRes);
       setCareers(cRes.careers || []);
       setQuestions(qRes.questions || []);
       setJobs(jRes.jobs || []);
       setProjects(pRes.projects || []);
     } catch (err) {
-      console.error('Failed to load initial data:', err);
+      console.error('Failed to load portal data:', err);
     } finally {
       setLoading(false);
     }
@@ -69,62 +62,22 @@ export default function HomePage({ activeCategory }) {
         padding: '36px'
       }}>
         <div style={{ maxWidth: 750, position: 'relative', zIndex: 2 }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 14px',
-            borderRadius: 20,
-            background: 'rgba(255, 255, 255, 0.15)',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            marginBottom: 16,
-            backdropFilter: 'blur(8px)'
-          }}>
-            <Sparkles size={14} color="#F59E0B" />
-            <span>Phase 1 Architecture Baseline Ready</span>
-          </div>
-
           <h2 style={{ fontSize: '2.2rem', fontWeight: 800, lineHeight: 1.25, marginBottom: 12 }}>
-            Smart Career Guidance & Job Matching System
+            Smart Career Guidance & Job Recommendations
           </h2>
 
-          <p style={{ fontSize: '1rem', color: '#E2E8F0', lineHeight: 1.6, marginBottom: 24 }}>
-            Empowering career discovery for both **IT** (Software, ML, Cloud, Security) and **Non-IT** (Marketing, Product, Finance, HR, Healthcare) domains with adaptive skill testing and job readiness intelligence.
+          <p style={{ fontSize: '1rem', color: '#E2E8F0', lineHeight: 1.6 }}>
+            Discover and explore both <strong>IT</strong> (Software Engineering, Data Science, Cloud/DevOps, UI/UX, Security) and <strong>Non-IT</strong> (Marketing, Product, Finance, HR, Healthcare) career pathways, skill assessment benchmarks, and curated job opportunities.
           </p>
-
-          {/* Quick Metrics */}
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '12px 20px', borderRadius: 12 }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF' }}>
-                {healthData?.stats?.total_careers || careers.length || 10}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>Career Pathways</div>
-            </div>
-
-            <div style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '12px 20px', borderRadius: 12 }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF' }}>
-                {healthData?.stats?.total_questions || questions.length || 50}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>Adaptive Questions</div>
-            </div>
-
-            <div style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '12px 20px', borderRadius: 12 }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF' }}>
-                {healthData?.database_status?.includes('connected') ? 'MongoDB' : 'In-Memory'}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>Active Storage Engine</div>
-            </div>
-          </div>
         </div>
       </GlassCard>
 
       {/* Navigation Tabs */}
-      <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid #E2E8F0', paddingBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid #E2E8F0', paddingBottom: 12, flexWrap: 'wrap' }}>
         {[
           { id: 'careers', label: 'Career Profiles', icon: Briefcase, count: careers.length },
           { id: 'questions', label: 'Assessment Questions', icon: HelpCircle, count: questions.length },
-          { id: 'jobs', label: 'Jobs & External Links', icon: ExternalLink, count: jobs.length },
+          { id: 'jobs', label: 'Jobs & Opportunities', icon: ExternalLink, count: jobs.length },
           { id: 'projects', label: 'Portfolio Projects', icon: FolderGit2, count: projects.length }
         ].map((tab) => {
           const Icon = tab.icon;
@@ -246,7 +199,7 @@ export default function HomePage({ activeCategory }) {
       {activeTab === 'questions' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {/* Difficulty Filter Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#FFFFFF', padding: 14, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#FFFFFF', padding: 14, borderRadius: 12, border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#172554', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Sliders size={16} /> Filter by Difficulty:
             </span>
@@ -335,7 +288,7 @@ export default function HomePage({ activeCategory }) {
                 </div>
 
                 <div style={{ fontSize: '0.75rem', color: '#64748B', fontStyle: 'italic', marginTop: 4 }}>
-                  Note: {q.explanation}
+                  Explanation: {q.explanation}
                 </div>
               </GlassCard>
             ))}

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Compass, Sparkles, Activity, Layers } from 'lucide-react';
+import { Compass } from 'lucide-react';
 
-export default function Navbar({ healthStatus, activeCategory, onSelectCategory }) {
+export default function Navbar({ activeCategory, onSelectCategory }) {
   return (
     <header style={{
       position: 'sticky',
@@ -61,14 +61,6 @@ export default function Navbar({ healthStatus, activeCategory, onSelectCategory 
               {cat === 'all' ? 'All Pathways' : cat}
             </button>
           ))}
-        </div>
-
-        {/* Health Status Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="glass-badge badge-success" style={{ textTransform: 'none', padding: '6px 12px' }}>
-            <Activity size={14} color="#10B981" />
-            <span>Backend: {healthStatus?.status === 'online' ? 'Online' : 'Connecting...'}</span>
-          </div>
         </div>
       </div>
     </header>
