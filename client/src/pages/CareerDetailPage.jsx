@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/common/GlassCard';
-import { fetchCareerById, fetchPortfolioProjects, fetchSampleJobs } from '../services/api';
+import { fetchCareerById, fetchPortfolioProjects, fetchSampleJobs, getPersonalizedCareerDetail } from '../services/api';
 import { 
   ArrowLeft, 
   Briefcase, 
@@ -10,11 +10,13 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   FolderGit2, 
-  ExternalLink 
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 
 export default function CareerDetailPage({ careerId, assessmentResult, onBack, onNavigate }) {
   const [career, setCareer] = useState(null);
+  const [recDetail, setRecDetail] = useState(null);
   const [projects, setProjects] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,15 +30,19 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
   const loadCareerDetail = async () => {
     try {
       setLoading(true);
-      const [cData, pData, jData] = await Promise.all([
+      const [cData, pData, jData, recData] = await Promise.all([
         fetchCareerById(careerId).catch(() => null),
         fetchPortfolioProjects('all').catch(() => ({ projects: [] })),
-        fetchSampleJobs('all').catch(() => ({ jobs: [] }))
+        fetchSampleJobs('all').catch(() => ({ jobs: [] })),
+        getPersonalizedCareerDetail(careerId).catch(() => null)
       ]);
 
       setCareer(cData);
       setProjects(pData?.projects || []);
       setJobs(jData?.jobs || []);
+      if (recData) {
+        setRecDetail(recData);
+      }
     } catch (err) {
       console.error('Error loading career details:', err);
     } finally {
@@ -52,7 +58,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
     );
   }
 
-  if (!career) {
+  if (!career && !recDetail) {
     return (
       <GlassCard style={{ textAlign: 'center', padding: '40px' }}>
         <div style={{ color: '#EF4444', fontWeight: 600, marginBottom: 16 }}>Career Profile Not Found</div>
@@ -63,8 +69,8 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
     );
   }
 
-  // Find recommendation result item if available
-  const recItem = assessmentResult?.career_recommendations?.find((r) => r.career_id === careerId);
+  const activeCareer = career || recDetail;
+  const recItem = recDetail || assessmentResult?.career_recommendations?.find((r) => r.career_id === careerId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -73,7 +79,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
         <button
           onClick={onBack}
           className="btn btn-outline"
-          style={{ padding: '8px 16px', fontSize: '0.85rem', marginBottom: 12 }}
+          style={{ padding: '8px 16px', fontSize: '0.85rem', marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
           <ArrowLeft size={16} /> Back to Recommendations
         </button>
@@ -88,21 +94,21 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span className={`glass-badge ${career.category === 'IT' ? 'badge-it' : 'badge-nonit'}`}>
-                {career.category} Career Pathway
+              <span className={`glass-badge ${activeCareer.category === 'IT' ? 'badge-it' : 'badge-nonit'}`}>
+                {activeCareer.category} Career Pathway
               </span>
             </div>
 
             <h2 style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>
-              {career.title}
+              {activeCareer.title}
             </h2>
 
             <p style={{ fontSize: '0.95rem', color: '#E2E8F0', marginTop: 10, maxWidth: 720, lineHeight: 1.6 }}>
-              {career.description}
+              {activeCareer.description}
             </p>
           </div>
 
-          {recItem && (
+          {recItem?.suitability_score !== undefined && (
             <div style={{
               background: 'rgba(255, 255, 255, 0.15)',
               color: '#FFFFFF',
@@ -110,10 +116,11 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
               borderRadius: 16,
               textAlign: 'center',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)'
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              minWidth: 140
             }}>
               <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#C7D2FE', fontWeight: 700 }}>
-                Calculated Suitability
+                Personalized Suitability
               </div>
               <div style={{ fontSize: '2.4rem', fontWeight: 800 }}>
                 {recItem.suitability_score}%
@@ -122,13 +129,25 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
           )}
         </div>
 
+        {/* Why this career matches you */}
+        {recItem?.reason && (
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.2)' }}>
+            <div style={{ fontSize: '0.85rem', color: '#FCD34D', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <Sparkles size={16} /> Why this career matches you:
+            </div>
+            <p style={{ fontSize: '0.9rem', color: '#E2E8F0', margin: 0 }}>
+              {recItem.reason}
+            </p>
+          </div>
+        )}
+
         {/* Stats Summary Strip */}
-        <div style={{ display: 'flex', gap: 24, marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.2)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 24, marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.2)', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <DollarSign size={18} color="#34D399" />
             <div>
               <div style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Average Salary</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{career.average_salary}</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{activeCareer.average_salary}</div>
             </div>
           </div>
 
@@ -136,27 +155,68 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
             <TrendingUp size={18} color="#818CF8" />
             <div>
               <div style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Industry Growth</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{career.growth_rate}</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{activeCareer.growth_rate}</div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <BookOpen size={18} color="#FBBF24" />
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Entry Requirements</div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{career.entry_requirements}</div>
+          {activeCareer.entry_requirements && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <BookOpen size={18} color="#FBBF24" />
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Entry Requirements</div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{activeCareer.entry_requirements}</div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </GlassCard>
 
-      {/* Skill Gap Analysis Section */}
+      {/* Matching Skills & Skills to Improve Split Row */}
+      {recItem && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+          <GlassCard style={{ padding: '24px', borderTop: '4px solid #10B981' }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#047857', marginTop: 0, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CheckCircle2 size={20} /> Your Matching Skills
+            </h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {recItem.matching_skills?.length > 0 ? (
+                recItem.matching_skills.map((sk, idx) => (
+                  <span key={idx} style={{ background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', padding: '6px 12px', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700 }}>
+                    ✓ {sk}
+                  </span>
+                ))
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: '#64748B' }}>None identified yet. Update your profile skills!</span>
+              )}
+            </div>
+          </GlassCard>
+
+          <GlassCard style={{ padding: '24px', borderTop: '4px solid #EF4444' }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#B91C1C', marginTop: 0, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AlertTriangle size={20} /> Skills You Need to Improve
+            </h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(recItem.missing_skills || recItem.skill_gaps?.filter(g => g.status === 'Improve').map(g => g.skill_name))?.length > 0 ? (
+                (recItem.missing_skills || recItem.skill_gaps?.filter(g => g.status === 'Improve').map(g => g.skill_name)).map((ms, idx) => (
+                  <span key={idx} style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA', padding: '6px 12px', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700 }}>
+                    • {typeof ms === 'string' ? ms : ms.skill_name}
+                  </span>
+                ))
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: '#047857', fontWeight: 700 }}>Great job! All required skills satisfied.</span>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* Detailed Required Skills Breakdown */}
       <GlassCard style={{ padding: '28px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Briefcase size={20} color="#4F46E5" /> Detailed Skill Gap Analysis
+          <Briefcase size={20} color="#4F46E5" /> Required Skill Benchmarks
         </h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {recItem?.skill_gaps ? (
             recItem.skill_gaps.map((sg, idx) => {
               const isStrong = sg.status === 'Strong';
@@ -202,7 +262,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
               );
             })
           ) : (
-            career.required_skills?.map((sk, sIdx) => (
+            activeCareer.required_skills?.map((sk, sIdx) => (
               <div key={sIdx} style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: 10, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 700, color: '#172554' }}>{sk.skill_name}</span>
                 <span style={{ fontSize: '0.82rem', color: '#64748B' }}>Benchmark Target: {sk.target_score}%</span>
@@ -212,39 +272,41 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
         </div>
       </GlassCard>
 
-      {/* Common Roles & Career Path */}
-      <GlassCard style={{ padding: '28px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#172554', marginBottom: 12 }}>
-          Common Industry Roles & Designations
-        </h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {career.common_roles?.map((role, rIdx) => (
-            <span key={rIdx} style={{
-              background: 'rgba(79, 70, 229, 0.08)',
-              color: '#4F46E5',
-              padding: '6px 14px',
-              borderRadius: 8,
-              fontSize: '0.85rem',
-              fontWeight: 600
-            }}>
-              💼 {role}
-            </span>
-          ))}
-        </div>
-      </GlassCard>
+      {/* Common Roles & Designations */}
+      {activeCareer.common_roles?.length > 0 && (
+        <GlassCard style={{ padding: '28px' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#172554', marginBottom: 12 }}>
+            Common Industry Roles & Designations
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {activeCareer.common_roles.map((role, rIdx) => (
+              <span key={rIdx} style={{
+                background: 'rgba(79, 70, 229, 0.08)',
+                color: '#4F46E5',
+                padding: '6px 14px',
+                borderRadius: 8,
+                fontSize: '0.85rem',
+                fontWeight: 600
+              }}>
+                💼 {role}
+              </span>
+            ))}
+          </div>
+        </GlassCard>
+      )}
 
       {/* Recommended Portfolio Projects */}
       <GlassCard style={{ padding: '28px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FolderGit2 size={20} color="#10B981" /> Recommended Portfolio Projects for This Career
+          <FolderGit2 size={20} color="#10B981" /> Recommended Portfolio Projects for This Pathway
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-          {projects.slice(0, 2).map((p) => (
-            <div key={p.id} style={{ border: '1px solid #E2E8F0', padding: 16, borderRadius: 12, background: '#FFFFFF' }}>
+          {(recItem?.recommended_projects || projects.slice(0, 2)).map((p, pIdx) => (
+            <div key={pIdx} style={{ border: '1px solid #E2E8F0', padding: 16, borderRadius: 12, background: '#FFFFFF' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#172554' }}>{p.title}</span>
-                <span className="glass-badge badge-it">{p.difficulty}</span>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#172554' }}>{p.title || p.project_name}</span>
+                <span className="glass-badge badge-it">{p.difficulty || 'Intermediate'}</span>
               </div>
               <p style={{ fontSize: '0.82rem', color: '#334155', marginBottom: 10 }}>{p.description}</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -262,7 +324,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
       {/* Related Job Listings */}
       <GlassCard style={{ padding: '28px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ExternalLink size={20} color="#4F46E5" /> Related Open Job Listings
+          <ExternalLink size={20} color="#4F46E5" /> Related Open Job Opportunities
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
@@ -287,6 +349,44 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
             </div>
           ))}
         </div>
+      </GlassCard>
+
+      {/* Action Plan CTA Banner */}
+      <GlassCard style={{
+        padding: '24px 32px',
+        background: 'linear-gradient(135deg, rgba(238, 242, 255, 0.95) 0%, rgba(224, 231, 255, 0.9) 100%)',
+        borderLeft: '6px solid #4F46E5',
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 16
+      }}>
+        <div>
+          <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554', margin: 0 }}>
+            Ready to master {activeCareer.title}?
+          </h4>
+          <p style={{ fontSize: '0.88rem', color: '#334155', margin: '4px 0 0 0' }}>
+            Generate your step-by-step learning roadmap, skill gap analysis, recommended projects, and job readiness score.
+          </p>
+        </div>
+
+        <button
+          onClick={() => onNavigate('actionPlan')}
+          className="btn"
+          style={{
+            background: 'linear-gradient(135deg, #172554 0%, #4F46E5 100%)',
+            color: '#FFFFFF',
+            padding: '12px 24px',
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: '0.88rem',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Build Career Action Plan →
+        </button>
       </GlassCard>
     </div>
   );

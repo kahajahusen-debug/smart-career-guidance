@@ -76,6 +76,60 @@ export const getAssessmentResult = async () => {
   return response.data;
 };
 
+// --- PHASE 5 PERSONALIZED RECOMMENDATION APIS ---
+export const getRecommendations = async (category = 'all') => {
+  const params = {};
+  if (category && category !== 'all') params.category = category;
+  const response = await apiClient.get('/recommendations', { params });
+  return response.data;
+};
+
+export const getPersonalizedCareerDetail = async (careerId) => {
+  const response = await apiClient.get(`/recommendations/${careerId}`);
+  return response.data;
+};
+
+// --- PHASE 6 CAREER ACTION PLAN APIS ---
+export const getActionPlan = async () => {
+  const response = await apiClient.get('/action-plan');
+  return response.data;
+};
+
+export const getSkillGaps = async () => {
+  const response = await apiClient.get('/action-plan/skill-gaps');
+  return response.data;
+};
+
+export const getRoadmap = async () => {
+  const response = await apiClient.get('/action-plan/roadmap');
+  return response.data;
+};
+
+export const getRoadmapProjects = async () => {
+  const response = await apiClient.get('/action-plan/projects');
+  return response.data;
+};
+
+export const getJobReadiness = async () => {
+  const response = await apiClient.get('/action-plan/readiness');
+  return response.data;
+};
+
+export const updateActionPlanProgress = async (itemId, itemType = 'skill', status = 'Completed') => {
+  const response = await apiClient.patch('/action-plan/progress', {
+    item_id: itemId,
+    item_type: itemType,
+    status: status
+  });
+  return response.data;
+};
+
+export const regenerateActionPlan = async (targetCareerId = null) => {
+  const payload = targetCareerId ? { target_career_id: targetCareerId } : {};
+  const response = await apiClient.post('/action-plan/regenerate', payload);
+  return response.data;
+};
+
 // --- PHASE 4 ADVANCED SKILL ASSESSMENT APIS ---
 export const fetchSkillAssessmentQuestions = async (category = 'all', difficulty = null, skillCategory = null) => {
   const params = {};
@@ -109,6 +163,72 @@ export const submitDiscoveryAnswers = async (answersMap) => {
 
 export const getDiscoveryResult = async () => {
   const response = await apiClient.get('/discovery/me');
+  return response.data;
+};
+
+// --- PHASE 7 JOB RECOMMENDATION & APPLICATION TRACKING APIS ---
+export const getRecommendedJobs = async (params = {}) => {
+  const response = await apiClient.get('/jobs/recommended', { params });
+  return response.data;
+};
+
+export const getJobs = async (params = {}) => {
+  const response = await apiClient.get('/jobs', { params });
+  return response.data;
+};
+
+export const getJobDetail = async (jobId) => {
+  const response = await apiClient.get(`/jobs/${jobId}`);
+  return response.data;
+};
+
+export const getJobMatch = async (jobId) => {
+  const response = await apiClient.get(`/jobs/${jobId}/match`);
+  return response.data;
+};
+
+export const saveJob = async (jobId) => {
+  const response = await apiClient.post(`/jobs/${jobId}/save`);
+  return response.data;
+};
+
+export const unsaveJob = async (jobId) => {
+  const response = await apiClient.delete(`/jobs/${jobId}/save`);
+  return response.data;
+};
+
+export const getSavedJobs = async () => {
+  const response = await apiClient.get('/jobs/saved');
+  return response.data;
+};
+
+export const createApplication = async (data) => {
+  const response = await apiClient.post('/applications', data);
+  return response.data;
+};
+
+export const getApplications = async () => {
+  const response = await apiClient.get('/applications');
+  return response.data;
+};
+
+export const getApplication = async (applicationId) => {
+  const response = await apiClient.get(`/applications/${applicationId}`);
+  return response.data;
+};
+
+export const updateApplication = async (applicationId, data) => {
+  const response = await apiClient.patch(`/applications/${applicationId}`, data);
+  return response.data;
+};
+
+export const deleteApplication = async (applicationId) => {
+  const response = await apiClient.delete(`/applications/${applicationId}`);
+  return response.data;
+};
+
+export const getApplicationStats = async () => {
+  const response = await apiClient.get('/applications/stats');
   return response.data;
 };
 

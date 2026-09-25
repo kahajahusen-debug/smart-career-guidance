@@ -37,6 +37,22 @@ def run_phase4_verification_tests():
         headers = {"Authorization": f"Bearer {token}"}
         print(f"[OK] Test candidate created ({email})")
 
+        # 3b. Test Submission Input Validations
+        # Empty submission
+        res_empty = client.post("/api/v1/skill-assessment/submit", json={"answers": {}}, headers=headers)
+        assert res_empty.status_code == 400
+        print("[OK] Empty submission properly rejected (400 Bad Request)")
+
+        # Invalid option index (out of range)
+        res_inv_opt = client.post("/api/v1/skill-assessment/submit", json={"answers": {"q_py_01": 99}}, headers=headers)
+        assert res_inv_opt.status_code == 400
+        print("[OK] Invalid option index properly rejected (400 Bad Request)")
+
+        # Only invalid question IDs
+        res_inv_q = client.post("/api/v1/skill-assessment/submit", json={"answers": {"invalid_nonexistent_id": 1}}, headers=headers)
+        assert res_inv_q.status_code == 400
+        print("[OK] Submission with no valid question IDs properly rejected (400 Bad Request)")
+
         # 4. First complete Career Discovery (to test connection with Discovery)
         disc_answers = {f"cd_q{i:02d}": 0 for i in range(1, 13)} # Technical heavy
         res_disc = client.post("/api/v1/discovery/submit", json={"answers": disc_answers}, headers=headers)

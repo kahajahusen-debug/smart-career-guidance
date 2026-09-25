@@ -13,6 +13,8 @@ import JobsPage from './pages/JobsPage';
 import ProjectsPage from './pages/ProjectsPage';
 import { fetchCurrentUser, getProfile, getAssessmentResult, getSkillAssessmentResult } from './services/api';
 
+import ActionPlanPage from './pages/ActionPlanPage';
+
 export default function App() {
   const [activePage, setActivePage] = useState('home');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -61,9 +63,9 @@ export default function App() {
 
   const handleNavigate = (targetPage) => {
     setAuthNotice(null);
-    const protectedPages = ['dashboard', 'profile', 'careerDiscovery', 'assessment', 'recommendations', 'jobs', 'projects', 'careerDetail'];
+    const protectedPages = ['dashboard', 'profile', 'careerDiscovery', 'assessment', 'recommendations', 'jobs', 'projects', 'careerDetail', 'actionPlan'];
     
-    // Auth Route Guard
+    // Auth Guard
     if (protectedPages.includes(targetPage) && !user) {
       setAuthNotice('Please log in to access your personalized dashboard and career guidance features.');
       setActivePage('login');
@@ -245,6 +247,12 @@ export default function App() {
             careerId={selectedCareerId}
             assessmentResult={assessmentResult}
             onBack={() => setActivePage('recommendations')}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {activePage === 'actionPlan' && (
+          <ActionPlanPage 
             onNavigate={handleNavigate}
           />
         )}

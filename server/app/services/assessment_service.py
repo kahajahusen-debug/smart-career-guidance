@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from fastapi import HTTPException, status
 from app.core.database import db, in_memory_store
 
 def load_questions_dataset() -> List[Dict[str, Any]]:
@@ -39,7 +40,7 @@ async def evaluate_quiz_submission(answers: Dict[str, int]) -> Dict[str, Any]:
     questions = await get_all_questions()
     q_map = {str(q.get("id")): q for q in questions}
 
-    total_submitted = len(answers)
+    valid_answers_count = 0
     correct_count = 0
     skill_stats: Dict[str, Dict[str, int]] = {}
 
@@ -48,18 +49,26 @@ async def evaluate_quiz_submission(answers: Dict[str, int]) -> Dict[str, Any]:
         if not q_obj:
             continue
 
+        options = q_obj.get("options", [])
+        if not isinstance(selected_idx, int) or selected_idx < 0 or (options and selected_idx >= len(options)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid option index {selected_idx} for question '{q_id}'."
+            )
+
         skill = q_obj.get("skill_name", "General")
         if skill not in skill_stats:
             skill_stats[skill] = {"total": 0, "correct": 0}
 
         skill_stats[skill]["total"] += 1
+        valid_answers_count += 1
         
         correct_idx = q_obj.get("correct_option_index")
         if selected_idx == correct_idx:
             correct_count += 1
             skill_stats[skill]["correct"] += 1
 
-    overall_accuracy = (correct_count / total_submitted * 100.0) if total_submitted > 0 else 0.0
+    overall_accuracy = (correct_count / valid_answers_count * 100.0) if valid_answers_count > 0 else 0.0
 
     skill_scores: Dict[str, float] = {}
     for sk, stat in skill_stats.items():
@@ -67,7 +76,7 @@ async def evaluate_quiz_submission(answers: Dict[str, int]) -> Dict[str, Any]:
             skill_scores[sk] = round((stat["correct"] / stat["total"]) * 100.0, 1)
 
     return {
-        "total_questions": total_submitted,
+        "total_questions": valid_answers_count,
         "correct_answers": correct_count,
         "overall_accuracy": round(overall_accuracy, 1),
         "skill_scores": skill_scores
@@ -85,7 +94,7 @@ async def evaluate_advanced_skill_assessment(
     questions = await get_all_questions()
     q_map = {str(q.get("id")): q for q in questions}
 
-    total_submitted = len(answers)
+    valid_answers_count = 0
     correct_count = 0
 
     skill_stats: Dict[str, Dict[str, Any]] = {}
@@ -95,6 +104,13 @@ async def evaluate_advanced_skill_assessment(
         q_obj = q_map.get(str(q_id))
         if not q_obj:
             continue
+
+        options = q_obj.get("options", [])
+        if not isinstance(selected_idx, int) or selected_idx < 0 or (options and selected_idx >= len(options)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid option index {selected_idx} for question '{q_id}'."
+            )
 
         sk_name = q_obj.get("skill_name", "General Skill")
         sk_category = q_obj.get("skill_category") or q_obj.get("category") or "General"
@@ -107,6 +123,7 @@ async def evaluate_advanced_skill_assessment(
 
         skill_stats[sk_name]["total"] += 1
         category_stats[sk_category]["total"] += 1
+        valid_answers_count += 1
 
         correct_idx = q_obj.get("correct_option_index")
         if selected_idx == correct_idx:
@@ -114,7 +131,13 @@ async def evaluate_advanced_skill_assessment(
             skill_stats[sk_name]["correct"] += 1
             category_stats[sk_category]["correct"] += 1
 
-    overall_accuracy = (correct_count / total_submitted * 100.0) if total_submitted > 0 else 0.0
+    if valid_answers_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid question answers found in submission."
+        )
+
+    overall_accuracy = (correct_count / valid_answers_count * 100.0) if valid_answers_count > 0 else 0.0
 
     skill_scores: Dict[str, float] = {}
     category_scores: Dict[str, float] = {}
@@ -204,7 +227,7 @@ async def evaluate_advanced_skill_assessment(
 
     return {
         "overall_accuracy": round(overall_accuracy, 1),
-        "total_questions": total_submitted,
+        "total_questions": valid_answers_count,
         "correct_answers": correct_count,
         "skill_scores": skill_scores,
         "category_scores": category_scores,
