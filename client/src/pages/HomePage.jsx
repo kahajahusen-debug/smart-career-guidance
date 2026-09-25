@@ -16,14 +16,21 @@ import {
   DollarSign
 } from 'lucide-react';
 
-export default function HomePage({ activeCategory }) {
+export default function HomePage({ activeCategory, initialTab = 'careers', onNavigate, user }) {
   const [careers, setCareers] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [projects, setProjects] = useState([]);
   const [selectedDifficulty, setSelectedDifficulty] = useState(null);
-  const [activeTab, setActiveTab] = useState('careers');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
 
   useEffect(() => {
     loadData();
@@ -66,11 +73,41 @@ export default function HomePage({ activeCategory }) {
             Smart Career Guidance & Job Recommendations
           </h2>
 
-          <p style={{ fontSize: '1rem', color: '#E2E8F0', lineHeight: 1.6 }}>
+          <p style={{ fontSize: '1rem', color: '#E2E8F0', lineHeight: 1.6, marginBottom: 20 }}>
             Discover and explore both <strong>IT</strong> (Software Engineering, Data Science, Cloud/DevOps, UI/UX, Security) and <strong>Non-IT</strong> (Marketing, Product, Finance, HR, Healthcare) career pathways, skill assessment benchmarks, and curated job opportunities.
           </p>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {user ? (
+              <button
+                onClick={() => onNavigate && onNavigate('dashboard')}
+                className="btn"
+                style={{ background: '#FFFFFF', color: '#172554', padding: '10px 20px', borderRadius: 10, fontWeight: 700, fontSize: '0.9rem' }}
+              >
+                Go to My Dashboard →
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => onNavigate && onNavigate('signup')}
+                  className="btn"
+                  style={{ background: '#FFFFFF', color: '#172554', padding: '10px 20px', borderRadius: 10, fontWeight: 700, fontSize: '0.9rem' }}
+                >
+                  Create Account & Get Guidance →
+                </button>
+                <button
+                  onClick={() => onNavigate && onNavigate('login')}
+                  className="btn"
+                  style={{ background: 'rgba(255, 255, 255, 0.15)', color: '#FFFFFF', border: '1px solid rgba(255, 255, 255, 0.3)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: '0.9rem' }}
+                >
+                  Log In
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </GlassCard>
+
 
       {/* Navigation Tabs */}
       <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid #E2E8F0', paddingBottom: 12, flexWrap: 'wrap' }}>
