@@ -11,7 +11,7 @@ import RecommendationsPage from './pages/RecommendationsPage';
 import CareerDetailPage from './pages/CareerDetailPage';
 import JobsPage from './pages/JobsPage';
 import ProjectsPage from './pages/ProjectsPage';
-import { fetchCurrentUser, getProfile, getAssessmentResult } from './services/api';
+import { fetchCurrentUser, getProfile, getAssessmentResult, getSkillAssessmentResult } from './services/api';
 
 export default function App() {
   const [activePage, setActivePage] = useState('home');
@@ -19,6 +19,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [assessmentResult, setAssessmentResult] = useState(null);
+  const [skillAssessmentResult, setSkillAssessmentResult] = useState(null);
   const [selectedCareerId, setSelectedCareerId] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [authNotice, setAuthNotice] = useState(null);
@@ -40,13 +41,15 @@ export default function App() {
       setUser(userData);
       
       // Load user profile & assessment results in background
-      const [profData, assData] = await Promise.all([
+      const [profData, assData, skillData] = await Promise.all([
         getProfile().catch(() => null),
-        getAssessmentResult().catch(() => null)
+        getAssessmentResult().catch(() => null),
+        getSkillAssessmentResult().catch(() => null)
       ]);
 
       if (profData) setProfile(profData);
       if (assData) setAssessmentResult(assData);
+      if (skillData) setSkillAssessmentResult(skillData);
     } catch (err) {
       console.log('Session token expired or invalid:', err);
       localStorage.removeItem('auth_token');
@@ -77,12 +80,14 @@ export default function App() {
 
     // Fetch user profile & assessment
     try {
-      const [profData, assData] = await Promise.all([
+      const [profData, assData, skillData] = await Promise.all([
         getProfile().catch(() => null),
-        getAssessmentResult().catch(() => null)
+        getAssessmentResult().catch(() => null),
+        getSkillAssessmentResult().catch(() => null)
       ]);
       if (profData) setProfile(profData);
       if (assData) setAssessmentResult(assData);
+      if (skillData) setSkillAssessmentResult(skillData);
     } catch (e) {
       console.log('Error loading post-login data:', e);
     }
@@ -95,6 +100,7 @@ export default function App() {
     setUser(null);
     setProfile(null);
     setAssessmentResult(null);
+    setSkillAssessmentResult(null);
     setActivePage('home');
   };
 
@@ -103,9 +109,23 @@ export default function App() {
     setActivePage('careerDetail');
   };
 
-  const handleAssessmentSubmitted = (result) => {
-    setAssessmentResult(result);
-    setActivePage('recommendations');
+  const handleAssessmentSubmitted = async (result) => {
+    if (result.career_recommendations) {
+      setAssessmentResult(result);
+    }
+    if (result.overall_accuracy !== undefined) {
+      setSkillAssessmentResult(result);
+    }
+    
+    // Background refetch to ensure both states stay synced
+    try {
+      const [assData, skillData] = await Promise.all([
+        getAssessmentResult().catch(() => null),
+        getSkillAssessmentResult().catch(() => null)
+      ]);
+      if (assData) setAssessmentResult(assData);
+      if (skillData) setSkillAssessmentResult(skillData);
+    } catch (e) {}
   };
 
   if (authChecking) {
@@ -183,6 +203,7 @@ export default function App() {
             user={user}
             profile={profile}
             assessmentResult={assessmentResult}
+            skillAssessmentResult={skillAssessmentResult}
             onNavigate={handleNavigate}
           />
         )}
@@ -206,6 +227,7 @@ export default function App() {
           <AssessmentPage 
             user={user}
             onAssessmentSubmitted={handleAssessmentSubmitted}
+            onNavigate={handleNavigate}
           />
         )}
 

@@ -13,14 +13,17 @@ import {
   Sliders
 } from 'lucide-react';
 
-export default function DashboardPage({ user, profile, assessmentResult, onNavigate }) {
-  const isAssessmentCompleted = !!(assessmentResult && assessmentResult.career_recommendations?.length);
-  const topRecommendation = isAssessmentCompleted ? assessmentResult.career_recommendations[0] : null;
+export default function DashboardPage({ user, profile, assessmentResult, skillAssessmentResult, onNavigate }) {
+  const isAssessmentCompleted = !!(
+    (assessmentResult && assessmentResult.career_recommendations?.length) ||
+    (skillAssessmentResult && skillAssessmentResult.overall_accuracy !== undefined)
+  );
+  
+  const topRecommendation = assessmentResult?.career_recommendations?.length ? assessmentResult.career_recommendations[0] : null;
 
   const skillsCount = profile?.current_skills?.length || 0;
   const missingSkillsCount = assessmentResult?.missing_skills?.length || 0;
   const projectsCount = assessmentResult?.recommended_projects?.length || 4;
-  const jobsCount = isAssessmentCompleted ? 4 : 4;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -250,7 +253,7 @@ export default function DashboardPage({ user, profile, assessmentResult, onNavig
       )}
 
       {/* Quick Navigation Cards */}
-      <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
         <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ padding: 10, borderRadius: 10, background: 'rgba(79, 70, 229, 0.1)', color: '#4F46E5' }}>
@@ -286,6 +289,26 @@ export default function DashboardPage({ user, profile, assessmentResult, onNavig
             style={{ width: '100%', padding: '9px', fontSize: '0.85rem' }}
           >
             Discover Areas →
+          </button>
+        </GlassCard>
+
+        {/* Dedicated Skill Assessment Card */}
+        <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ padding: 10, borderRadius: 10, background: 'rgba(124, 58, 237, 0.12)', color: '#7C3AED' }}>
+              <HelpCircle size={22} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#172554', margin: 0 }}>Skill Assessment</h4>
+              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Test your technical & domain skills</span>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('assessment')}
+            className="btn btn-outline"
+            style={{ width: '100%', padding: '9px', fontSize: '0.85rem', fontWeight: 700 }}
+          >
+            {isAssessmentCompleted ? 'Retake Assessment →' : 'Start Assessment →'}
           </button>
         </GlassCard>
 

@@ -76,6 +76,26 @@ export const getAssessmentResult = async () => {
   return response.data;
 };
 
+// --- PHASE 4 ADVANCED SKILL ASSESSMENT APIS ---
+export const fetchSkillAssessmentQuestions = async (category = 'all', difficulty = null, skillCategory = null) => {
+  const params = {};
+  if (category && category !== 'all') params.category = category;
+  if (difficulty) params.difficulty = difficulty;
+  if (skillCategory) params.skill_category = skillCategory;
+  const response = await apiClient.get('/skill-assessment/questions', { params });
+  return response.data;
+};
+
+export const submitSkillAssessment = async (answersMap) => {
+  const response = await apiClient.post('/skill-assessment/submit', { answers: answersMap });
+  return response.data;
+};
+
+export const getSkillAssessmentResult = async () => {
+  const response = await apiClient.get('/skill-assessment/me');
+  return response.data;
+};
+
 // --- PHASE 3 CAREER DISCOVERY APIS ---
 export const fetchDiscoveryQuestions = async () => {
   const response = await apiClient.get('/discovery/questions');

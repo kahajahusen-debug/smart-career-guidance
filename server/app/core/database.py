@@ -21,7 +21,8 @@ in_memory_store = {
     "users": [],
     "profiles": {},
     "assessment_results": {},
-    "discovery_results": {}
+    "discovery_results": {},
+    "skill_assessment_results": {}
 }
 
 async def connect_to_mongo():
@@ -39,7 +40,8 @@ async def connect_to_mongo():
             await db.db.profiles.create_index("user_id", unique=True)
             await db.db.assessment_results.create_index("user_id")
             await db.db.discovery_results.create_index("user_id")
-            logger.info("MongoDB indexes verified on users, profiles, assessment_results, and discovery_results.")
+            await db.db.skill_assessment_results.create_index("user_id")
+            logger.info("MongoDB indexes verified on users, profiles, assessment_results, discovery_results, and skill_assessment_results.")
         except Exception as idx_err:
             logger.warning(f"Error initializing MongoDB indexes: {idx_err}")
 
