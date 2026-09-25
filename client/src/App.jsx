@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
+import CareerDiscoveryPage from './pages/CareerDiscoveryPage';
 import AssessmentPage from './pages/AssessmentPage';
 import RecommendationsPage from './pages/RecommendationsPage';
 import CareerDetailPage from './pages/CareerDetailPage';
@@ -57,7 +58,7 @@ export default function App() {
 
   const handleNavigate = (targetPage) => {
     setAuthNotice(null);
-    const protectedPages = ['dashboard', 'profile', 'assessment', 'recommendations', 'jobs', 'projects', 'careerDetail'];
+    const protectedPages = ['dashboard', 'profile', 'careerDiscovery', 'assessment', 'recommendations', 'jobs', 'projects', 'careerDetail'];
     
     // Auth Route Guard
     if (protectedPages.includes(targetPage) && !user) {
@@ -190,6 +191,14 @@ export default function App() {
           <ProfilePage 
             user={user}
             onProfileUpdated={setProfile}
+          />
+        )}
+
+        {activePage === 'careerDiscovery' && (
+          <CareerDiscoveryPage
+            user={user}
+            onNavigate={handleNavigate}
+            onSelectCareer={handleSelectCareerDetail}
           />
         )}
 

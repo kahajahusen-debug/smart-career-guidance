@@ -1,0 +1,122 @@
+[
+  {
+    "id": "cd_q01",
+    "question_text": "Which type of problem do you enjoy solving the most?",
+    "options": [
+      "Building complex software systems, writing code, or fixing technical application bugs",
+      "Analyzing data trends, discovering patterns, or working with statistical numbers",
+      "Creating visually appealing layouts, sketching graphics, or designing user interfaces",
+      "Organizing team projects, planning business strategies, or leading product initiatives"
+    ]
+  },
+  {
+    "id": "cd_q02",
+    "question_text": "When working on a group project, what role do you naturally step into?",
+    "options": [
+      "The Lead Developer building core features and software architecture",
+      "The Data Analyst researching statistics, metrics, and validating facts",
+      "The UX/UI Designer crafting slides, wireframes, and visual branding",
+      "The Project Manager coordinating deadlines, delegating tasks, and organizing the team"
+    ]
+  },
+  {
+    "id": "cd_q03",
+    "question_text": "Which tool or software environment sounds most exciting to work in daily?",
+    "options": [
+      "IDEs & Code Editors (VS Code, Python, GitHub, Docker)",
+      "Data & Analytics Tools (SQL, Jupyter Notebooks, Pandas, Tableau)",
+      "Design & Prototyping Suites (Figma, Adobe XD, Canva, Framer)",
+      "Management & Strategy Hubs (Jira, Notion, Trello, Excel spreadsheets)"
+    ]
+  },
+  {
+    "id": "cd_q04",
+    "question_text": "What kind of achievement gives you the greatest sense of accomplishment?",
+    "options": [
+      "Deploying a clean, bug-free web application or backend service",
+      "Extracting actionable insights from raw data to answer a complex question",
+      "Designing a modern interface that users find beautiful and easy to use",
+      "Successfully launching a project campaign and reaching organizational goals"
+    ]
+  },
+  {
+    "id": "cd_q05",
+    "question_text": "How do you prefer to spend your ideal workday?",
+    "options": [
+      "Writing program logic, structuring databases, and automating tasks",
+      "Querying databases, cleaning data feeds, and analyzing performance metrics",
+      "Conducting user research, creating wireframes, and refining micro-interactions",
+      "Meeting with stakeholders, defining business requirements, and planning roadmaps"
+    ]
+  },
+  {
+    "id": "cd_q06",
+    "question_text": "What topic do you find most interesting when reading tech blogs or industry news?",
+    "options": [
+      "System design, cloud infrastructure, and modern software frameworks",
+      "Artificial Intelligence, predictive modeling, and big data trends",
+      "User experience trends, accessibility standards, and visual design",
+      "Entrepreneurship, market expansion strategies, and team leadership"
+    ]
+  },
+  {
+    "id": "cd_q07",
+    "question_text": "When presented with a new app idea, what is your first thought?",
+    "options": [
+      "What programming languages, frameworks, and database architecture should we use?",
+      "What data metrics can we collect, model, and analyze from user activity?",
+      "How will the screen look and how intuitive will the user navigation feel?",
+      "What is the business model, target market, and growth potential?"
+    ]
+  },
+  {
+    "id": "cd_q08",
+    "question_text": "Which elective course topic would you be most eager to enroll in?",
+    "options": [
+      "Advanced Software Engineering & Full Stack Web Development",
+      "Applied Data Mining, Machine Learning & Business Intelligence",
+      "Human-Computer Interaction (HCI) & Digital Product Design",
+      "Strategic Management, Product Ownership & Tech Entrepreneurship"
+    ]
+  },
+  {
+    "id": "cd_q09",
+    "question_text": "What type of deliverable are you most proud to showcase in your portfolio?",
+    "options": [
+      "A functional full-stack web application with REST APIs and database storage",
+      "A comprehensive data analysis dashboard with predictive ML insights",
+      "A complete mobile app UI kit and interactive Figma prototype",
+      "A comprehensive product strategy document and market launch plan"
+    ]
+  },
+  {
+    "id": "cd_q10",
+    "question_text": "How do you approach making an important decision?",
+    "options": [
+      "Systematically evaluate logical steps, technical constraints, and code efficiency",
+      "Analyze quantitative numbers, statistical evidence, and historical data trends",
+      "Focus on user feedback, empathy, and qualitative user experience testing",
+      "Evaluate trade-offs, financial impact, and strategic organizational priorities"
+    ]
+  },
+  {
+    "id": "cd_q11",
+    "question_text": "What type of technical workshop or hackathon track appeals to you most?",
+    "options": [
+      "Web & Mobile Application Software Building",
+      "Data Science & Predictive Analytics Challenge",
+      "UI/UX Design Sprint & Interactive Prototyping",
+      "Startup Business Pitch & Product Management Track"
+    ]
+  },
+  {
+    "id": "cd_q12",
+    "question_text": "Where do you see yourself making the biggest impact in your ideal career?",
+    "options": [
+      "Engineering robust, scalable software systems that power modern platforms",
+      "Unlocking data-driven insights that guide smart automated decision-making",
+      "Shaping how millions of people visually experience and interact with digital products",
+      "Leading teams, driving product vision, and managing successful business ventures"
+    ]
+  }
+]

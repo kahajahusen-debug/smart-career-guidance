@@ -14,6 +14,7 @@ export default function Navbar({
   const navLinks = isLoggedIn ? [
     { id: 'home', label: 'Home' },
     { id: 'dashboard', label: 'Dashboard' },
+    { id: 'careerDiscovery', label: 'Career Discovery' },
     { id: 'profile', label: 'Profile' },
     { id: 'assessment', label: 'Assessment' },
     { id: 'recommendations', label: 'Recommendations' },

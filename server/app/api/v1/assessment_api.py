@@ -75,7 +75,7 @@ async def get_my_assessment_result(current_user: dict = Depends(get_current_user
 
     if not result_doc:
         raise HTTPException(
-            status_code=status.HTTP_444_NOT_FOUND if hasattr(status, "HTTP_444_NOT_FOUND") else 404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="No assessment results found. Please complete the assessment first."
         )
 

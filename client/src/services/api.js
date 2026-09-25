@@ -76,6 +76,22 @@ export const getAssessmentResult = async () => {
   return response.data;
 };
 
+// --- PHASE 3 CAREER DISCOVERY APIS ---
+export const fetchDiscoveryQuestions = async () => {
+  const response = await apiClient.get('/discovery/questions');
+  return response.data;
+};
+
+export const submitDiscoveryAnswers = async (answersMap) => {
+  const response = await apiClient.post('/discovery/submit', { answers: answersMap });
+  return response.data;
+};
+
+export const getDiscoveryResult = async () => {
+  const response = await apiClient.get('/discovery/me');
+  return response.data;
+};
+
 // --- PHASE 1 EXISTING APIS (PRESERVED) ---
 export const checkHealth = async () => {
   const response = await apiClient.get('/health');

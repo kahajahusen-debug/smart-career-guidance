@@ -250,7 +250,7 @@ export default function DashboardPage({ user, profile, assessmentResult, onNavig
       )}
 
       {/* Quick Navigation Cards */}
-      <div className="grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+      <div className="grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
         <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ padding: 10, borderRadius: 10, background: 'rgba(79, 70, 229, 0.1)', color: '#4F46E5' }}>
@@ -272,11 +272,30 @@ export default function DashboardPage({ user, profile, assessmentResult, onNavig
 
         <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ padding: 10, borderRadius: 10, background: 'rgba(14, 165, 233, 0.1)', color: '#0EA5E9' }}>
+              <TrendingUp size={22} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#172554', margin: 0 }}>Career Discovery</h4>
+              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Interest & work style mapping</span>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('careerDiscovery')}
+            className="btn btn-outline"
+            style={{ width: '100%', padding: '9px', fontSize: '0.85rem' }}
+          >
+            Discover Areas →
+          </button>
+        </GlassCard>
+
+        <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ padding: 10, borderRadius: 10, background: 'rgba(124, 58, 237, 0.1)', color: '#7C3AED' }}>
               <Award size={22} />
             </div>
             <div>
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#172554', margin: 0 }}>Career Recommendations</h4>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#172554', margin: 0 }}>Recommendations</h4>
               <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Personalized suitability rankings</span>
             </div>
           </div>
