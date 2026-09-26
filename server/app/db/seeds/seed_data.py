@@ -901,39 +901,348 @@ QUESTIONS_SEED = [
 PROJECTS_SEED = [
     {
         "id": "proj_01",
+        "project_id": "proj_01",
         "title": "Full-Stack SaaS Job Board with Search & Alerts",
         "category": "IT",
         "difficulty": "Intermediate",
-        "description": "Build a responsive web app with job filtering, application submission, and email notification webhooks.",
-        "skills_covered": ["React", "Python", "SQL", "REST APIs"],
-        "deliverables": ["GitHub repository link", "Live deployed demo URL", "Architecture documentation"]
+        "target_careers": ["Full Stack Software Engineer"],
+        "description": "Build a complete job board application with search, filtering, applications and notifications.",
+        "skills_covered": ["React", "Python", "SQL", "REST APIs", "Git", "JavaScript"],
+        "estimated_duration": "4-6 weeks",
+        "portfolio_value": 96,
+        "learning_outcomes": [
+            "Build a React frontend",
+            "Create FastAPI backend APIs",
+            "Work with MongoDB",
+            "Implement authentication",
+            "Deploy a full-stack application"
+        ],
+        "technologies": ["React", "Vite", "FastAPI", "MongoDB", "Git"],
+        "difficulty_score": 3,
+        "github_required": True,
+        "status": "Not Started",
+        "deliverables": ["GitHub repository link", "Live deployed demo URL", "Architecture documentation"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Project Setup & Architecture", "completed": False},
+            {"id": "m2", "step": 2, "title": "Frontend Development & Components", "completed": False},
+            {"id": "m3", "step": 3, "title": "Backend REST API Implementation", "completed": False},
+            {"id": "m4", "step": 4, "title": "Database Integration & Models", "completed": False},
+            {"id": "m5", "step": 5, "title": "Testing & User Isolation", "completed": False},
+            {"id": "m6", "step": 6, "title": "Production Deployment", "completed": False}
+        ]
     },
     {
         "id": "proj_02",
+        "project_id": "proj_02",
         "title": "Customer Churn Prediction Engine",
         "category": "IT",
         "difficulty": "Advanced",
+        "target_careers": ["Data Scientist & ML Engineer"],
         "description": "Train a Random Forest / XGBoost model on Telecom customer data to identify churn risk factors and deploy via FastAPI.",
-        "skills_covered": ["Python", "Machine Learning", "Scikit-Learn", "FastAPI"],
-        "deliverables": ["Jupyter notebook with EDA", "Trained ML model pipeline", "API integration"]
+        "skills_covered": ["Python", "Machine Learning", "Scikit-Learn", "FastAPI", "SQL", "Statistics"],
+        "estimated_duration": "5-7 weeks",
+        "portfolio_value": 95,
+        "learning_outcomes": [
+            "Perform Exploratory Data Analysis (EDA)",
+            "Feature engineering and scaling",
+            "Train Random Forest & XGBoost models",
+            "Deploy model endpoints with FastAPI",
+            "Build model evaluation metrics dashboard"
+        ],
+        "technologies": ["Python", "Scikit-Learn", "FastAPI", "Pandas", "Matplotlib"],
+        "difficulty_score": 4,
+        "github_required": True,
+        "status": "Not Started",
+        "deliverables": ["Jupyter notebook with EDA", "Trained ML model pipeline", "API integration"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Data Preprocessing & EDA", "completed": False},
+            {"id": "m2", "step": 2, "title": "Feature Engineering & Selection", "completed": False},
+            {"id": "m3", "step": 3, "title": "Model Training & Hyperparameter Tuning", "completed": False},
+            {"id": "m4", "step": 4, "title": "Model Evaluation & Metrics", "completed": False},
+            {"id": "m5", "step": 5, "title": "FastAPI Endpoint Integration", "completed": False},
+            {"id": "m6", "step": 6, "title": "Deployment & Monitoring", "completed": False}
+        ]
     },
     {
         "id": "proj_03",
-        "title": "Data-Driven SEO & Content Campaign Audit",
+        "project_id": "proj_03",
+        "title": "Digital Marketing Campaign Analytics",
         "category": "Non-IT",
         "difficulty": "Beginner",
+        "target_careers": ["Digital Marketing Strategist"],
         "description": "Perform comprehensive keyword research, content gap analysis, and organic traffic growth audit for an e-commerce store.",
-        "skills_covered": ["SEO & SEM", "Marketing Analytics", "Content Strategy"],
-        "deliverables": ["Keyword opportunity sheet", "Technical audit deck", "90-day execution roadmap"]
+        "skills_covered": ["SEO & SEM", "Marketing Analytics", "Content Strategy", "Social Media Marketing"],
+        "estimated_duration": "2-3 weeks",
+        "portfolio_value": 90,
+        "learning_outcomes": [
+            "Analyze Google Search Console dataset",
+            "Evaluate multi-touch attribution models",
+            "Conduct competitor keyword analysis",
+            "Draft optimized copy & campaign plans"
+        ],
+        "technologies": ["Google Analytics", "SEMrush", "Excel", "Looker Studio"],
+        "difficulty_score": 1,
+        "github_required": False,
+        "status": "Not Started",
+        "deliverables": ["Keyword opportunity sheet", "Technical audit deck", "90-day execution roadmap"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Campaign Data Gathering", "completed": False},
+            {"id": "m2", "step": 2, "title": "Keyword & Content Gap Audit", "completed": False},
+            {"id": "m3", "step": 3, "title": "Traffic & Attribution Analysis", "completed": False},
+            {"id": "m4", "step": 4, "title": "Conversion Rate Optimization", "completed": False},
+            {"id": "m5", "step": 5, "title": "Report Deck & Recommendations", "completed": False},
+            {"id": "m6", "step": 6, "title": "Execution Roadmap", "completed": False}
+        ]
     },
     {
         "id": "proj_04",
-        "title": "Product Strategy Teardown & Feature Specs",
+        "project_id": "proj_04",
+        "title": "Product Strategy Case Study",
         "category": "Non-IT",
         "difficulty": "Intermediate",
-        "description": "Write a PRD (Product Requirement Document) and wireframe specs for a new onboarding feature in a popular SaaS application.",
-        "skills_covered": ["Product Strategy", "User Research", "Agile & Scrum"],
-        "deliverables": ["Product Requirement Document (PRD)", "Interactive Figma prototype", "RICE priority matrix"]
+        "target_careers": ["Product Manager"],
+        "description": "Formulate a comprehensive product growth strategy, market teardown, and write a full Product Requirement Document (PRD).",
+        "skills_covered": ["Product Strategy", "User Research", "Agile & Scrum", "Data Analytics"],
+        "estimated_duration": "3-4 weeks",
+        "portfolio_value": 92,
+        "learning_outcomes": [
+            "Conduct competitive market teardowns",
+            "Define feature specifications & user stories",
+            "Prioritize features using RICE framework",
+            "Map customer journey and sprint release plan"
+        ],
+        "technologies": ["Jira", "Figma", "Notion", "Mixpanel"],
+        "difficulty_score": 3,
+        "github_required": False,
+        "status": "Not Started",
+        "deliverables": ["Product Requirement Document (PRD)", "Interactive Figma prototype", "RICE priority matrix"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Market & Competitive Analysis", "completed": False},
+            {"id": "m2", "step": 2, "title": "User Research & Problem Framing", "completed": False},
+            {"id": "m3", "step": 3, "title": "PRD Drafting & Specs", "completed": False},
+            {"id": "m4", "step": 4, "title": "RICE Feature Prioritization", "completed": False},
+            {"id": "m5", "step": 5, "title": "Wireframe & User Flow Mapping", "completed": False},
+            {"id": "m6", "step": 6, "title": "Release Strategy & KPIs", "completed": False}
+        ]
+    },
+    {
+        "id": "proj_05",
+        "project_id": "proj_05",
+        "title": "E-Commerce Recommendation System",
+        "category": "IT",
+        "difficulty": "Advanced",
+        "target_careers": ["Data Scientist & ML Engineer"],
+        "description": "Build a collaborative and content-based recommendation engine for e-commerce products with personalized user feeds.",
+        "skills_covered": ["Python", "Machine Learning", "SQL", "REST APIs", "React"],
+        "estimated_duration": "4-6 weeks",
+        "portfolio_value": 94,
+        "learning_outcomes": [
+            "Build matrix factorization algorithms",
+            "Implement similarity scoring",
+            "Create recommendation API endpoints",
+            "Connect interactive UI to recommendation engine"
+        ],
+        "technologies": ["Python", "PyTorch", "FastAPI", "React", "MongoDB"],
+        "difficulty_score": 4,
+        "github_required": True,
+        "status": "Not Started",
+        "deliverables": ["Recommendation engine code", "REST API integration", "Benchmark test report"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "System Architecture & Data Schema", "completed": False},
+            {"id": "m2", "step": 2, "title": "Collaborative Filtering Algorithm", "completed": False},
+            {"id": "m3", "step": 3, "title": "Content-Based Filtering Setup", "completed": False},
+            {"id": "m4", "step": 4, "title": "Recommendation API Integration", "completed": False},
+            {"id": "m5", "step": 5, "title": "Frontend UI Feed Component", "completed": False},
+            {"id": "m6", "step": 6, "title": "Validation & Optimization", "completed": False}
+        ]
+    },
+    {
+        "id": "proj_06",
+        "project_id": "proj_06",
+        "title": "Cloud Deployment Monitoring Dashboard",
+        "category": "IT",
+        "difficulty": "Intermediate",
+        "target_careers": ["DevOps & Cloud Engineer"],
+        "description": "Construct a real-time infrastructure monitoring dashboard using Docker, Prometheus metrics, and automated alert triggers.",
+        "skills_covered": ["Docker & Kubernetes", "Linux", "CI/CD", "Cloud Architecture", "Python"],
+        "estimated_duration": "3-5 weeks",
+        "portfolio_value": 95,
+        "learning_outcomes": [
+            "Containerize services with Docker",
+            "Configure Prometheus metric scrapers",
+            "Set up Docker Compose environments",
+            "Automate CI/CD pipelines",
+            "Build alert notification hooks"
+        ],
+        "technologies": ["Docker", "Kubernetes", "Prometheus", "Grafana", "Linux"],
+        "difficulty_score": 3,
+        "github_required": True,
+        "status": "Not Started",
+        "deliverables": ["Dockerfile and Compose manifests", "Prometheus alert config", "Grafana dashboard export"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Environment & Container Setup", "completed": False},
+            {"id": "m2", "step": 2, "title": "Metric Scraper Configuration", "completed": False},
+            {"id": "m3", "step": 3, "title": "CI/CD Pipeline Automation", "completed": False},
+            {"id": "m4", "step": 4, "title": "Dashboard Visualization", "completed": False},
+            {"id": "m5", "step": 5, "title": "Alert Trigger Configuration", "completed": False},
+            {"id": "m6", "step": 6, "title": "Production Staging", "completed": False}
+        ]
+    },
+    {
+        "id": "proj_07",
+        "project_id": "proj_07",
+        "title": "Cybersecurity Log Analyzer",
+        "category": "IT",
+        "difficulty": "Intermediate",
+        "target_careers": ["Cybersecurity Analyst"],
+        "description": "Develop an automated security log analysis pipeline to detect brute force attempts, unauthorized access, and anomaly spikes.",
+        "skills_covered": ["Network Security", "Ethical Hacking", "Linux", "Incident Response", "Python"],
+        "estimated_duration": "3-5 weeks",
+        "portfolio_value": 93,
+        "learning_outcomes": [
+            "Parse syslog and web server log files",
+            "Detect anomaly patterns using regex and Python",
+            "Implement threat alert thresholding",
+            "Build incident reporting dashboards"
+        ],
+        "technologies": ["Python", "Linux", "ELK Stack", "Bash", "Regex"],
+        "difficulty_score": 3,
+        "github_required": True,
+        "status": "Not Started",
+        "deliverables": ["Log parser script", "Threat detection rule set", "Incident response report template"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Log Data Collection & Parsing", "completed": False},
+            {"id": "m2", "step": 2, "title": "Security Rules & Pattern Matching", "completed": False},
+            {"id": "m3", "step": 3, "title": "Anomaly Detection Engine", "completed": False},
+            {"id": "m4", "step": 4, "title": "Incident Alert Dispatcher", "completed": False},
+            {"id": "m5", "step": 5, "title": "Security Report Generation", "completed": False},
+            {"id": "m6", "step": 6, "title": "Integration Testing", "completed": False}
+        ]
+    },
+    {
+        "id": "proj_08",
+        "project_id": "proj_08",
+        "title": "UI/UX Product Redesign",
+        "category": "IT",
+        "difficulty": "Beginner",
+        "target_careers": ["UI/UX Product Designer"],
+        "description": "Conduct user research and execute a complete mobile & desktop UI redesign with high-fidelity Figma components and user flows.",
+        "skills_covered": ["UI/UX Design", "Figma & Wireframing", "User Research", "Design Systems", "Prototyping"],
+        "estimated_duration": "2-4 weeks",
+        "portfolio_value": 91,
+        "learning_outcomes": [
+            "Conduct user interviews and persona mapping",
+            "Draft low-fidelity wireframes",
+            "Build an atomic design system in Figma",
+            "Create interactive prototypes",
+            "Perform usability testing"
+        ],
+        "technologies": ["Figma", "Whimsical", "UsabilityHub", "Design Systems"],
+        "difficulty_score": 2,
+        "github_required": False,
+        "status": "Not Started",
+        "deliverables": ["Figma design system file", "Interactive prototype link", "Usability test summary"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "User Research & Persona Creation", "completed": False},
+            {"id": "m2", "step": 2, "title": "Wireframing & Structural Layout", "completed": False},
+            {"id": "m3", "step": 3, "title": "Figma Design System Setup", "completed": False},
+            {"id": "m4", "step": 4, "title": "High-Fidelity UI Mockups", "completed": False},
+            {"id": "m5", "step": 5, "title": "Interactive Prototyping", "completed": False},
+            {"id": "m6", "step": 6, "title": "Usability Testing & Handoff", "completed": False}
+        ]
+    },
+    {
+        "id": "proj_09",
+        "project_id": "proj_09",
+        "title": "Financial Risk Analysis Dashboard",
+        "category": "Non-IT",
+        "difficulty": "Intermediate",
+        "target_careers": ["Financial Analyst & Risk Specialist"],
+        "description": "Construct a financial risk assessment model evaluating corporate debt ratio, cash flow forecasting, and portfolio sensitivity.",
+        "skills_covered": ["Financial Modeling", "Accounting Principles", "Excel & Valuation", "Risk Analysis", "Statistics"],
+        "estimated_duration": "3-5 weeks",
+        "portfolio_value": 93,
+        "learning_outcomes": [
+            "Build 3-statement financial models",
+            "Perform DCF valuation & sensitivity tables",
+            "Analyze capital structure risk metrics",
+            "Generate executive investment reports"
+        ],
+        "technologies": ["Excel", "Python", "Financial Modeling", "Power BI"],
+        "difficulty_score": 3,
+        "github_required": False,
+        "status": "Not Started",
+        "deliverables": ["Excel financial model workbook", "Sensitivity analysis deck", "Executive summary sheet"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Historical Financial Data Parsing", "completed": False},
+            {"id": "m2", "step": 2, "title": "3-Statement Model Construction", "completed": False},
+            {"id": "m3", "step": 3, "title": "DCF Valuation & WACC Calculation", "completed": False},
+            {"id": "m4", "step": 4, "title": "Sensitivity & Stress Testing", "completed": False},
+            {"id": "m5", "step": 5, "title": "Executive Risk Summary", "completed": False},
+            {"id": "m6", "step": 6, "title": "Final Presentation Deck", "completed": False}
+        ]
+    },
+    {
+        "id": "proj_10",
+        "project_id": "proj_10",
+        "title": "HR Employee Analytics System",
+        "category": "Non-IT",
+        "difficulty": "Intermediate",
+        "target_careers": ["Human Resources & Talent Manager"],
+        "description": "Design an HR metrics system analyzing turnover rates, hiring efficiency, and identifying key retention risk drivers.",
+        "skills_covered": ["Talent Acquisition", "Employee Relations", "HR Compliance", "Performance Management", "Communication"],
+        "estimated_duration": "3-4 weeks",
+        "portfolio_value": 90,
+        "learning_outcomes": [
+            "Analyze employee engagement & exit surveys",
+            "Calculate attrition rates & cost-per-hire",
+            "Build HR analytics dashboard",
+            "Formulate talent retention strategies"
+        ],
+        "technologies": ["Excel", "Tableau", "HRIS", "Power BI"],
+        "difficulty_score": 2,
+        "github_required": False,
+        "status": "Not Started",
+        "deliverables": ["HR metrics dashboard export", "Attrition driver analysis report", "Policy recommendation brief"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Workforce Dataset Audit", "completed": False},
+            {"id": "m2", "step": 2, "title": "Attrition & Metric Calculations", "completed": False},
+            {"id": "m3", "step": 3, "title": "Retention Factor Identification", "completed": False},
+            {"id": "m4", "step": 4, "title": "Dashboard Visualization Build", "completed": False},
+            {"id": "m5", "step": 5, "title": "HR Policy Recommendation", "completed": False},
+            {"id": "m6", "step": 6, "title": "Presentation to Leadership", "completed": False}
+        ]
+    },
+    {
+        "id": "proj_11",
+        "project_id": "proj_11",
+        "title": "Hospital Operations & Patient Flow Analytics",
+        "category": "Non-IT",
+        "difficulty": "Intermediate",
+        "target_careers": ["Healthcare Operations Administrator"],
+        "description": "Design a clinical workflow and bed capacity management system optimizing patient admissions and regulatory compliance.",
+        "skills_covered": ["Healthcare Management", "Regulatory Compliance", "Facility Budgeting", "Operations Logistics", "Patient Quality Care"],
+        "estimated_duration": "3-5 weeks",
+        "portfolio_value": 92,
+        "learning_outcomes": [
+            "Audit hospital admissions & bed turnaround",
+            "Formulate regulatory compliance checklists",
+            "Build capacity forecasting models",
+            "Optimize patient care logistics"
+        ],
+        "technologies": ["Excel", "Power BI", "Healthcare Operations", "Logistics"],
+        "difficulty_score": 3,
+        "github_required": False,
+        "status": "Not Started",
+        "deliverables": ["Patient flow model deck", "Compliance protocol handbook"],
+        "roadmap": [
+            {"id": "m1", "step": 1, "title": "Clinical Workflow & Admission Audit", "completed": False},
+            {"id": "m2", "step": 2, "title": "Regulatory Compliance Mapping", "completed": False},
+            {"id": "m3", "step": 3, "title": "Capacity & Budgeting Model", "completed": False},
+            {"id": "m4", "step": 4, "title": "Patient Logistics Optimization", "completed": False},
+            {"id": "m5", "step": 5, "title": "Quality Care Metric Dashboard", "completed": False},
+            {"id": "m6", "step": 6, "title": "Final Operations Presentation", "completed": False}
+        ]
     }
 ]
 

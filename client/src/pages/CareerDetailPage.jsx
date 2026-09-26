@@ -303,18 +303,30 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
           {(recItem?.recommended_projects || projects.slice(0, 2)).map((p, pIdx) => (
-            <div key={pIdx} style={{ border: '1px solid #E2E8F0', padding: 16, borderRadius: 12, background: '#FFFFFF' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#172554' }}>{p.title || p.project_name}</span>
-                <span className="glass-badge badge-it">{p.difficulty || 'Intermediate'}</span>
+            <div key={pIdx} style={{ border: '1px solid #E2E8F0', padding: 18, borderRadius: 12, background: '#FFFFFF', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontWeight: 800, fontSize: '1rem', color: '#172554' }}>{p.title || p.project_name}</span>
+                  <span className="glass-badge badge-it">{p.difficulty || 'Intermediate'}</span>
+                </div>
+                <p style={{ fontSize: '0.84rem', color: '#334155', marginBottom: 10, lineHeight: 1.4 }}>{p.description}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {p.skills_covered?.map((sk, idx) => (
+                    <span key={idx} style={{ background: 'rgba(124, 58, 237, 0.08)', color: '#7C3AED', padding: '2px 7px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 600 }}>
+                      {sk}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <p style={{ fontSize: '0.82rem', color: '#334155', marginBottom: 10 }}>{p.description}</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {p.skills_covered?.map((sk, idx) => (
-                  <span key={idx} style={{ background: '#F1F5F9', color: '#475569', padding: '2px 6px', borderRadius: 4, fontSize: '0.72rem' }}>
-                    {sk}
-                  </span>
-                ))}
+
+              <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 10, marginTop: 6 }}>
+                <button
+                  onClick={() => onNavigate ? onNavigate('projects') : null}
+                  className="btn btn-outline"
+                  style={{ width: '100%', padding: '7px', fontSize: '0.82rem', fontWeight: 700 }}
+                >
+                  View Project →
+                </button>
               </div>
             </div>
           ))}

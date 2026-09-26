@@ -259,7 +259,56 @@ export const fetchSampleJobs = async (category = 'all') => {
 };
 
 export const fetchPortfolioProjects = async (category = 'all') => {
-  const response = await apiClient.get('/projects', { params: { category } });
+  const params = {};
+  if (category && category !== 'all') params.category = category;
+  const response = await apiClient.get('/projects', { params });
+  return response.data;
+};
+
+// --- PHASE 8 PORTFOLIO PROJECTS & TRACKING APIS ---
+export const getRecommendedProjects = async (category = 'all') => {
+  const params = {};
+  if (category && category !== 'all') params.category = category;
+  const response = await apiClient.get('/projects/recommended', { params });
+  return response.data;
+};
+
+export const getProjectDetail = async (projectId) => {
+  const response = await apiClient.get(`/projects/${projectId}`);
+  return response.data;
+};
+
+export const getProjectProgress = async (projectId) => {
+  const response = await apiClient.get(`/projects/${projectId}/progress`);
+  return response.data;
+};
+
+export const updateProjectProgress = async (projectId, statusOrPayload, progressPercentage = null) => {
+  let payload = {};
+  if (typeof statusOrPayload === 'object' && statusOrPayload !== null) {
+    payload = statusOrPayload;
+  } else {
+    if (statusOrPayload) payload.status = statusOrPayload;
+    if (progressPercentage !== null && progressPercentage !== undefined) {
+      payload.progress_percentage = parseInt(progressPercentage, 10);
+    }
+  }
+  const response = await apiClient.patch(`/projects/${projectId}/progress`, payload);
+  return response.data;
+};
+
+export const toggleProjectMilestone = async (projectId, milestoneId) => {
+  const response = await apiClient.patch(`/projects/${projectId}/milestones/${milestoneId}`);
+  return response.data;
+};
+
+export const startProject = async (projectId) => {
+  const response = await apiClient.post(`/projects/${projectId}/start`);
+  return response.data;
+};
+
+export const completeProject = async (projectId) => {
+  const response = await apiClient.post(`/projects/${projectId}/complete`);
   return response.data;
 };
 

@@ -11,6 +11,7 @@ import RecommendationsPage from './pages/RecommendationsPage';
 import CareerDetailPage from './pages/CareerDetailPage';
 import JobsPage from './pages/JobsPage';
 import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 import { fetchCurrentUser, getProfile, getAssessmentResult, getSkillAssessmentResult } from './services/api';
 
 import ActionPlanPage from './pages/ActionPlanPage';
@@ -23,6 +24,7 @@ export default function App() {
   const [assessmentResult, setAssessmentResult] = useState(null);
   const [skillAssessmentResult, setSkillAssessmentResult] = useState(null);
   const [selectedCareerId, setSelectedCareerId] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [authNotice, setAuthNotice] = useState(null);
 
@@ -63,7 +65,7 @@ export default function App() {
 
   const handleNavigate = (targetPage) => {
     setAuthNotice(null);
-    const protectedPages = ['dashboard', 'profile', 'careerDiscovery', 'assessment', 'recommendations', 'jobs', 'projects', 'careerDetail', 'actionPlan'];
+    const protectedPages = ['dashboard', 'profile', 'careerDiscovery', 'assessment', 'recommendations', 'jobs', 'projects', 'projectDetail', 'careerDetail', 'actionPlan'];
     
     // Auth Guard
     if (protectedPages.includes(targetPage) && !user) {
@@ -109,6 +111,11 @@ export default function App() {
   const handleSelectCareerDetail = (careerId) => {
     setSelectedCareerId(careerId);
     setActivePage('careerDetail');
+  };
+
+  const handleSelectProjectDetail = (projectId) => {
+    setSelectedProjectId(projectId);
+    setActivePage('projectDetail');
   };
 
   const handleAssessmentSubmitted = async (result) => {
@@ -268,6 +275,16 @@ export default function App() {
           <ProjectsPage 
             activeCategory={activeCategory}
             assessmentResult={assessmentResult}
+            onSelectProject={handleSelectProjectDetail}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {activePage === 'projectDetail' && (
+          <ProjectDetailPage 
+            projectId={selectedProjectId}
+            onBack={() => setActivePage('projects')}
+            onNavigate={handleNavigate}
           />
         )}
       </main>

@@ -472,12 +472,19 @@ export default function ActionPlanPage({ user, onNavigate }) {
                 </div>
 
                 {/* Controls */}
-                <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, color: isCompleted ? '#059669' : isInProgress ? '#D97706' : '#64748B' }}>
                     {proj.status}
                   </span>
 
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button
+                      onClick={() => onNavigate ? onNavigate('projects') : null}
+                      className="btn btn-outline"
+                      style={{ padding: '5px 10px', fontSize: '0.75rem', borderRadius: 6, fontWeight: 700 }}
+                    >
+                      View Project →
+                    </button>
                     <button
                       onClick={() => handleStatusChange(proj.project_id, 'project', 'In Progress')}
                       disabled={isUpdating}

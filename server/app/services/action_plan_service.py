@@ -32,16 +32,25 @@ async def get_or_create_action_plan(
         return existing_doc
 
     # Fetch user data & recommendations
+    user_prog_list = []
     if db.is_connected and db.db is not None:
         profile_doc = await db.db.profiles.find_one({"user_id": user_id}, {"_id": 0})
         disc_doc = await db.db.discovery_results.find_one({"user_id": user_id}, {"_id": 0})
         skill_doc = await db.db.skill_assessment_results.find_one({"user_id": user_id}, {"_id": 0})
         all_projects = await db.db.projects.find({}, {"_id": 0}).to_list(length=100)
+        user_prog_list = await db.db.user_project_progress.find({"user_id": user_id}, {"_id": 0}).to_list(length=100)
     else:
         profile_doc = in_memory_store.get("profiles", {}).get(user_id)
         disc_doc = in_memory_store.get("discovery_results", {}).get(user_id)
         skill_doc = in_memory_store.get("skill_assessment_results", {}).get(user_id)
         all_projects = in_memory_store.get("projects", [])
+        prog_store = in_memory_store.get("user_project_progress", {})
+        user_prog_list = [v for k, v in prog_store.items() if k.startswith(f"{user_id}_")]
+
+    # Build existing progress map from existing_doc and user_project_progress
+    existing_progress = existing_doc.get("progress", {}).copy() if existing_doc else {}
+    for up in user_prog_list:
+        existing_progress[up.get("project_id")] = up.get("status", "Not Started")
 
     rec_res = await calculate_personalized_recommendations(
         user_id=user_id,
@@ -81,9 +90,6 @@ async def get_or_create_action_plan(
             }
     else:
         target_rec = recommendations[0]
-
-    # Existing progress map if rebuilding
-    existing_progress = existing_doc.get("progress", {}) if existing_doc else {}
 
     # 1. Skill Gap Analysis & Learning Roadmap
     skill_gaps: List[Dict[str, Any]] = []
@@ -323,10 +329,14 @@ async def update_action_plan_progress(
                     break
 
     if not item_found:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Item ID '{item_id}' not found in career action plan roadmap."
-        )
+        if item_type.lower() in ["project", "projects"]:
+            action_plan["progress"][item_id] = status_value
+            item_found = True
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Item ID '{item_id}' not found in career action plan roadmap."
+            )
 
     # Recalculate progress metrics
     roadmap = action_plan.get("roadmap", [])

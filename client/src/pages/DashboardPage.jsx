@@ -342,6 +342,191 @@ export default function DashboardPage({ user, profile, assessmentResult, skillAs
         </div>
       </GlassCard>
 
+      {/* Your Portfolio Projects Section (Phase 8 Feature) */}
+      <GlassCard style={{
+        padding: '28px',
+        background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(236, 253, 245, 0.9) 100%)',
+        borderLeft: '6px solid #10B981',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#065F46',
+                padding: '4px 12px',
+                borderRadius: 999,
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}>
+                <FolderGit2 size={14} /> Phase 8 Feature
+              </span>
+              <span style={{
+                background: 'rgba(79, 70, 229, 0.12)',
+                color: '#4F46E5',
+                padding: '4px 12px',
+                borderRadius: 999,
+                fontSize: '0.78rem',
+                fontWeight: 700
+              }}>
+                Personalized Recommendations
+              </span>
+            </div>
+
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#172554', margin: 0 }}>
+              Your Portfolio Projects
+            </h3>
+
+            <p style={{ fontSize: '0.92rem', color: '#334155', marginTop: 6, maxWidth: 650 }}>
+              Build projects that close your biggest skill gaps and build proven proof of work.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{
+              background: '#FFFFFF',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              padding: '12px 20px',
+              borderRadius: 14,
+              textAlign: 'center',
+              minWidth: 140
+            }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
+                Portfolio Readiness
+              </div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10B981' }}>
+                {actionPlan?.readiness_breakdown?.portfolio_ready_pct || 40}%
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
+                Projects: {actionPlan?.recommended_projects?.filter(p => p.status === 'Completed').length || 0} / {actionPlan?.recommended_projects?.length || 3}
+              </div>
+            </div>
+
+            <button
+              onClick={() => onNavigate('projects')}
+              className="btn"
+              style={{
+                background: '#172554',
+                color: '#FFFFFF',
+                padding: '12px 20px',
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <span>View All Projects →</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Portfolio Stats Row */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 14,
+          background: 'rgba(255, 255, 255, 0.8)',
+          padding: '14px 18px',
+          borderRadius: 12,
+          border: '1px solid rgba(16, 185, 129, 0.2)'
+        }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Recommended Projects</span>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554', marginTop: 2 }}>
+              {actionPlan?.recommended_projects?.length || 4}
+            </div>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Projects In Progress</span>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#D97706', marginTop: 2 }}>
+              {actionPlan?.recommended_projects?.filter(p => p.status === 'In Progress').length || 1}
+            </div>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Projects Completed</span>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669', marginTop: 2 }}>
+              {actionPlan?.recommended_projects?.filter(p => p.status === 'Completed').length || 0}
+            </div>
+          </div>
+        </div>
+
+        {/* Top 2 Recommended Projects Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+          {(actionPlan?.recommended_projects || []).slice(0, 2).map((p, idx) => {
+            const isCompleted = p.status === 'Completed';
+            const isInProgress = p.status === 'In Progress';
+            return (
+              <div key={idx} style={{
+                background: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: 12,
+                padding: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: 12
+              }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#172554', margin: 0 }}>
+                      {p.title}
+                    </h4>
+                    <span className="glass-badge badge-it" style={{ fontSize: '0.72rem' }}>{p.difficulty || 'Intermediate'}</span>
+                  </div>
+
+                  <p style={{ fontSize: '0.84rem', color: '#475569', marginTop: 6, lineHeight: 1.4 }}>
+                    {p.description || 'Targeted portfolio proof for career advancement.'}
+                  </p>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                    {p.skills_covered?.map((sk, sIdx) => (
+                      <span key={sIdx} style={{ background: 'rgba(124, 58, 237, 0.08)', color: '#7C3AED', padding: '2px 7px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 600 }}>
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, marginBottom: 4 }}>
+                    <span style={{ color: isCompleted ? '#059669' : isInProgress ? '#D97706' : '#64748B' }}>
+                      Progress: {isCompleted ? '100%' : isInProgress ? '50%' : '0%'}
+                    </span>
+                    <span style={{ color: '#64748B' }}>{p.status || 'Not Started'}</span>
+                  </div>
+                  <div style={{ height: 6, background: '#E2E8F0', borderRadius: 999, overflow: 'hidden', marginBottom: 10 }}>
+                    <div style={{
+                      width: `${isCompleted ? 100 : isInProgress ? 50 : 0}%`,
+                      height: '100%',
+                      background: isCompleted ? '#10B981' : isInProgress ? '#F59E0B' : '#CBD5E1',
+                      borderRadius: 999
+                    }} />
+                  </div>
+
+                  <button
+                    onClick={() => onNavigate('projects')}
+                    className="btn btn-outline"
+                    style={{ width: '100%', padding: '7px', fontSize: '0.82rem', fontWeight: 700 }}
+                  >
+                    {isInProgress ? 'Continue Project →' : isCompleted ? 'View Details ✓' : 'Start Project →'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </GlassCard>
+
       {/* Featured Skill Assessment Section Card */}
       <GlassCard style={{
         padding: '28px',
