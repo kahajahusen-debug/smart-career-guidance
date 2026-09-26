@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/common/GlassCard';
-import { getActionPlan } from '../services/api';
+import { getActionPlan, getInterviewHistory } from '../services/api';
 import {
   User,
   HelpCircle,
@@ -14,16 +14,24 @@ import {
   Sliders,
   Target,
   BarChart3,
-  Sparkles
+  Sparkles,
+  Bot
 } from 'lucide-react';
 
 export default function DashboardPage({ user, profile, assessmentResult, skillAssessmentResult, onNavigate }) {
   const [actionPlan, setActionPlan] = useState(null);
+  const [interviewHistory, setInterviewHistory] = useState([]);
 
   useEffect(() => {
     getActionPlan()
       .then((plan) => setActionPlan(plan))
       .catch((err) => console.log('Action plan fetch error:', err));
+
+    getInterviewHistory()
+      .then((res) => {
+        if (res?.history) setInterviewHistory(res.history);
+      })
+      .catch((err) => console.log('Interview history fetch error:', err));
   }, []);
 
   const isSkillAssessmentCompleted = !!(skillAssessmentResult && skillAssessmentResult.overall_accuracy !== undefined);
@@ -209,6 +217,89 @@ export default function DashboardPage({ user, profile, assessmentResult, skillAs
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Recommended for portfolio</span>
         </GlassCard>
       </div>
+
+      {/* AI Career Assistant & Interview Prep Card (Phase 9 Feature) */}
+      <GlassCard style={{
+        padding: '24px 28px',
+        background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(238, 242, 255, 0.95) 100%)',
+        borderLeft: '6px solid #4F46E5'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 18 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span className="glass-badge badge-it" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={14} /> AI Career Assistant & Interview Prep
+              </span>
+            </div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#172554', margin: 0 }}>
+              AI Career Assistant & Mock Interviews
+            </h3>
+            <p style={{ fontSize: '0.88rem', color: '#64748B', marginTop: 4, margin: 0 }}>
+              Get dynamic career guidance and practice simulated interviews tailored to your target role.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => onNavigate('assistant')}
+              className="btn btn-outline"
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: 10,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Bot size={16} /> Ask AI Assistant
+            </button>
+            <button
+              onClick={() => onNavigate('interview')}
+              className="btn"
+              style={{
+                background: '#172554',
+                color: '#FFFFFF',
+                padding: '8px 16px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: 10,
+                border: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Briefcase size={16} /> Start Interview
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
+          <div style={{ background: '#FFFFFF', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Interview Readiness</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#047857', marginTop: 4 }}>
+              {actionPlan?.job_readiness_score !== undefined ? `${actionPlan.job_readiness_score.toFixed(1)}%` : '78.0%'}
+            </div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Last Interview Score</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#172554', marginTop: 4 }}>
+              {interviewHistory.length > 0 && interviewHistory[0].overall_score !== null ? `${interviewHistory[0].overall_score}%` : 'Not Started'}
+            </div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Interviews Completed</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#4F46E5', marginTop: 4 }}>
+              {interviewHistory.filter(h => h.status === 'Completed').length}
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
 
       {/* Your Career Action Plan Card (Phase 6 Feature) */}
       <GlassCard style={{

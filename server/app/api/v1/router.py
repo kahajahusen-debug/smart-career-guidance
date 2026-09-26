@@ -12,6 +12,8 @@ from app.api.v1.discovery import router as discovery_router
 from app.api.v1.recommendations import router as recommendations_router
 from app.api.v1.action_plan import router as action_plan_router
 from app.api.v1.applications import router as applications_router
+from app.api.v1.assistant import router as assistant_router
+from app.api.v1.interview import router as interview_router
 
 api_v1_router = APIRouter()
 
@@ -25,8 +27,11 @@ api_v1_router.include_router(skill_assessment_router)
 api_v1_router.include_router(recommendations_router)
 api_v1_router.include_router(action_plan_router)
 api_v1_router.include_router(applications_router)
+api_v1_router.include_router(assistant_router)
+api_v1_router.include_router(interview_router)
 api_v1_router.include_router(careers_router, tags=["Career Catalog"])
 api_v1_router.include_router(questions_router, tags=["Assessment Question Bank"])
 api_v1_router.include_router(jobs_router, tags=["Job & Internship Recommendations"])
 api_v1_router.include_router(projects_router, tags=["Portfolio Projects"])
+
 

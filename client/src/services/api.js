@@ -67,14 +67,15 @@ export const updateProfile = async (data) => {
 
 // --- ASSESSMENT & RECOMMENDATION APIS ---
 export const submitAssessment = async (answersMap) => {
-  const response = await apiClient.post('/assessment/submit', { answers: answersMap });
+  const response = await apiClient.post('/skill-assessment/submit', { answers: answersMap });
   return response.data;
 };
 
 export const getAssessmentResult = async () => {
-  const response = await apiClient.get('/assessment/me');
+  const response = await apiClient.get('/skill-assessment/me');
   return response.data;
 };
+
 
 // --- PHASE 5 PERSONALIZED RECOMMENDATION APIS ---
 export const getRecommendations = async (category = 'all') => {
@@ -312,4 +313,56 @@ export const completeProject = async (projectId) => {
   return response.data;
 };
 
+// --- PHASE 9 AI CAREER ASSISTANT & INTERVIEW PREPARATION APIS ---
+export const getAssistantContext = async () => {
+  const response = await apiClient.get('/assistant/context');
+  return response.data;
+};
+
+export const sendAssistantMessage = async (message) => {
+  const response = await apiClient.post('/assistant/chat', { message });
+  return response.data;
+};
+
+export const getAssistantHistory = async () => {
+  const response = await apiClient.get('/assistant/history');
+  return response.data;
+};
+
+export const clearAssistantHistory = async () => {
+  const response = await apiClient.delete('/assistant/history');
+  return response.data;
+};
+
+export const startInterviewSession = async (payload) => {
+  const response = await apiClient.post('/interview/start', payload);
+  return response.data;
+};
+
+export const submitInterviewAnswer = async (sessionId, answer) => {
+  const response = await apiClient.post(`/interview/${sessionId}/answer`, { answer });
+  return response.data;
+};
+
+export const getInterviewSession = async (sessionId) => {
+  const response = await apiClient.get(`/interview/${sessionId}`);
+  return response.data;
+};
+
+export const getInterviewHistory = async () => {
+  const response = await apiClient.get('/interview/history');
+  return response.data;
+};
+
+export const clearInterviewHistory = async () => {
+  const response = await apiClient.delete('/interview/history');
+  return response.data;
+};
+
+export const finishInterviewSession = async (sessionId) => {
+  const response = await apiClient.post(`/interview/${sessionId}/finish`);
+  return response.data;
+};
+
 export default apiClient;
+

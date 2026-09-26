@@ -19,6 +19,8 @@ export default function Navbar({
     { id: 'assessment', label: 'Assessment' },
     { id: 'recommendations', label: 'Recommendations' },
     { id: 'actionPlan', label: 'Action Plan' },
+    { id: 'assistant', label: 'AI Assistant' },
+    { id: 'interview', label: 'Interview Prep' },
     { id: 'careers', label: 'Careers' },
     { id: 'jobs', label: 'Jobs' },
     { id: 'projects', label: 'Projects' },

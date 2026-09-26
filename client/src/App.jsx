@@ -15,6 +15,8 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import { fetchCurrentUser, getProfile, getAssessmentResult, getSkillAssessmentResult } from './services/api';
 
 import ActionPlanPage from './pages/ActionPlanPage';
+import CareerAssistantPage from './pages/CareerAssistantPage';
+import InterviewPreparationPage from './pages/InterviewPreparationPage';
 
 export default function App() {
   const [activePage, setActivePage] = useState('home');
@@ -25,6 +27,8 @@ export default function App() {
   const [skillAssessmentResult, setSkillAssessmentResult] = useState(null);
   const [selectedCareerId, setSelectedCareerId] = useState(null);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [assistantPrompt, setAssistantPrompt] = useState(null);
+  const [interviewPreselectedCareer, setInterviewPreselectedCareer] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [authNotice, setAuthNotice] = useState(null);
 
@@ -44,16 +48,14 @@ export default function App() {
       const userData = await fetchCurrentUser();
       setUser(userData);
       
-      // Load user profile & assessment results in background
-      const [profData, assData, skillData] = await Promise.all([
+      // Load user profile & skill assessment results in background
+      const [profData, skillData] = await Promise.all([
         getProfile().catch(() => null),
-        getAssessmentResult().catch(() => null),
         getSkillAssessmentResult().catch(() => null)
       ]);
 
       if (profData) setProfile(profData);
-      if (assData) setAssessmentResult(assData);
-      if (skillData) setSkillAssessmentResult(skillData);
+      if (skillData && skillData.success !== false) setSkillAssessmentResult(skillData);
     } catch (err) {
       console.log('Session token expired or invalid:', err);
       localStorage.removeItem('auth_token');
@@ -63,9 +65,9 @@ export default function App() {
     }
   };
 
-  const handleNavigate = (targetPage) => {
+  const handleNavigate = (targetPage, options = {}) => {
     setAuthNotice(null);
-    const protectedPages = ['dashboard', 'profile', 'careerDiscovery', 'assessment', 'recommendations', 'jobs', 'projects', 'projectDetail', 'careerDetail', 'actionPlan'];
+    const protectedPages = ['dashboard', 'profile', 'careerDiscovery', 'assessment', 'recommendations', 'jobs', 'projects', 'projectDetail', 'careerDetail', 'actionPlan', 'assistant', 'interview'];
     
     // Auth Guard
     if (protectedPages.includes(targetPage) && !user) {
@@ -73,6 +75,9 @@ export default function App() {
       setActivePage('login');
       return;
     }
+
+    if (options.prompt) setAssistantPrompt(options.prompt);
+    if (options.career) setInterviewPreselectedCareer(options.career);
 
     setActivePage(targetPage);
   };
@@ -82,19 +87,18 @@ export default function App() {
     setUser(userData);
     setAuthNotice(null);
 
-    // Fetch user profile & assessment
+    // Fetch user profile & skill assessment
     try {
-      const [profData, assData, skillData] = await Promise.all([
+      const [profData, skillData] = await Promise.all([
         getProfile().catch(() => null),
-        getAssessmentResult().catch(() => null),
         getSkillAssessmentResult().catch(() => null)
       ]);
       if (profData) setProfile(profData);
-      if (assData) setAssessmentResult(assData);
-      if (skillData) setSkillAssessmentResult(skillData);
+      if (skillData && skillData.success !== false) setSkillAssessmentResult(skillData);
     } catch (e) {
       console.log('Error loading post-login data:', e);
     }
+
 
     setActivePage('dashboard');
   };
@@ -261,6 +265,20 @@ export default function App() {
         {activePage === 'actionPlan' && (
           <ActionPlanPage 
             onNavigate={handleNavigate}
+          />
+        )}
+
+        {activePage === 'assistant' && (
+          <CareerAssistantPage
+            onNavigate={handleNavigate}
+            initialPrompt={assistantPrompt}
+          />
+        )}
+
+        {activePage === 'interview' && (
+          <InterviewPreparationPage
+            onNavigate={handleNavigate}
+            preselectedCareer={interviewPreselectedCareer}
           />
         )}
 

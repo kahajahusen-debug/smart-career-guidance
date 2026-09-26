@@ -11,7 +11,8 @@ import {
   AlertTriangle, 
   FolderGit2, 
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Bot
 } from 'lucide-react';
 
 export default function CareerDetailPage({ careerId, assessmentResult, onBack, onNavigate }) {
@@ -140,6 +141,51 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
             </p>
           </div>
         )}
+
+        {/* Prepare for this Career (Phase 9 Integration) */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={16} color="#FCD34D" /> Prepare for this Career:
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => onNavigate('assistant', { prompt: `What specific skills and portfolio projects should I focus on to become a successful ${activeCareer.title}?` })}
+              className="btn"
+              style={{
+                background: 'rgba(255, 255, 255, 0.18)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                padding: '8px 14px',
+                borderRadius: 8,
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Bot size={15} /> Ask AI Assistant
+            </button>
+            <button
+              onClick={() => onNavigate('interview', { career: activeCareer.title })}
+              className="btn"
+              style={{
+                background: '#FFFFFF',
+                color: '#172554',
+                padding: '8px 14px',
+                borderRadius: 8,
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                border: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Briefcase size={15} /> Practice Interview
+            </button>
+          </div>
+        </div>
 
         {/* Stats Summary Strip */}
         <div style={{ display: 'flex', gap: 24, marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.2)', flexWrap: 'wrap' }}>

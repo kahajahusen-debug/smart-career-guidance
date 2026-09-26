@@ -37,7 +37,14 @@ def run_phase4_verification_tests():
         headers = {"Authorization": f"Bearer {token}"}
         print(f"[OK] Test candidate created ({email})")
 
+        # 3a. Test GET /api/v1/skill-assessment/me prior to assessment submission (returns 200 OK with completed=False)
+        res_me_init = client.get("/api/v1/skill-assessment/me", headers=headers)
+        assert res_me_init.status_code == 200, f"Expected 200 for uncompleted assessment, got {res_me_init.status_code}"
+        assert res_me_init.json().get("completed") is False
+        print("[OK] GET /api/v1/skill-assessment/me prior to submission verified (200 OK, completed=False)")
+
         # 3b. Test Submission Input Validations
+
         # Empty submission
         res_empty = client.post("/api/v1/skill-assessment/submit", json={"answers": {}}, headers=headers)
         assert res_empty.status_code == 400

@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from app.core.database import db, in_memory_store
 from app.core.security import get_current_user, get_optional_user
 from app.models.assessment import (
@@ -90,7 +91,7 @@ async def submit_assessment(
 
     return result_response
 
-@router.get("/me", response_model=AssessmentResultResponse, summary="Get latest assessment results and recommendations for logged-in user")
+@router.get("/me", summary="Get latest assessment results and recommendations for logged-in user")
 async def get_my_assessment_result(current_user: dict = Depends(get_current_user)):
     user_id = current_user["id"]
 
@@ -100,12 +101,16 @@ async def get_my_assessment_result(current_user: dict = Depends(get_current_user
         result_doc = in_memory_store.get("assessment_results", {}).get(user_id)
 
     if not result_doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No assessment results found. Please complete the assessment first."
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": False,
+                "completed": False,
+                "message": "No assessment results found. Please complete the assessment first."
+            }
         )
 
-    return AssessmentResultResponse(**result_doc)
+    return result_doc
 
 
 # --- PHASE 4 ADVANCED SKILL ASSESSMENT ENGINE ENDPOINTS ---
@@ -194,7 +199,7 @@ async def submit_skill_assessment(
 
     return SkillAssessmentResultResponse(**eval_result)
 
-@skill_assessment_router.get("/me", response_model=SkillAssessmentResultResponse, summary="Get latest Skill Assessment result for current user")
+@skill_assessment_router.get("/me", summary="Get latest Skill Assessment result for current user")
 async def get_my_skill_assessment_result(current_user: dict = Depends(get_current_user)):
     user_id = current_user["id"]
 
@@ -204,9 +209,14 @@ async def get_my_skill_assessment_result(current_user: dict = Depends(get_curren
         result_doc = in_memory_store.get("skill_assessment_results", {}).get(user_id)
 
     if not result_doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No skill assessment results found. Please complete the skill assessment first."
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": False,
+                "completed": False,
+                "message": "No skill assessment results found. Please complete the skill assessment first."
+            }
         )
 
-    return SkillAssessmentResultResponse(**result_doc)
+    return result_doc
+
