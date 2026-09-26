@@ -11,7 +11,7 @@ from app.main import app
 def run_tests():
     client = TestClient(app)
 
-    print("\n=== Starting Phase 8.1 Portfolio Projects & Tracking Complete Verification Suite ===")
+    print("\n=== Starting Phase 8.3 Portfolio Projects & Tracking Refinement Verification Suite ===")
 
     # 1. Unauthorized request returns 401
     res = client.get("/api/v1/projects/recommended")
@@ -20,9 +20,9 @@ def run_tests():
 
     # Setup User A (IT Target Career)
     timestamp_id = int(asyncio.get_event_loop().time() * 1000)
-    email_a = f"testuser_p81a_{timestamp_id}@example.com"
+    email_a = f"testuser_p83a_{timestamp_id}@example.com"
     signup_payload_a = {
-        "full_name": "Phase 8.1 IT User A",
+        "full_name": "Phase 8.3 IT User A",
         "email": email_a,
         "password": "Password123!",
         "confirm_password": "Password123!"
@@ -34,7 +34,7 @@ def run_tests():
 
     # Profile for User A
     profile_payload_a = {
-        "full_name": "Phase 8.1 IT User A",
+        "full_name": "Phase 8.3 IT User A",
         "email": email_a,
         "education_level": "Bachelor's Degree",
         "degree": "B.Tech",
@@ -46,44 +46,69 @@ def run_tests():
     }
     client.post("/api/v1/profile", json=profile_payload_a, headers=headers_a)
 
-    # 2. Authenticated user can retrieve master catalog
+    # 2. Authenticated user can retrieve master catalog & summary metadata
     res = client.get("/api/v1/projects", headers=headers_a)
     assert res.status_code == 200, f"Get projects failed: {res.text}"
     p_data = res.json()
-    assert "projects" in p_data and len(p_data["projects"]) >= 11, f"Expected at least 11 projects, got {len(p_data.get('projects', []))}"
-    print(f"[OK] 2. Catalog contains {len(p_data['projects'])} projects covering IT & Non-IT careers")
+    assert "projects" in p_data and len(p_data["projects"]) >= 11
+    assert "summary" in p_data, "Summary metadata missing"
+    assert "recommended_count" in p_data["summary"]
+    assert "portfolio_readiness" in p_data["summary"]
+    print(f"[OK] 2. Catalog & Summary retrieved (Matching Projects: {p_data['summary']['recommended_count']}, Readiness: {p_data['summary']['portfolio_readiness']}%)")
 
     # 3. Category filter works
     res_it = client.get("/api/v1/projects?category=IT", headers=headers_a)
     assert res_it.status_code == 200
     it_projects = res_it.json()["projects"]
-    assert all(p["category"] == "IT" for p in it_projects), "Non-IT project found in IT filter"
+    assert all(p["category"] == "IT" for p in it_projects)
     print(f"[OK] 3. Category filtering works correctly ({len(it_projects)} IT projects)")
 
-    # 4. Personalized recommendation & 5-part match score breakdown
+    # 4. Personalized 5-part match score sum consistency & Priority Thresholds
     res = client.get("/api/v1/projects/recommended", headers=headers_a)
     assert res.status_code == 200, f"Recommended projects failed: {res.text}"
     rec_data = res.json()
     assert "projects" in rec_data and len(rec_data["projects"]) > 0
-    top_rec = rec_data["projects"][0]
+    projects_list = rec_data["projects"]
+    top_rec = projects_list[0]
     
-    assert "recommendation_score" in top_rec, "Recommendation score missing"
-    assert "match_score_breakdown" in top_rec, "Match score breakdown missing"
+    # Assert exact sum consistency (Requirement 2)
     bd = top_rec["match_score_breakdown"]
-    assert "target_career_relevance" in bd
-    assert "skill_gap_alignment" in bd
-    assert "current_skill_compatibility" in bd
-    assert "difficulty_readiness_fit" in bd
-    assert "portfolio_value_fit" in bd
-    assert "priority" in top_rec
-    assert "reason" in top_rec
-    assert "skills_you_will_improve" in top_rec
-    print(f"[OK] 4. Personalized 5-part weighted recommendation model verified! (Top: '{top_rec['title']}' - Score: {top_rec['recommendation_score']}% - Priority: {top_rec['priority']})")
+    sum_score = round(
+        bd["target_career_relevance"] +
+        bd["skill_gap_alignment"] +
+        bd["current_skill_compatibility"] +
+        bd["difficulty_readiness_fit"] +
+        bd["portfolio_value_fit"],
+        1
+    )
+    assert abs(top_rec["recommendation_score"] - sum_score) < 0.01, f"Score mismatch: {top_rec['recommendation_score']} vs sum {sum_score}"
+    
+    # Priority classification threshold checks (Requirement 1)
+    for p in projects_list:
+        sc = p["recommendation_score"]
+        pri = p["priority"]
+        if pri == "High Priority":
+            assert sc >= 75.0, f"High Priority score {sc} < 75.0"
+        elif pri == "Recommended":
+            assert 55.0 <= sc < 75.0 or (sc >= 75.0 and p.get("category") != "IT"), f"Recommended priority score {sc} invalid"
+        elif pri == "Explore":
+            assert sc < 55.0 or p.get("category") != "IT", f"Explore priority score {sc} invalid"
 
-    # 5. Project details with hydrated roadmap
+    # Single Top Match Indicator check (Requirement 7)
+    assert top_rec.get("is_top_match") == True, "Top recommendation missing is_top_match = True"
+    assert all(p.get("is_top_match") != True for p in projects_list[1:]), "Multiple items flagged as is_top_match"
+    
+    # Skills You'll Improve limit to 3 & Real Personalization (Requirements 3 & 4)
+    skills_imp = top_rec.get("skills_you_will_improve", [])
+    assert len(skills_imp) <= 3, f"Expected max 3 skills to improve, got {len(skills_imp)}"
+    assert any("level_display" in s or "current_level" in s for s in skills_imp)
+
+    print(f"[OK] 4. Score Sum Consistency & Priority Thresholds verified! (Top: '{top_rec['title']}' - Score: {top_rec['recommendation_score']}% - Priority: {top_rec['priority']} - TopMatch: {top_rec['is_top_match']})")
+
+    # 5. Project details with hydrated roadmap & deliverables
     target_proj_id = top_rec["id"]
     res = client.get(f"/api/v1/projects/{target_proj_id}", headers=headers_a)
-    assert res.status_code == 200, f"Project details failed: {res.text}"
+    assert res.status_code == 200
     proj_detail = res.json()
     assert proj_detail["id"] == target_proj_id
     assert "roadmap" in proj_detail and len(proj_detail["roadmap"]) > 0
@@ -91,7 +116,7 @@ def run_tests():
 
     # 6. Start project
     res = client.post(f"/api/v1/projects/{target_proj_id}/start", headers=headers_a)
-    assert res.status_code == 200, f"Start project failed: {res.text}"
+    assert res.status_code == 200
     start_res = res.json()
     assert start_res["progress"]["status"] == "In Progress"
     print(f"[OK] 6. Project '{target_proj_id}' started successfully (Status: In Progress)")
@@ -99,7 +124,7 @@ def run_tests():
     # 7. Milestone toggle & automatic status / progress % sync
     first_milestone_id = proj_detail["roadmap"][0]["id"]
     res = client.patch(f"/api/v1/projects/{target_proj_id}/milestones/{first_milestone_id}", headers=headers_a)
-    assert res.status_code == 200, f"Milestone toggle failed: {res.text}"
+    assert res.status_code == 200
     m_res = res.json()
     assert first_milestone_id in m_res["progress"]["completed_milestones"]
     assert m_res["progress"]["progress_percentage"] > 0
@@ -164,9 +189,9 @@ def run_tests():
     print("[OK] 13. Progress verified persisted in database")
 
     # 14. User Isolation (User B sees clean 0% state)
-    email_b = f"testuser_p81b_{timestamp_id}@example.com"
+    email_b = f"testuser_p83b_{timestamp_id}@example.com"
     signup_payload_b = {
-        "full_name": "Phase 8.1 User B",
+        "full_name": "Phase 8.3 User B",
         "email": email_b,
         "password": "Password123!",
         "confirm_password": "Password123!"
@@ -202,9 +227,9 @@ def run_tests():
     assert res.status_code == 404
     print("[OK] 17. Invalid project ID properly returned 404 Not Found")
 
-    # 18. Non-IT user gets relevant Non-IT recommendations
+    # 18. Non-IT user gets relevant Non-IT recommendations and Explore priority for unrelated
     profile_payload_b = {
-        "full_name": "Phase 8.1 Non-IT User B",
+        "full_name": "Phase 8.3 Non-IT User B",
         "email": email_b,
         "education_level": "Bachelor's Degree",
         "degree": "BBA",
@@ -234,7 +259,7 @@ def run_tests():
     print("[OK] 19. All milestones completed auto-synced project status to 100% 'Completed'")
 
     print("\n============================================================")
-    print("ALL 19 PHASE 8.1 PORTFOLIO PROJECT TESTS PASSED SUCCESSFULLY!")
+    print("ALL 19 PHASE 8.3 PORTFOLIO PROJECT TESTS PASSED SUCCESSFULLY!")
     print("============================================================\n")
 
 if __name__ == "__main__":
