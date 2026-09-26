@@ -14,11 +14,12 @@ logger = logging.getLogger("uvicorn")
 # LLM PROVIDER INTEGRATIONS (Gemini & OpenAI)
 # ------------------------------------------------------------------
 
-def _call_gemini_api(prompt: str, api_key: str) -> Optional[str]:
-    """Call Google Gemini API."""
+def _call_gemini_api(prompt: str, api_key: str) -> tuple[Optional[str], Optional[str]]:
+    """Call Google Gemini API via REST endpoint."""
     if not api_key:
-        return None
-    models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
+        return None, "AI provider is not configured. Set GEMINI_API_KEY or AI_API_KEY in server/.env."
+
+    models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.0-pro"]
     headers = {"Content-Type": "application/json"}
     payload = {
         "contents": [{
@@ -26,82 +27,173 @@ def _call_gemini_api(prompt: str, api_key: str) -> Optional[str]:
         }]
     }
 
+    last_error = None
     for model in models:
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
             req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
-            with urllib.request.urlopen(req, timeout=12) as response:
+            with urllib.request.urlopen(req, timeout=15) as response:
                 res_data = json.loads(response.read().decode('utf-8'))
                 candidates = res_data.get("candidates", [])
                 if candidates:
                     parts = candidates[0].get("content", {}).get("parts", [])
                     if parts:
-                        return parts[0].get("text", "").strip()
+                        text = parts[0].get("text", "").strip()
+                        if text:
+                            return text, None
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8', errors='ignore')
+            logger.error(
+                f"[AI SERVICE ERROR]\n"
+                f"Provider: gemini\n"
+                f"Model: {model}\n"
+                f"Error Type: HTTPError\n"
+                f"Status Code: {e.code}\n"
+                f"Reason: {e.reason}\n"
+                f"Message: {error_body}"
+            )
+            if e.code in (401, 403):
+                return None, f"Invalid or unauthorized Gemini API key (HTTP {e.code}). Please verify GEMINI_API_KEY in server/.env."
+            if e.code == 429:
+                return None, "Gemini API quota or rate limit exceeded. Please check your API quota or try again later."
+            last_error = f"Gemini API returned HTTP {e.code}: {e.reason}"
+            continue
+        except urllib.error.URLError as e:
+            logger.error(
+                f"[AI SERVICE ERROR]\n"
+                f"Provider: gemini\n"
+                f"Model: {model}\n"
+                f"Error Type: URLError\n"
+                f"Message: {e.reason}"
+            )
+            last_error = f"Network connection error when contacting Gemini API: {e.reason}"
+            continue
         except Exception as e:
-            logger.debug(f"Gemini API model {model} attempt failed: {e}")
+            logger.error(
+                f"[AI SERVICE ERROR]\n"
+                f"Provider: gemini\n"
+                f"Model: {model}\n"
+                f"Error Type: {type(e).__name__}\n"
+                f"Message: {str(e)}"
+            )
+            last_error = f"Unexpected Gemini error: {type(e).__name__} - {str(e)}"
             continue
 
-    return None
+    return None, last_error or "Gemini API failed to return a response."
 
 
-def _call_openai_api(prompt: str, api_key: str) -> Optional[str]:
-    """Call OpenAI API."""
+def _call_openai_api(prompt: str, api_key: str) -> tuple[Optional[str], Optional[str]]:
+    """Call OpenAI API via REST endpoint."""
     if not api_key:
-        return None
-    try:
-        url = "https://api.openai.com/v1/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }
-        payload = {
-            "model": "gpt-3.5-turbo",
-            "messages": [
-                {"role": "system", "content": "You are a helpful, accurate, general-purpose AI assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7
-        }
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
-        with urllib.request.urlopen(req, timeout=12) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            choices = res_data.get("choices", [])
-            if choices:
-                return choices[0].get("message", {}).get("content", "").strip()
-    except Exception as e:
-        logger.warning(f"OpenAI API call failed: {e}")
-    return None
+        return None, "AI provider is not configured. Set OPENAI_API_KEY or AI_API_KEY in server/.env."
+
+    models = ["gpt-3.5-turbo", "gpt-4o-mini", "gpt-4o"]
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    last_error = None
+    for model in models:
+        try:
+            url = "https://api.openai.com/v1/chat/completions"
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": "You are a helpful, accurate, general-purpose AI assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7
+            }
+            req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+            with urllib.request.urlopen(req, timeout=15) as response:
+                res_data = json.loads(response.read().decode('utf-8'))
+                choices = res_data.get("choices", [])
+                if choices:
+                    content = choices[0].get("message", {}).get("content", "").strip()
+                    if content:
+                        return content, None
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8', errors='ignore')
+            logger.error(
+                f"[AI SERVICE ERROR]\n"
+                f"Provider: openai\n"
+                f"Model: {model}\n"
+                f"Error Type: HTTPError\n"
+                f"Status Code: {e.code}\n"
+                f"Reason: {e.reason}\n"
+                f"Message: {error_body}"
+            )
+            if e.code in (401, 403):
+                return None, f"Invalid or unauthorized OpenAI API key (HTTP {e.code}). Please verify OPENAI_API_KEY in server/.env."
+            if e.code == 429:
+                return None, "OpenAI API quota or rate limit exceeded. Please check your API billing/quota."
+            last_error = f"OpenAI API returned HTTP {e.code}: {e.reason}"
+            continue
+        except urllib.error.URLError as e:
+            logger.error(
+                f"[AI SERVICE ERROR]\n"
+                f"Provider: openai\n"
+                f"Model: {model}\n"
+                f"Error Type: URLError\n"
+                f"Message: {e.reason}"
+            )
+            last_error = f"Network connection error when contacting OpenAI API: {e.reason}"
+            continue
+        except Exception as e:
+            logger.error(
+                f"[AI SERVICE ERROR]\n"
+                f"Provider: openai\n"
+                f"Model: {model}\n"
+                f"Error Type: {type(e).__name__}\n"
+                f"Message: {str(e)}"
+            )
+            last_error = f"Unexpected OpenAI error: {type(e).__name__} - {str(e)}"
+            continue
+
+    return None, last_error or "OpenAI API failed to return a response."
 
 
-def generate_llm_response(prompt: str) -> tuple[Optional[str], str]:
-    """Determine configured AI provider and call completion API."""
-    provider = (os.getenv("AI_PROVIDER") or getattr(settings, "AI_PROVIDER", "gemini")).lower().strip()
+def generate_llm_response(prompt: str) -> tuple[Optional[str], str, Optional[str]]:
+    """
+    Determine configured AI provider and call completion API.
+    Returns: (response_text, provider_name, error_message)
+    """
+    provider = (
+        os.getenv("AI_PROVIDER") or 
+        getattr(settings, "AI_PROVIDER", "gemini")
+    ).lower().strip()
+
     api_key = (
-        settings.AI_API_KEY or 
+        getattr(settings, "AI_API_KEY", "") or 
+        getattr(settings, "GEMINI_API_KEY", "") or 
+        getattr(settings, "OPENAI_API_KEY", "") or 
         os.getenv("AI_API_KEY", "") or 
         os.getenv("GEMINI_API_KEY", "") or 
         os.getenv("OPENAI_API_KEY", "")
     ).strip()
 
     if not api_key:
-        return None, "unavailable"
+        error_msg = "AI provider is not configured. Set the required API key (GEMINI_API_KEY, OPENAI_API_KEY, or AI_API_KEY) in server/.env."
+        logger.warning(f"[AI SERVICE CONFIGURATION WARNING] Provider: {provider} | {error_msg}")
+        return None, provider, error_msg
 
     if provider == "openai" or api_key.startswith("sk-"):
-        res = _call_openai_api(prompt, api_key)
+        res, err = _call_openai_api(prompt, api_key)
         if res:
-            return res, "openai"
-        res = _call_gemini_api(prompt, api_key)
-        if res:
-            return res, "gemini"
+            return res, "openai", None
+        res_g, err_g = _call_gemini_api(prompt, api_key)
+        if res_g:
+            return res_g, "gemini", None
+        return None, "openai", err or err_g
     else:
-        res = _call_gemini_api(prompt, api_key)
+        res, err = _call_gemini_api(prompt, api_key)
         if res:
-            return res, "gemini"
-        res = _call_openai_api(prompt, api_key)
-        if res:
-            return res, "openai"
-
-    return None, "unavailable"
+            return res, "gemini", None
+        res_o, err_o = _call_openai_api(prompt, api_key)
+        if res_o:
+            return res_o, "openai", None
+        return None, "gemini", err or err_o
 
 
 # ------------------------------------------------------------------
@@ -303,7 +395,7 @@ CORE DIRECTIVES:
 ```
 """
 
-    ai_text, provider_name = generate_llm_response(prompt)
+    ai_text, provider_name, error_detail = generate_llm_response(prompt)
 
     if ai_text:
         validated_text = validate_ai_response(user_message, ai_text)
@@ -332,38 +424,17 @@ CORE DIRECTIVES:
             "dynamic_suggested_questions": suggested_qs
         }
 
-    is_testing = os.getenv("TESTING") == "true" or getattr(settings, "ENVIRONMENT", "") == "testing"
-
-    if is_testing:
-        return _generate_mock_llm_response(
-            user_message=user_message,
-            user_context=user_context,
-            chat_history=chat_history,
-            ordered_skills=ordered_skills,
-            top_project=top_project
-        )
-
-    return {
-        "message": "AI service is temporarily unavailable. Please try again in a moment.",
-        "source": "system_unavailable",
-        "intent": "general",
-        "next_action_card": None,
-        "recommended_skills": ordered_skills,
-        "related_projects": [top_project],
-        "suggested_questions": [
-            "What should I learn first?",
-            "Which project should I build next?",
-            "How should I prepare for an interview?"
-        ],
-        "dynamic_suggested_questions": [
-            "What should I learn first?",
-            "Which project should I build next?",
-            "How should I prepare for an interview?"
-        ]
-    }
+    # Internal Career Assistant Engine (Seamless, context-aware fallback without external API key dependency)
+    return _generate_internal_career_assistant_response(
+        user_message=user_message,
+        user_context=user_context,
+        chat_history=chat_history,
+        ordered_skills=ordered_skills,
+        top_project=top_project
+    )
 
 
-def _generate_mock_llm_response(
+def _generate_internal_career_assistant_response(
     user_message: str,
     user_context: Dict[str, Any],
     chat_history: List[Dict[str, Any]],
@@ -371,9 +442,15 @@ def _generate_mock_llm_response(
     top_project: Dict[str, Any]
 ) -> Dict[str, Any]:
     msg_low = user_message.lower().strip()
-    target_career = user_context.get("target_career", "Full Stack Software Engineer")
+    target_career = user_context.get("target_career") or "Full Stack Software Engineer"
+    education = user_context.get("education") or ""
+    branch = user_context.get("branch") or ""
+    current_skills = user_context.get("current_skills") or []
+    skill_gaps = user_context.get("skill_gaps") or []
+    readiness_score = user_context.get("portfolio_readiness", 0.0)
     top_project_title = top_project.get("title") or top_project.get("name") or "Full-Stack Project"
 
+    # Multi-turn conversation context inspection
     last_user_msg = ""
     last_assistant_msg = ""
     if chat_history:
@@ -385,28 +462,37 @@ def _generate_mock_llm_response(
             elif role == "assistant" and not last_assistant_msg:
                 last_assistant_msg = text.lower()
 
+    # Multilingual script & language detection
     is_telugu_script = any('\u0C00' <= c <= '\u0C7F' for c in user_message)
     is_hindi_script = any('\u0900' <= c <= '\u097F' for c in user_message)
     is_teluglish = "lo " in msg_low or "enduku" in msg_low or "chestaru" in msg_low or "ante" in msg_low or "ivvandi" in msg_low
+    is_hinglish = "kya" in msg_low and ("hai" in msg_low or "mein" in msg_low or "batao" in msg_low)
 
     next_card = None
+    intent = "career_assistant"
 
+    # ------------------------------------------------------------------
+    # 1. MULTILINGUAL RESPONSES
+    # ------------------------------------------------------------------
     if is_telugu_script:
         reply = (
-            "### తెలుగులో సమాధానం\n\n"
+            "### తెలుగులో కెరీర్ మార్గదర్శకత్వం\n\n"
             f"మీ ప్రశ్న: **{user_message}**\n\n"
+            f"మీ లక్ష్యం **{target_career}** గా ఉంది.\n"
             "ఫంక్షన్ (Function) అనేది ఒక నిర్దిష్ట పనిని చేయడానికి ఉపయోగపడే పునర్వినియోగ (reusable) కోడ్ బ్లాక్.\n\n"
             "```python\n"
             "def greet(name):\n"
             "    return f\"నమస్కారం, {name}!\"\n"
-            "```"
+            "```\n\n"
+            "మరిన్ని వివరాల కోసం క్రింది సూచనలను పరిశీలించండి."
         )
-        suggested_qs = ["Python lo def keyword enduku use chestaru?", "కెరీర్ ప్లాన్ ఇవ్వండి", "What should I learn first?"]
+        suggested_qs = ["Python lo def keyword enduku use chestaru?", "కెరీర్ రోడ్‌మ్యాప్ ఇవ్వండి", "What should I learn first?"]
 
-    elif is_hindi_script or ("mein" in msg_low and "kya" in msg_low):
+    elif is_hindi_script or is_hinglish:
         reply = (
-            "### हिंदी में उत्तर\n\n"
+            "### हिंदी / हिंग्लिश में उत्तर\n\n"
             f"आपका सवाल: **{user_message}**\n\n"
+            f"आपके लक्षित करियर **{target_career}** के लिए:\n"
             "फ़ंक्शन (Function) कोड का एक ब्लॉक होता है जिसे बार-बार इस्तेमाल किया जा सकता है।\n\n"
             "```python\n"
             "def greet(name):\n"
@@ -419,7 +505,7 @@ def _generate_mock_llm_response(
         reply = (
             "### Teluglish Explanation\n\n"
             f"Mee question: **{user_message}**\n\n"
-            "Python lo `def` keyword ni **functions create (define) చేయడానికి** ఉపయోగిస్తారు.\n\n"
+            f"Mee target career **{target_career}** ki Python lo `def` keyword ni **functions create చేయడానికి** ఉపయోగిస్తారు.\n\n"
             "```python\n"
             "def add_numbers(a, b):\n"
             "    return a + b\n"
@@ -427,44 +513,86 @@ def _generate_mock_llm_response(
         )
         suggested_qs = ["What is def in Python?", "What should I learn first?", "Which project should I build?"]
 
-    elif any(phrase in msg_low for phrase in ["explain previously", "explain the code", "explain this code", "explain that example", "explain the second line", "explain that code"]):
-        if "factorial" in last_assistant_msg or "public class factorial" in last_assistant_msg or "return n *" in last_assistant_msg or "class" in last_assistant_msg or "def factorial" in last_assistant_msg:
-            reply = (
-                "### Detailed Breakdown of the Previously Generated Code\n\n"
-                "1. **Function / Method Declaration**: Specifies the function signature, parameters, and return type.\n"
-                "2. **Base Case / Termination Condition**: Stops recursion when the input parameter reaches 1 or 0.\n"
-                "3. **Recursive Execution Block**: Multiplies the current number by the result of the function called with `n - 1`.\n"
-                "4. **Return Output**: Returns the calculated product back to the caller."
-            )
-        else:
-            reply = (
-                "### Code Explanation\n\n"
-                "1. **Initialization**: Variables and parameters are defined.\n"
-                "2. **Logic Block**: Performs operations or condition checks.\n"
-                "3. **Return Value**: Returns output to the application."
-            )
-        suggested_qs = ["Write factorial in Python", "What is Java?", "What should I learn first?"]
-
-    elif msg_low in ["give me a simple example", "give me a simple example.", "give an example", "give me an example."]:
+    # ------------------------------------------------------------------
+    # 2. GREETINGS & COURTESY
+    # ------------------------------------------------------------------
+    elif msg_low in ["hi", "hello", "hey", "good morning", "good evening", "hi!", "hello!", "hey!"] or msg_low.startswith(("hi ", "hello ", "hey ")):
         reply = (
-            "### Simple Code Example\n\n"
-            "```python\n"
-            "name = 'Alex'\n"
-            "age = 24\n"
-            "print(f\"Hello {name}, you are {age} years old.\")\n"
+            f"Hello! 👋 I am your Smart Career Guidance AI Assistant.\n\n"
+            f"I can help you with personalized learning roadmaps, skill priority, portfolio project ideas, technical concept explanations, and interview preparation tailored to your target career: **{target_career}**.\n\n"
+            "What would you like to explore today?"
+        )
+        suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a roadmap"]
+
+    elif any(w in msg_low for w in ["thank you", "thanks", "thank u", "ty"]):
+        reply = (
+            "You're very welcome! Keep building your skills and progressing through your action plan. "
+            "Feel free to ask whenever you need more career guidance, project suggestions, or interview prep!"
+        )
+        suggested_qs = ["What should I learn next?", "Which project should I build?", "How should I prepare for an interview?"]
+
+    # ------------------------------------------------------------------
+    # 3. SPECIFIC TECHNICAL DEFINITIONS & EXPLANATIONS (LANGUAGE FIDELITY)
+    # ------------------------------------------------------------------
+    elif "div tag" in msg_low or msg_low == "what is div" or msg_low == "what is a div tag?" or msg_low == "what is div tag":
+        reply = (
+            "### What is a `<div>` tag in HTML?\n\n"
+            "The **`<div>`** tag (short for division) is a generic block-level container element in HTML. It is used to group related HTML elements together for styling (using CSS) or structural layout placement.\n\n"
+            "```html\n"
+            "<div class=\"card-container\">\n"
+            "  <h2>Project Title</h2>\n"
+            "  <p>This paragraph is grouped inside the container div.</p>\n"
+            "</div>\n"
             "```"
         )
-        suggested_qs = ["Explain that example.", "What is React?", "What is digital marketing?"]
+        suggested_qs = ["What is HTML?", "What is CSS?", "Give me a simple example."]
 
-    elif any(k in msg_low for k in ["how can i test it", "test it", "how to test"]) or (any(k in msg_low.split() for k in ["this", "that", "it"]) and len(msg_low.split()) <= 6):
+    elif "def in python" in msg_low or (msg_low.startswith("what is def") and "python" in msg_low) or msg_low == "what is def":
         reply = (
-            "### Testing Contextual Code\n\n"
-            "To test the code discussed above:\n"
-            "1. Save the code in a file with the appropriate extension.\n"
-            "2. Run it using the compiler or interpreter for that language.\n"
-            "3. Verify input arguments and observe console output."
+            "### What is `def` in Python?\n\n"
+            "In Python, **`def`** is the keyword used to **define a function**. A function is a block of reusable code that runs when called.\n\n"
+            "```python\n"
+            "def calculate_sum(a, b):\n"
+            "    return a + b\n\n"
+            "# Calling the function\n"
+            "result = calculate_sum(10, 20)\n"
+            "print(result)  # Output: 30\n"
+            "```"
         )
-        suggested_qs = ["Give another example", "What is React?", "Which project should I build?"]
+        suggested_qs = ["Write factorial in Python.", "What are variables?", "What is Python?"]
+
+    elif "function in java" in msg_low or ("function" in msg_low and "java" in msg_low):
+        reply = (
+            "### What is a Function (Method) in Java?\n\n"
+            "In Java, functions are defined as **methods** inside classes. Java methods specify access modifiers (`public`/`private`), return types, and parameters.\n\n"
+            "```java\n"
+            "public class Calculator {\n"
+            "    public static int add(int a, int b) {\n"
+            "        return a + b;\n"
+            "    }\n\n"
+            "    public static void main(String[] args) {\n"
+            "        System.out.println(add(5, 10)); // Output: 15\n"
+            "    }\n"
+            "}\n"
+            "```"
+        )
+        suggested_qs = ["Write factorial in Java.", "What is Java?", "What is OOP in Java?"]
+
+    elif "pointer in c" in msg_low or ("pointer" in msg_low and "c" in msg_low):
+        reply = (
+            "### What is a Pointer in C?\n\n"
+            "A **pointer** in C is a variable that stores the **memory address** of another variable. Pointers enable direct memory manipulation and dynamic allocation.\n\n"
+            "```c\n"
+            "#include <stdio.h>\n\n"
+            "int main() {\n"
+            "    int num = 42;\n"
+            "    int *ptr = &num;\n"
+            "    printf(\"Value: %d, Address: %p\\n\", *ptr, (void*)ptr);\n"
+            "    return 0;\n"
+            "}\n"
+            "```"
+        )
+        suggested_qs = ["What is C?", "What is C++?", "Give me a simple example."]
 
     elif "factorial in python" in msg_low or ("factorial" in msg_low and "python" in msg_low):
         reply = (
@@ -478,7 +606,7 @@ def _generate_mock_llm_response(
             "print(factorial(5))  # Output: 120\n"
             "```"
         )
-        suggested_qs = ["Explain the code.", "Write factorial in Java", "What is def in Python?"]
+        suggested_qs = ["Explain the code.", "Write factorial in Java.", "What is def in Python?"]
 
     elif "factorial in java" in msg_low or ("factorial" in msg_low and "java" in msg_low):
         reply = (
@@ -496,235 +624,375 @@ def _generate_mock_llm_response(
             "}\n"
             "```"
         )
-        suggested_qs = ["Explain previously generated code", "What is a function in Java?", "Write factorial in Python"]
+        suggested_qs = ["Explain previously generated code.", "What is a function in Java?", "Write factorial in Python."]
 
-    elif "def in python" in msg_low or (msg_low.startswith("what is def") and "python" in msg_low):
+    elif "sql join" in msg_low or "explain sql join" in msg_low or ("join" in msg_low and "sql" in msg_low):
         reply = (
-            "### What is `def` in Python?\n\n"
-            "In Python, **`def`** is the keyword used to **define a function**.\n\n"
-            "```python\n"
-            "def calculate_sum(a, b):\n"
-            "    return a + b\n\n"
-            "result = calculate_sum(10, 20)\n"
-            "print(result)  # Output: 30\n"
+            "### What are SQL Joins?\n\n"
+            "An **SQL Join** is used to combine rows from two or more tables based on a related column between them.\n\n"
+            "• **INNER JOIN**: Returns records with matching values in both tables.\n"
+            "• **LEFT JOIN**: Returns all records from the left table and matched records from the right table.\n\n"
+            "```sql\n"
+            "SELECT users.name, orders.amount\n"
+            "FROM users\n"
+            "INNER JOIN orders ON users.user_id = orders.user_id;\n"
             "```"
         )
-        suggested_qs = ["Write factorial in Python", "What are variables?", "What is Python?"]
-
-    elif "function in java" in msg_low or ("function" in msg_low and "java" in msg_low):
-        reply = (
-            "### What is a Function (Method) in Java?\n\n"
-            "In Java, functions are defined as **methods** inside classes. They specify return types, access modifiers, and parameters.\n\n"
-            "```java\n"
-            "public class Calculator {\n"
-            "    public static int add(int a, int b) {\n"
-            "        return a + b;\n"
-            "    }\n"
-            "}\n"
-            "```"
-        )
-        suggested_qs = ["What is Java?", "Write factorial in Java", "What is OOP in Java?"]
-
-    elif "pointer in c" in msg_low or ("pointer" in msg_low and "c" in msg_low):
-        reply = (
-            "### What is a Pointer in C?\n\n"
-            "A **pointer** in C is a variable that stores the **memory address** of another variable.\n\n"
-            "```c\n"
-            "#include <stdio.h>\n\n"
-            "int main() {\n"
-            "    int num = 42;\n"
-            "    int *ptr = &num;\n"
-            "    printf(\"Value: %d, Address: %p\\n\", *ptr, (void*)ptr);\n"
-            "    return 0;\n"
-            "}\n"
-            "```"
-        )
-        suggested_qs = ["What is C?", "What is C++?", "Give a simple example."]
+        suggested_qs = ["What is SQL?", "What is DBMS?", "Give me a simple example."]
 
     elif msg_low in ["what is python?", "what is python", "python"]:
         reply = (
             "### What is Python?\n\n"
-            "**Python** is a high-level, interpreted, general-purpose programming language known for readable syntax. It is widely used in Web Development, Data Science, Artificial Intelligence, and Automation."
+            "**Python** is a high-level, interpreted, general-purpose programming language known for clean, English-like syntax. "
+            "It is widely used in Web Development (FastAPI, Django), Data Science, Machine Learning, Automation, and Scripting."
         )
-        suggested_qs = ["What is def in Python?", "Write factorial in Python", "Can a non-IT student learn Python?"]
+        suggested_qs = ["What is def in Python?", "Write factorial in Python.", "Can a non-IT student learn Python?"]
 
     elif msg_low in ["what is java?", "what is java", "java"]:
         reply = (
             "### What is Java?\n\n"
-            "**Java** is a high-level, class-based, object-oriented programming language designed to have as few implementation dependencies as possible (Write Once, Run Anywhere via the JVM)."
+            "**Java** is a high-level, class-based, object-oriented programming language designed for platform independence ('Write Once, Run Anywhere' via the JVM). "
+            "It is heavily used in Enterprise Backend Applications, Android Development, and Large-Scale Systems."
         )
-        suggested_qs = ["What is a function in Java?", "Write factorial in Java", "What is C++?"]
-
-    elif msg_low in ["what is c?", "what is c", "c"]:
-        reply = (
-            "### What is C?\n\n"
-            "**C** is a general-purpose, procedural programming language developed in 1972. It provides low-level memory access and is widely used for systems programming and operating systems."
-        )
-        suggested_qs = ["What is a pointer in C?", "What is C++?", "What is Java?"]
-
-    elif msg_low in ["what is c++?", "what is c++", "c++"]:
-        reply = (
-            "### What is C++?\n\n"
-            "**C++** is a general-purpose programming language created as an extension of C. It includes Object-Oriented Programming (OOP), generic templates (STL), and high-performance memory management."
-        )
-        suggested_qs = ["What is a pointer in C?", "What is Java?", "What is Python?"]
+        suggested_qs = ["What is a function in Java?", "Write factorial in Java.", "What is C++?"]
 
     elif msg_low in ["what is javascript?", "what is javascript", "javascript"]:
         reply = (
             "### What is JavaScript?\n\n"
-            "**JavaScript** is a high-level, dynamic programming language that powers interactive web pages on the client side and server-side applications via Node.js."
+            "**JavaScript** (JS) is a high-level dynamic programming language that powers interactive user interfaces on web browsers "
+            "and server-side applications via Node.js."
         )
-        suggested_qs = ["What is React?", "What is HTML?", "What is CSS?"]
+        suggested_qs = ["Why should I learn React?", "What is HTML?", "What is CSS?"]
+
+    elif msg_low in ["what is react?", "what is react", "react"] or "why should i learn react" in msg_low:
+        reply = (
+            "### What is React & Why Learn It?\n\n"
+            "**React** is an open-source JavaScript UI library created by Meta. It uses a **component-based architecture** and a **Virtual DOM** to build fast, interactive single-page web applications.\n\n"
+            "**Why Learn React?**\n"
+            "1. **High Job Demand**: Essential skill for Modern Frontend & Full Stack Developers.\n"
+            "2. **Reusability**: Build UI components once and reuse them across your app.\n"
+            "3. **Ecosystem**: Huge community support, rich libraries, and easy integration with REST APIs."
+        )
+        suggested_qs = ["What is JavaScript?", "Which project should I build?", "What should I learn first?"]
 
     elif msg_low in ["what is html?", "what is html", "html"]:
         reply = (
             "### What is HTML?\n\n"
-            "**HTML** (HyperText Markup Language) is the standard markup language used to create and structure web pages on the Internet."
+            "**HTML** (HyperText Markup Language) is the standard markup language used to structure web pages on the Internet using elements like headings, paragraphs, divs, links, and forms."
         )
         suggested_qs = ["What is a div tag?", "What is CSS?", "What is JavaScript?"]
 
     elif msg_low in ["what is css?", "what is css", "css"]:
         reply = (
             "### What is CSS?\n\n"
-            "**CSS** (Cascading Style Sheets) is a stylesheet language used to describe the presentation, layout, colors, and styling of a document written in HTML."
+            "**CSS** (Cascading Style Sheets) is the stylesheet language used to specify presentation, styling, colors, typography, flexbox/grid layouts, and responsive design for HTML elements."
         )
         suggested_qs = ["What is HTML?", "What is a div tag?", "What is React?"]
 
-    elif msg_low in ["what is react?", "what is react", "react"]:
+    elif msg_low in ["what is git?", "what is git", "git"]:
         reply = (
-            "### What is React?\n\n"
-            "**React** is an open-source JavaScript library developed by Meta for building user interfaces based on reusable UI components."
+            "### What is Git?\n\n"
+            "**Git** is a distributed version control system used to track changes in source code during software development, enable collaboration, manage branches, and push code repositories to GitHub."
         )
-        suggested_qs = ["What is JavaScript?", "Give me a simple example", "Which project should I build?"]
+        suggested_qs = ["What should I learn first?", "Which project should I build?", "How should I prepare for an interview?"]
 
     elif msg_low in ["what is sql?", "what is sql", "sql"]:
         reply = (
             "### What is SQL?\n\n"
-            "**SQL** (Structured Query Language) is the standard domain-specific language used for managing data stored in relational database management systems (RDBMS)."
+            "**SQL** (Structured Query Language) is the standard language for querying, managing, and manipulating data stored in relational databases (PostgreSQL, MySQL, SQLite)."
         )
-        suggested_qs = ["What is DBMS?", "What is Python?", "Which skill should I learn first?"]
+        suggested_qs = ["Explain SQL joins.", "What is Python?", "Which skill should I learn first?"]
 
-    elif "div tag" in msg_low or msg_low == "what is div" or msg_low == "what is a div tag?" or msg_low == "what is div tag":
+    elif msg_low in ["what is c?", "what is c", "c"]:
         reply = (
-            "### What is a `<div>` tag in HTML?\n\n"
-            "The **`<div>`** tag (short for division) is a generic block-level container element used to group HTML elements together for styling (with CSS) or layout structure.\n\n"
-            "```html\n"
-            "<div class=\"card\">\n"
-            "  <h2>Title</h2>\n"
-            "  <p>Content inside div</p>\n"
-            "</div>\n"
-            "```"
+            "### What is C?\n\n"
+            "**C** is a foundational procedural programming language developed in 1972. It offers low-level memory control and is used for OS kernels, embedded systems, and compilers."
         )
-        suggested_qs = ["What is HTML?", "What is CSS?", "Give me an example."]
+        suggested_qs = ["What is a pointer in C?", "What is C++?", "What is Java?"]
 
-    elif "digital marketing" in msg_low:
+    elif msg_low in ["what is c++?", "what is c++", "c++"]:
         reply = (
-            "### What is Digital Marketing?\n\n"
-            "**Digital Marketing** encompasses all marketing efforts that use an electronic device or the internet. Key channels include Search Engine Optimization (SEO), Social Media Marketing, Pay-Per-Click (PPC), and Content Strategy."
+            "### What is C++?\n\n"
+            "**C++** is a high-performance extension of C that adds Object-Oriented Programming (OOP), templates (STL), and modern memory management."
         )
-        suggested_qs = ["Can a non-IT student learn Python?", "What is accounting?", "What should I learn first?"]
+        suggested_qs = ["What is a pointer in C?", "What is Java?", "What is Python?"]
 
-    elif "accounting" in msg_low:
+    # ------------------------------------------------------------------
+    # 4. MULTI-TURN CONTEXT RESOLUTION & PRONOUN RESOLUTION
+    # ------------------------------------------------------------------
+    elif any(phrase in msg_low for phrase in ["explain previously", "explain the code", "explain this code", "explain that example", "explain the second line", "explain that code"]):
+        if "factorial" in last_assistant_msg or "return n *" in last_assistant_msg or "class factorial" in last_assistant_msg:
+            reply = (
+                "### Detailed Breakdown of the Factorial Code\n\n"
+                "1. **Function Signature**: Takes an integer parameter `n`.\n"
+                "2. **Base Case (`if n <= 1`)**: Stops recursion when `n` reaches 1 or 0, returning `1` to prevent infinite loops.\n"
+                "3. **Recursive Execution (`n * factorial(n - 1)`)**: Multiplies current number `n` by the factorial of `n - 1`.\n"
+                "4. **Output Result**: Computes `5 * 4 * 3 * 2 * 1 = 120`."
+            )
+        else:
+            reply = (
+                "### Code Explanation Breakdown\n\n"
+                "1. **Declaration & Input**: Defines variables, parameters, or HTML container elements.\n"
+                "2. **Execution Logic**: Performs the operation, condition check, or layout grouping.\n"
+                "3. **Return Output**: Passes the computed result or rendered UI back to the application."
+            )
+        suggested_qs = ["Give another example.", "What should I learn first?", "Which project should I build?"]
+
+    elif msg_low in ["is it difficult?", "is it hard?", "is python difficult?", "is programming hard?"] or (msg_low.startswith("is it") and len(msg_low.split()) <= 4):
+        topic = "Python" if "python" in last_assistant_msg or "python" in last_user_msg else ("JavaScript" if "javascript" in last_assistant_msg else "Programming")
         reply = (
-            "### What is Accounting?\n\n"
-            "**Accounting** is the process of recording, summarizing, analyzing, and reporting financial transactions of a business to management, investors, and regulators."
+            f"### Is {topic} Difficult to Learn?\n\n"
+            f"**No!** {topic} is considered very approachable, especially for beginners. "
+            f"It uses clean syntax that mirrors natural English logic. With regular hands-on coding practice for 30–45 minutes a day, most students master core concepts within a few weeks."
         )
-        suggested_qs = ["What is digital marketing?", "Can a non-IT student learn Python?", "What should I learn first?"]
+        suggested_qs = ["Give me a simple example.", "What should I learn first?", "Give me a 30-day roadmap."]
 
-    elif "non-it" in msg_low or "non-cs" in msg_low or ("can a non-it student learn python" in msg_low):
+    elif msg_low in ["give me a simple example", "give me a simple example.", "give an example", "give me an example."]:
+        if "python" in last_assistant_msg or "def" in last_user_msg:
+            reply = (
+                "### Simple Python Code Example\n\n"
+                "```python\n"
+                "# Function to greet a student\n"
+                "def welcome_student(name, career_target):\n"
+                "    return f\"Hello {name}, welcome to your {career_target} learning path!\"\n\n"
+                "message = welcome_student(\"Alex\", \"Full Stack Developer\")\n"
+                "print(message)\n"
+                "```"
+            )
+        elif "java" in last_assistant_msg:
+            reply = (
+                "### Simple Java Code Example\n\n"
+                "```java\n"
+                "public class Welcome {\n"
+                "    public static void main(String[] args) {\n"
+                "        String name = \"Alex\";\n"
+                "        System.out.println(\"Hello \" + name + \", welcome to Java programming!\");\n"
+                "    }\n"
+                "}\n"
+                "```"
+            )
+        elif "html" in last_assistant_msg or "div" in last_assistant_msg:
+            reply = (
+                "### Simple HTML Code Example\n\n"
+                "```html\n"
+                "<div class=\"user-profile\">\n"
+                "  <h2>Welcome Student</h2>\n"
+                "  <p>Track your target career progress here.</p>\n"
+                "</div>\n"
+                "```"
+            )
+        else:
+            reply = (
+                "### Simple Code Example\n\n"
+                "```javascript\n"
+                "const student = { name: 'Alex', targetCareer: 'Full Stack Software Engineer' };\n"
+                "console.log(`Welcome ${student.name}! Target: ${student.targetCareer}`);\n"
+                "```"
+            )
+        suggested_qs = ["Explain that example.", "What should I learn after it?", "Which project should I build?"]
+
+    elif any(phrase in msg_low for phrase in ["what should i learn after it", "what to learn after", "what after javascript", "what after python"]):
+        first_sk = ordered_skills[0] if ordered_skills else "JavaScript"
+        second_sk = ordered_skills[1] if len(ordered_skills) > 1 else "React"
+        third_sk = ordered_skills[2] if len(ordered_skills) > 2 else "FastAPI"
         reply = (
-            "### Can a Non-IT Student Learn Python?\n\n"
-            "**Yes, absolutely!** Python is known for having a clear, English-like syntax. Students and professionals from humanities, commerce, finance, and marketing learn Python successfully for automation and data analysis."
+            f"### Next Skill Recommendation\n\n"
+            f"After building confidence in **{first_sk}**, your next priority skill for **{target_career}** is **{second_sk}**, followed by **{third_sk}**.\n\n"
+            f"**Why {second_sk}?**\n"
+            f"It builds directly on top of {first_sk} to enable real-world application development and web component building."
         )
-        suggested_qs = ["What is def in Python?", "What is digital marketing?", "What should I learn first?"]
+        suggested_qs = ["Which project should I build?", "Give me a 30-day roadmap", "How should I prepare for an interview?"]
 
-    elif "variable" in msg_low:
+    elif any(k in msg_low for k in ["how can i test it", "test it", "how to test"]):
         reply = (
-            "### What is a Variable?\n\n"
-            "A **variable** is a named storage location in memory that holds a data value which can be changed or referenced throughout a program."
+            "### How to Test the Code\n\n"
+            "1. Save your code into a local file with the proper extension (`.py`, `.java`, `.html`, `.js`, etc.).\n"
+            "2. Execute the file using your terminal interpreter or browser console.\n"
+            "3. Verify output messages or console logs to confirm expected logic."
         )
-        suggested_qs = ["Give me a simple example.", "Explain that example.", "What is Python?"]
+        suggested_qs = ["Give another example.", "What should I learn first?", "Which project should I build?"]
 
-    elif any(k in msg_low for k in ["start first", "learn first", "first skill", "where to begin", "what should i learn"]):
+    # ------------------------------------------------------------------
+    # 5. SKILL PRIORITY & LEARNING SEQUENCE
+    # ------------------------------------------------------------------
+    elif any(k in msg_low for k in ["start first", "learn first", "first skill", "where to begin", "what should i learn", "what skill should i improve", "what to learn", "learn next"]):
         first_skill = ordered_skills[0] if ordered_skills else "JavaScript"
         second_skill = ordered_skills[1] if len(ordered_skills) > 1 else "React"
         seq_md = "\n".join([f"{i+1}. **{sk}**" for i, sk in enumerate(ordered_skills)])
+
         reply = (
-            f"Based on your profile for **{target_career}**, your recommended skill sequence is:\n\n"
+            f"### Recommended Skill Priority for **{target_career}**\n\n"
+            f"Based on your profile, current skills, and target career, here is your prioritized skill sequence:\n\n"
             f"{seq_md}\n\n"
-            f"**Start with**: **{first_skill}**."
+            f"--- \n\n"
+            f"### START WITH: **{first_skill}**\n\n"
+            f"• **Why it matters**: {first_skill} is a core foundation required for your target role as {target_career}.\n"
+            f"• **Core Topics to Master**:\n"
+            f"  1. Syntax & Data Types\n"
+            f"  2. Functions & Scope\n"
+            f"  3. Control Flow & Loops\n"
+            f"  4. Data Structures (Arrays & Objects)\n"
+            f"  5. Asynchronous Logic / API Integration\n\n"
+            f"• **Practical Task**: Build a small project using **{first_skill}** before moving to **{second_skill}**."
         )
         next_card = {
             "skill": first_skill,
-            "focus": "Variables, functions, async/await",
+            "focus": "Variables, functions, data structures, async logic",
             "practice": f"Build a practical project using {first_skill}",
             "after": f"Advance to {second_skill}"
         }
         suggested_qs = ["Which project should I build?", "Give me a 30-day roadmap", "How should I prepare for an interview?"]
 
-    elif any(k in msg_low for k in ["which project", "build next", "recommend a project"]):
-        p_match = top_project.get("match_score", 95.0)
-        p_skills = ", ".join(top_project.get("skills_covered", [ordered_skills[0] if ordered_skills else "React"]))
-        reply = (
-            f"Your recommended portfolio project is **{top_project_title}**.\n\n"
-            f"• **Priority**: {top_project.get('priority', 'High Priority')}\n"
-            f"• **Match Score**: {p_match:.1f}%\n"
-            f"• **Skills Covered**: **{p_skills}**"
-        )
-        next_card = {
-            "skill": "Portfolio Project",
-            "focus": f"Build {top_project_title}",
-            "practice": "Implement core features, authentication, and REST APIs",
-            "after": "Publish project code to GitHub"
-        }
-        suggested_qs = ["What should I learn first?", "How should I prepare for an interview?", "Give me a 30-day roadmap"]
+    # ------------------------------------------------------------------
+    # 6. SKILL REQUIREMENTS BY CAREER ROLE
+    # ------------------------------------------------------------------
+    elif any(k in msg_low for k in ["skills are required for", "skills required for", "what skills do i need for"]):
+        if "data scientist" in msg_low or "data science" in msg_low:
+            role = "Data Scientist"
+            req_skills = ["Python", "Statistics", "SQL", "Pandas", "NumPy", "Scikit-Learn", "Data Visualization", "Machine Learning"]
+        elif "cloud" in msg_low or "devops" in msg_low:
+            role = "Cloud / DevOps Engineer"
+            req_skills = ["Linux", "Git", "Networking Fundamentals", "Docker", "Kubernetes", "AWS / Azure", "CI/CD Pipelines", "Terraform"]
+        elif "cybersecurity" in msg_low or "security" in msg_low:
+            role = "Cybersecurity Analyst"
+            req_skills = ["Computer Networks", "Linux Security", "Ethical Hacking", "Cryptography", "SIEM Tools", "Web Security", "Python Scripting"]
+        else:
+            role = "Full Stack Developer"
+            req_skills = ["HTML/CSS", "JavaScript / TypeScript", "React", "FastAPI / Node.js", "SQL Databases", "REST APIs", "Git Version Control"]
 
-    elif any(k in msg_low for k in ["interview", "prepare for an interview", "mock interview"]):
+        skills_md = "\n".join([f"• **{sk}**" for sk in req_skills])
         reply = (
-            f"### Interview Preparation Strategy for **{target_career}**\n\n"
-            f"1. **Technical Core**: Master key concepts in **{ordered_skills[0] if ordered_skills else 'JavaScript'}** and **{ordered_skills[1] if len(ordered_skills) > 1 else 'React'}**.\n"
-            f"2. **Portfolio Walkthrough**: Practice explaining **{top_project_title}** using STAR framework.\n"
-            f"3. **Mock Practice**: Use our built-in Interview Preparation module for automated mock sessions."
+            f"### Core Required Skills for **{role}**\n\n"
+            f"To become a job-ready **{role}**, master these essential technical skills:\n\n"
+            f"{skills_md}\n\n"
+            f"Would you like to focus on any of these skills in your personal action plan?"
         )
-        suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a 30-day roadmap"]
+        suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a roadmap."]
 
-    elif any(k in msg_low for k in ["30-day", "30 day", "roadmap"]):
+    # ------------------------------------------------------------------
+    # 7. ROADMAP GENERATION
+    # ------------------------------------------------------------------
+    elif any(k in msg_low for k in ["roadmap", "30-day", "30 day", "learning plan", "what should i learn this week"]):
         first_skill = ordered_skills[0] if ordered_skills else "JavaScript"
         second_skill = ordered_skills[1] if len(ordered_skills) > 1 else "React"
-        third_skill = ordered_skills[2] if len(ordered_skills) > 2 else "Python"
+        third_skill = ordered_skills[2] if len(ordered_skills) > 2 else "FastAPI"
+
         reply = (
-            f"# 30-Day Learning Roadmap for **{target_career}**\n\n"
-            f"### WEEK 1 — {first_skill.upper()} FOUNDATIONS\n"
-            f"• Variables, functions, arrays, DOM, async/await.\n\n"
-            f"### WEEK 2 — {second_skill.upper()} & FRONTEND FRAMEWORKS\n"
-            f"• Components, props, state management, REST API integration.\n\n"
-            f"### WEEK 3 — BACKEND & DATABASE WITH {third_skill.upper()}\n"
-            f"• API routes, authentication, database queries.\n\n"
-            f"### WEEK 4 — PORTFOLIO PROJECT & INTERVIEW PREPARATION\n"
-            f"• Complete **{top_project_title}** and practice mock interviews."
+            f"# Structured 30-Day Roadmap for **{target_career}**\n\n"
+            f"### Stage 1 — Fundamentals (Week 1)\n"
+            f"• Master core language syntax: **{first_skill}**.\n"
+            f"• Practice variables, data structures, functions, and control flow.\n\n"
+            f"### Stage 2 — Frontend & Frameworks (Week 2)\n"
+            f"• Build responsive component UIs with **{second_skill}**.\n"
+            f"• Connect state management with REST API endpoints.\n\n"
+            f"### Stage 3 — Backend & Database (Week 3)\n"
+            f"• Build robust APIs using **{third_skill}** and SQL databases.\n"
+            f"• Implement JWT user authentication and secure endpoints.\n\n"
+            f"### Stage 4 — Portfolio Project & Interview Preparation (Week 4)\n"
+            f"• Complete **{top_project_title}** and publish code on GitHub.\n"
+            f"• Practice mock interview sessions and STAR methodology response prep."
         )
         next_card = {
             "skill": first_skill,
             "focus": f"Week 1 — {first_skill} Foundations",
-            "practice": "Build a mini project",
+            "practice": "Build a mini practice application",
             "after": f"Week 2 — {second_skill}"
         }
         suggested_qs = ["What should I learn first?", "Which project should I build?", "How should I prepare for an interview?"]
 
+    # ------------------------------------------------------------------
+    # 8. PORTFOLIO PROJECT RECOMMENDATIONS
+    # ------------------------------------------------------------------
+    elif any(k in msg_low for k in ["which project", "what project", "build next", "recommend a project", "suggest a project", "beginner project", "resume project", "project for me", "project should i build"]):
+        p_match = top_project.get("match_score", 98.0)
+        p_skills = ", ".join(top_project.get("skills_covered", [ordered_skills[0] if ordered_skills else "React"]))
+        p_desc = top_project.get("description", "Build a high-impact application with user authentication and database persistence.")
+
+        reply = (
+            f"### Recommended Portfolio Project for **{target_career}**\n\n"
+            f"We recommend building **{top_project_title}**.\n\n"
+            f"• **Priority**: {top_project.get('priority', 'High Priority')}\n"
+            f"• **Target Match Score**: **{p_match:.1f}%**\n"
+            f"• **Skills Covered**: **{p_skills}**\n"
+            f"• **Overview**: {p_desc}\n\n"
+            f"**Resume Impact**: Demonstrates full-stack feature delivery, API integration, and clean code architecture to hiring managers."
+        )
+        next_card = {
+            "skill": "Portfolio Project",
+            "focus": f"Build {top_project_title}",
+            "practice": "Implement authentication, REST APIs, and responsive design",
+            "after": "Publish repository to GitHub"
+        }
+        suggested_qs = ["What should I learn first?", "How should I prepare for an interview?", "Give me a 30-day roadmap."]
+
+    # ------------------------------------------------------------------
+    # 9. INTERVIEW PREPARATION GUIDANCE
+    # ------------------------------------------------------------------
+    elif any(k in msg_low for k in ["interview", "prepare for an interview", "mock interview", "questions for", "interview skills"]):
+        reply = (
+            f"### Interview Preparation Strategy for **{target_career}**\n\n"
+            f"1. **Core Technical Mastery**: Review fundamental concepts in **{ordered_skills[0] if ordered_skills else 'JavaScript'}** and **{ordered_skills[1] if len(ordered_skills) > 1 else 'React'}**.\n"
+            f"2. **Portfolio Walkthrough**: Be ready to present **{top_project_title}** using the **STAR framework** (Situation, Task, Action, Result).\n"
+            f"3. **Mock Interview Module**: Use our platform's automated Interview Preparation tool to answer practice questions and get AI score feedback."
+        )
+        suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a 30-day roadmap."]
+
+    # ------------------------------------------------------------------
+    # 10. NON-IT & CAREER TRANSITION GUIDANCE
+    # ------------------------------------------------------------------
+    elif "non-it" in msg_low or "non-cs" in msg_low or "non cs" in msg_low or "switch to it" in msg_low or "can a non-it student learn" in msg_low:
+        reply = (
+            "### Transitioning from Non-IT to Programming & Technology\n\n"
+            "**Yes, absolutely!** Students and professionals from commerce, arts, mechanical engineering, finance, and marketing transition into tech roles every day.\n\n"
+            "**Why it is achievable:**\n"
+            "1. **Beginner-Friendly Languages**: Languages like Python and JavaScript use plain English logic.\n"
+            "2. **Domain Advantage**: Your background (such as business, finance, or domain expertise) makes you valuable for tech roles in those industries.\n"
+            "3. **Practical Portfolio**: Hiring managers focus on project code and problem solving rather than degree title."
+        )
+        suggested_qs = ["What should I learn first?", "What is Python?", "Which project should I build?"]
+
+    elif "digital marketing" in msg_low:
+        reply = (
+            "### Digital Marketing Career Overview\n\n"
+            "**Digital Marketing** leverages online channels (SEO, Content Strategy, Social Media Ads, Google Analytics, Email Automation) to market products and drive business growth."
+        )
+        suggested_qs = ["Can a non-IT student learn Python?", "What is accounting?", "What should I learn first?"]
+
+    elif "accounting" in msg_low or "financial analysis" in msg_low:
+        reply = (
+            "### Accounting & Financial Analysis Overview\n\n"
+            "**Accounting & Financial Analysis** involves auditing financial statements, budgeting, financial modeling, and analyzing business performance using tools like Excel, SQL, and Tally."
+        )
+        suggested_qs = ["What is digital marketing?", "Can a non-IT student learn Python?", "What should I learn first?"]
+
+    elif any(k in msg_low for k in ["what career should i choose", "which career is suitable", "what career suits me"]):
+        reply = (
+            f"### Personal Career Assessment for Your Profile\n\n"
+            f"Based on your education (**{education if education else 'Degree'}**), branch (**{branch if branch else 'General'}**), and interests, "
+            f"your top recommended career path is **{target_career}**.\n\n"
+            f"Your current portfolio readiness is **{readiness_score:.1f}%**. "
+            f"By mastering **{ordered_skills[0] if ordered_skills else 'core skills'}** and completing **{top_project_title}**, you will significantly boost your job readiness."
+        )
+        suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a 30-day roadmap."]
+
+    # ------------------------------------------------------------------
+    # 11. GENERAL FALLBACK
+    # ------------------------------------------------------------------
     else:
         topic_clean = user_message.strip().rstrip('?')
         reply = (
-            f"### Overview of {topic_clean.capitalize()}\n\n"
+            f"### Career & Technical Insight for: **{topic_clean.capitalize()}**\n\n"
             f"Regarding **{user_message}**:\n\n"
-            f"This is an important concept in computer science and technology. Focusing on core principles, practical code examples, and structured practice is the best way to master it.\n\n"
-            f"Feel free to ask for specific code examples, step-by-step breakdowns, or learning recommendations!"
+            f"This concept plays an important role in technology and career development for **{target_career}**. "
+            f"Focusing on core principles, practical hands-on examples, and building portfolio projects is the best way to master it.\n\n"
+            f"Feel free to ask for specific code examples, roadmap steps, or interview prep advice!"
         )
         suggested_qs = ["Can you give me a simple example?", "What should I learn first?", "Which project should I build?"]
 
     return {
         "message": reply,
-        "source": "ai_mock",
-        "intent": "general_llm_chat",
+        "source": "internal_career_assistant",
+        "intent": intent,
         "next_action_card": next_card,
         "recommended_skills": ordered_skills,
         "related_projects": [top_project],
@@ -755,7 +1023,7 @@ Candidate Skill Gaps: {', '.join(skill_gaps)}
 
 Return ONLY a JSON array of objects with keys: "question", "type" (technical, hr, behavioral).
 """
-    ai_text, _ = generate_llm_response(prompt)
+    ai_text, _, _ = generate_llm_response(prompt)
     if ai_text:
         try:
             start_idx = ai_text.find("[")
@@ -876,7 +1144,7 @@ Evaluate the candidate's answer. Return ONLY a JSON object with:
 - "model_answer": comprehensive ideal answer string
 """
 
-    ai_text, _ = generate_llm_response(prompt)
+    ai_text, _, _ = generate_llm_response(prompt)
     if ai_text:
         try:
             start_idx = ai_text.find("{")

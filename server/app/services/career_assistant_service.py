@@ -40,8 +40,13 @@ async def get_user_full_context(user_id: str) -> Dict[str, Any]:
     target_career = "Full Stack Software Engineer"
     if action_plan_doc and action_plan_doc.get("target_career_title"):
         target_career = action_plan_doc.get("target_career_title")
-    elif profile_doc and profile_doc.get("preferred_category") == "Non-IT":
-        target_career = "Digital Marketing & Analytics Strategist"
+    elif profile_doc:
+        target_career = (
+            profile_doc.get("target_role") or 
+            profile_doc.get("preferred_role") or 
+            profile_doc.get("career_goal") or 
+            ("Digital Marketing & Analytics Strategist" if profile_doc.get("preferred_category") == "Non-IT" else "Full Stack Software Engineer")
+        )
 
     current_skills = profile_doc.get("current_skills", []) if profile_doc else []
     skill_gaps = [sg.get("skill_name") for sg in action_plan_doc.get("skill_gaps", [])] if action_plan_doc else []
@@ -68,7 +73,9 @@ async def get_user_full_context(user_id: str) -> Dict[str, Any]:
         "completed_projects": completed_projects,
         "in_progress_projects": in_progress_projects,
         "action_plan": action_plan_doc,
-        "education": profile_doc.get("degree", "") if profile_doc else "",
+        "education": (profile_doc.get("degree", "") or profile_doc.get("education", "")) if profile_doc else "",
+        "branch": (profile_doc.get("branch", "") or profile_doc.get("specialization", "")) if profile_doc else "",
+        "interests": profile_doc.get("interests", []) if profile_doc else [],
         "work_style": profile_doc.get("work_style", "") if profile_doc else ""
     }
 

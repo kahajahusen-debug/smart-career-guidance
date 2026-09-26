@@ -529,9 +529,11 @@ export default function AssessmentPage({ user, onAssessmentSubmitted, onNavigate
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
           {currentQ.options?.map((optText, oIdx) => {
             const isSelected = selectedOption === oIdx;
+            const optId = `assessment-q-${currentQ.id}-opt-${oIdx}`;
             return (
               <label
                 key={oIdx}
+                htmlFor={optId}
                 onClick={() => handleSelectOption(currentQ.id, oIdx)}
                 style={{
                   display: 'flex',
@@ -546,6 +548,7 @@ export default function AssessmentPage({ user, onAssessmentSubmitted, onNavigate
                 }}
               >
                 <input
+                  id={optId}
                   type="radio"
                   name={`question_${currentQ.id}`}
                   checked={isSelected}

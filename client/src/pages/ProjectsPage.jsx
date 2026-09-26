@@ -300,10 +300,12 @@ export default function ProjectsPage({ activeCategory, assessmentResult, onSelec
 
           {/* Difficulty Filter */}
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+            <label htmlFor="projects-difficulty-filter" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
               Difficulty:
             </label>
             <select
+              id="projects-difficulty-filter"
+              name="difficultyFilter"
               value={difficultyFilter}
               onChange={(e) => setDifficultyFilter(e.target.value)}
               style={{
@@ -327,10 +329,12 @@ export default function ProjectsPage({ activeCategory, assessmentResult, onSelec
 
           {/* Priority Filter */}
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+            <label htmlFor="projects-priority-filter" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
               Priority:
             </label>
             <select
+              id="projects-priority-filter"
+              name="priorityFilter"
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
               style={{
@@ -354,10 +358,12 @@ export default function ProjectsPage({ activeCategory, assessmentResult, onSelec
 
           {/* Sort By Dropdown */}
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+            <label htmlFor="projects-sort-by" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
               Sort By:
             </label>
             <select
+              id="projects-sort-by"
+              name="sortBy"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               style={{

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/common/GlassCard';
 import { 
   fetchCareers, 
-  fetchQuestions, 
   fetchSampleJobs, 
   fetchPortfolioProjects
 } from '../services/api';
@@ -10,44 +9,39 @@ import {
   Briefcase, 
   ExternalLink, 
   FolderGit2, 
-  HelpCircle,
   TrendingUp,
-  Sliders,
   DollarSign
 } from 'lucide-react';
 
 export default function HomePage({ activeCategory, initialTab = 'careers', onNavigate, user }) {
   const [careers, setCareers] = useState([]);
-  const [questions, setQuestions] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [selectedDifficulty, setSelectedDifficulty] = useState(null);
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(initialTab === 'questions' ? 'careers' : initialTab);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    if (initialTab) {
+    if (initialTab && initialTab !== 'questions') {
       setActiveTab(initialTab);
+    } else if (initialTab === 'questions') {
+      setActiveTab('careers');
     }
   }, [initialTab]);
 
-
   useEffect(() => {
     loadData();
-  }, [activeCategory, selectedDifficulty]);
+  }, [activeCategory]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [cRes, qRes, jRes, pRes] = await Promise.all([
+      const [cRes, jRes, pRes] = await Promise.all([
         fetchCareers(activeCategory).catch(() => ({ careers: [] })),
-        fetchQuestions(activeCategory, selectedDifficulty).catch(() => ({ questions: [] })),
         fetchSampleJobs(activeCategory).catch(() => ({ jobs: [] })),
         fetchPortfolioProjects(activeCategory).catch(() => ({ projects: [] }))
       ]);
 
       setCareers(cRes.careers || []);
-      setQuestions(qRes.questions || []);
       setJobs(jRes.jobs || []);
       setProjects(pRes.projects || []);
     } catch (err) {
@@ -108,12 +102,10 @@ export default function HomePage({ activeCategory, initialTab = 'careers', onNav
         </div>
       </GlassCard>
 
-
       {/* Navigation Tabs */}
       <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid #E2E8F0', paddingBottom: 12, flexWrap: 'wrap' }}>
         {[
           { id: 'careers', label: 'Career Profiles', icon: Briefcase, count: careers.length },
-          { id: 'questions', label: 'Assessment Questions', icon: HelpCircle, count: questions.length },
           { id: 'jobs', label: 'Jobs & Opportunities', icon: ExternalLink, count: jobs.length },
           { id: 'projects', label: 'Portfolio Projects', icon: FolderGit2, count: projects.length }
         ].map((tab) => {
@@ -232,108 +224,7 @@ export default function HomePage({ activeCategory, initialTab = 'careers', onNav
         </div>
       )}
 
-      {/* TAB CONTENT 2: QUESTIONS */}
-      {activeTab === 'questions' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Difficulty Filter Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#FFFFFF', padding: 14, borderRadius: 12, border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#172554', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Sliders size={16} /> Filter by Difficulty:
-            </span>
-            <button
-              onClick={() => setSelectedDifficulty(null)}
-              className="btn"
-              style={{
-                padding: '4px 12px',
-                fontSize: '0.75rem',
-                borderRadius: 6,
-                background: selectedDifficulty === null ? '#172554' : '#F1F5F9',
-                color: selectedDifficulty === null ? '#FFFFFF' : '#475569'
-              }}
-            >
-              All Levels (1-5)
-            </button>
-            {[1, 2, 3, 4, 5].map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setSelectedDifficulty(lvl)}
-                className="btn"
-                style={{
-                  padding: '4px 12px',
-                  fontSize: '0.75rem',
-                  borderRadius: 6,
-                  background: selectedDifficulty === lvl ? '#7C3AED' : '#F1F5F9',
-                  color: selectedDifficulty === lvl ? '#FFFFFF' : '#475569'
-                }}
-              >
-                Level {lvl}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid-2">
-            {questions.map((q) => (
-              <GlassCard key={q.id} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{
-                    background: 'rgba(124, 58, 237, 0.1)',
-                    color: '#7C3AED',
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    fontSize: '0.75rem',
-                    fontWeight: 700
-                  }}>
-                    {q.skill_name}
-                  </span>
-                  <span style={{
-                    background: '#F1F5F9',
-                    color: '#475569',
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    fontSize: '0.75rem',
-                    fontWeight: 600
-                  }}>
-                    Difficulty Level {q.difficulty}/5
-                  </span>
-                </div>
-
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A' }}>
-                  {q.question_text}
-                </h4>
-
-                {/* Options List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {q.options?.map((opt, oIdx) => (
-                    <div key={oIdx} style={{
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      fontSize: '0.82rem',
-                      background: oIdx === q.correct_option_index ? 'rgba(16, 185, 129, 0.1)' : '#F8FAFC',
-                      border: oIdx === q.correct_option_index ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #E2E8F0',
-                      color: oIdx === q.correct_option_index ? '#065F46' : '#334155',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontWeight: oIdx === q.correct_option_index ? 600 : 400
-                    }}>
-                      <span>{opt}</span>
-                      {oIdx === q.correct_option_index && (
-                        <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>Correct</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ fontSize: '0.75rem', color: '#64748B', fontStyle: 'italic', marginTop: 4 }}>
-                  Explanation: {q.explanation}
-                </div>
-              </GlassCard>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT 3: JOBS */}
+      {/* TAB CONTENT 2: JOBS */}
       {activeTab === 'jobs' && (
         <div className="grid-2">
           {jobs.map((j) => (
@@ -386,7 +277,7 @@ export default function HomePage({ activeCategory, initialTab = 'careers', onNav
         </div>
       )}
 
-      {/* TAB CONTENT 4: PROJECTS */}
+      {/* TAB CONTENT 3: PROJECTS */}
       {activeTab === 'projects' && (
         <div className="grid-2">
           {projects.map((p) => (

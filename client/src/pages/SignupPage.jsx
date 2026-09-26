@@ -192,6 +192,7 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
           {/* Full Name */}
           <div>
             <label
+              htmlFor="signup-full-name"
               style={{
                 display: 'block',
                 fontSize: '0.82rem',
@@ -215,7 +216,10 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
               />
 
               <input
+                id="signup-full-name"
+                name="fullName"
                 type="text"
+                autoComplete="name"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -236,6 +240,7 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
           {/* Email */}
           <div>
             <label
+              htmlFor="signup-email"
               style={{
                 display: 'block',
                 fontSize: '0.82rem',
@@ -259,7 +264,10 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
               />
 
               <input
+                id="signup-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -280,6 +288,7 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
           {/* Password */}
           <div>
             <label
+              htmlFor="signup-password"
               style={{
                 display: 'block',
                 fontSize: '0.82rem',
@@ -303,7 +312,10 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
               />
 
               <input
+                id="signup-password"
+                name="password"
                 type="password"
+                autoComplete="new-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -324,6 +336,7 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
           {/* Confirm Password */}
           <div>
             <label
+              htmlFor="signup-confirm-password"
               style={{
                 display: 'block',
                 fontSize: '0.82rem',
@@ -347,7 +360,10 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
               />
 
               <input
+                id="signup-confirm-password"
+                name="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 required
                 value={confirmPassword}
                 onChange={(e) =>

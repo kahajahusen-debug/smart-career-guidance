@@ -1,5 +1,8 @@
 import os
-from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv()
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Smart Career Guidance System"
@@ -70,11 +73,15 @@ class Settings(BaseSettings):
 
     AI_API_KEY: str = os.getenv(
         "AI_API_KEY",
-        os.getenv("GEMINI_API_KEY", os.getenv("OPENAI_API_KEY", ""))
+        ""
     )
 
-    class Config:
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=True
+    )
 
 
 settings = Settings()

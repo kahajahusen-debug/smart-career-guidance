@@ -514,6 +514,8 @@ export default function ProjectDetailPage({ projectId, onBack, onNavigate }) {
                 border: isDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #E2E8F0'
               }}>
                 <input
+                  id={`milestone-check-${mId}`}
+                  name={`milestone_${mId}`}
                   type="checkbox"
                   checked={isDone}
                   onChange={() => handleToggleMilestone(mId)}
@@ -682,10 +684,12 @@ export default function ProjectDetailPage({ projectId, onBack, onNavigate }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
           {/* 10. GitHub URL */}
           <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
+            <label htmlFor="project-github-url" style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
               GitHub Repository URL:
             </label>
             <input
+              id="project-github-url"
+              name="githubUrl"
               type="url"
               placeholder="https://github.com/username/project"
               value={githubUrl}
@@ -702,10 +706,12 @@ export default function ProjectDetailPage({ projectId, onBack, onNavigate }) {
 
           {/* 11. Live Demo URL */}
           <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
+            <label htmlFor="project-live-demo-url" style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
               Live Demo URL:
             </label>
             <input
+              id="project-live-demo-url"
+              name="liveDemoUrl"
               type="url"
               placeholder="https://myproject.vercel.app"
               value={liveDemoUrl}
@@ -722,10 +728,12 @@ export default function ProjectDetailPage({ projectId, onBack, onNavigate }) {
 
           {/* 12. Documentation URL */}
           <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
+            <label htmlFor="project-documentation-url" style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
               Documentation / PRD Link:
             </label>
             <input
+              id="project-documentation-url"
+              name="documentationUrl"
               type="url"
               placeholder="https://notion.so/my-prd"
               value={documentationUrl}
@@ -820,10 +828,12 @@ export default function ProjectDetailPage({ projectId, onBack, onNavigate }) {
             {/* Custom Slider */}
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: 6 }}>
-                <span>Custom Progress:</span>
+                <label htmlFor="project-progress-range">Custom Progress:</label>
                 <span style={{ color: '#4F46E5' }}>{customProgress}%</span>
               </div>
               <input
+                id="project-progress-range"
+                name="customProgress"
                 type="range"
                 min="0"
                 max="100"

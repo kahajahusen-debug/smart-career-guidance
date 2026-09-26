@@ -481,11 +481,12 @@ export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer }
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
           {currentQ.options?.map((optText, oIdx) => {
             const isSelected = selectedOption === oIdx;
-            const labels = ['Option 1 (Technical)', 'Option 2 (Data)', 'Option 3 (Design)', 'Option 4 (Business)'];
+            const optId = `discovery-q-${currentQ.id}-opt-${oIdx}`;
 
             return (
               <label
                 key={oIdx}
+                htmlFor={optId}
                 onClick={() => handleSelectOption(currentQ.id, oIdx)}
                 style={{
                   display: 'flex',
@@ -500,6 +501,7 @@ export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer }
                 }}
               >
                 <input
+                  id={optId}
                   type="radio"
                   name={`discovery_q_${currentQ.id}`}
                   checked={isSelected}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 
-export default function ChipInput({ chips = [], onChange, placeholder = "Add item..." }) {
+export default function ChipInput({ chips = [], onChange, placeholder = "Add item...", id, name, 'aria-label': ariaLabel }) {
   const [inputValue, setInputValue] = useState('');
 
   const handleAdd = () => {
@@ -27,11 +27,15 @@ export default function ChipInput({ chips = [], onChange, placeholder = "Add ite
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <input
+          id={id || (name ? `chip-input-${name}` : 'chip-input-field')}
+          name={name || 'chipInput'}
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          aria-label={ariaLabel || placeholder || "Add item"}
+          autoComplete="off"
           style={{
             flex: 1,
             padding: '10px 14px',

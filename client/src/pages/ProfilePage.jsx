@@ -155,11 +155,14 @@ export default function ProfilePage({ user, onProfileUpdated }) {
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                <label htmlFor="profile-full-name" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
                   Full Name
                 </label>
                 <input
+                  id="profile-full-name"
+                  name="fullName"
                   type="text"
+                  autoComplete="name"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -168,11 +171,14 @@ export default function ProfilePage({ user, onProfileUpdated }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                <label htmlFor="profile-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
                   Email Address
                 </label>
                 <input
+                  id="profile-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   required
                   disabled
                   value={email}
@@ -189,10 +195,12 @@ export default function ProfilePage({ user, onProfileUpdated }) {
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                <label htmlFor="profile-education-level" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
                   Education Level
                 </label>
                 <select
+                  id="profile-education-level"
+                  name="educationLevel"
                   value={educationLevel}
                   onChange={(e) => setEducationLevel(e.target.value)}
                   style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #CBD5E1', fontSize: '0.9rem', outline: 'none' }}
@@ -206,10 +214,12 @@ export default function ProfilePage({ user, onProfileUpdated }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                <label htmlFor="profile-degree" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
                   Degree Program
                 </label>
                 <input
+                  id="profile-degree"
+                  name="degree"
                   type="text"
                   value={degree}
                   onChange={(e) => setDegree(e.target.value)}
@@ -219,10 +229,12 @@ export default function ProfilePage({ user, onProfileUpdated }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                <label htmlFor="profile-branch" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
                   Branch / Specialization
                 </label>
                 <input
+                  id="profile-branch"
+                  name="branch"
                   type="text"
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
@@ -232,10 +244,12 @@ export default function ProfilePage({ user, onProfileUpdated }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+                <label htmlFor="profile-graduation-year" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 6 }}>
                   Graduation Year
                 </label>
                 <input
+                  id="profile-graduation-year"
+                  name="graduationYear"
                   type="number"
                   value={graduationYear}
                   onChange={(e) => setGraduationYear(e.target.value)}
@@ -251,6 +265,8 @@ export default function ProfilePage({ user, onProfileUpdated }) {
               <Sliders size={18} color="#7C3AED" /> Current Skills
             </h3>
             <ChipInput
+              id="profile-skills"
+              name="currentSkills"
               chips={currentSkills}
               onChange={setCurrentSkills}
               placeholder="Type skill (e.g. Python, SQL, React, SEO) and press Enter..."
@@ -262,6 +278,8 @@ export default function ProfilePage({ user, onProfileUpdated }) {
               <Heart size={18} color="#EC4899" /> Domain Interests
             </h3>
             <ChipInput
+              id="profile-interests"
+              name="interests"
               chips={interests}
               onChange={setInterests}
               placeholder="Type interest (e.g. Data Science, UI Design, Finance) and press Enter..."

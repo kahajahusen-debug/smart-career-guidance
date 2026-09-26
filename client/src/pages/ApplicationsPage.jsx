@@ -291,6 +291,9 @@ export default function ApplicationsPage({ onNavigate, onSelectJob }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ position: 'relative' }}>
                       <select
+                        id={`app-status-${app.application_id}`}
+                        name="status"
+                        aria-label={`Application status for ${app.job_title}`}
                         value={app.status}
                         onChange={(e) => handleStatusChange(app.application_id, e.target.value)}
                         style={{
@@ -375,6 +378,9 @@ export default function ApplicationsPage({ onNavigate, onSelectJob }) {
                   {isEditingNotes ? (
                     <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                       <input
+                        id={`app-notes-${app.application_id}`}
+                        name="notes"
+                        aria-label={`Notes for ${app.job_title}`}
                         type="text"
                         value={notesInput}
                         onChange={(e) => setNotesInput(e.target.value)}

@@ -247,10 +247,12 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 28 }}>
             {/* Target Career */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+              <label htmlFor="interview-target-career" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
                 Target Career Pathway
               </label>
               <select
+                id="interview-target-career"
+                name="targetCareer"
                 value={targetCareer}
                 onChange={(e) => setTargetCareer(e.target.value)}
                 style={{
@@ -280,10 +282,12 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
 
             {/* Interview Type */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+              <label htmlFor="interview-type" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
                 Interview Type
               </label>
               <select
+                id="interview-type"
+                name="interviewType"
                 value={interviewType}
                 onChange={(e) => setInterviewType(e.target.value)}
                 style={{
@@ -305,10 +309,12 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
 
             {/* Difficulty */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+              <label htmlFor="interview-difficulty" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
                 Difficulty Level
               </label>
               <select
+                id="interview-difficulty"
+                name="difficulty"
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
                 style={{
@@ -329,10 +335,12 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
 
             {/* Number of Questions */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+              <label htmlFor="interview-total-questions" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
                 Number of Questions
               </label>
               <select
+                id="interview-total-questions"
+                name="totalQuestions"
                 value={totalQuestions}
                 onChange={(e) => setTotalQuestions(parseInt(e.target.value, 10))}
                 style={{
@@ -517,10 +525,12 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
           ) : (
             /* ANSWER INPUT FORM */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label style={{ fontSize: '0.88rem', fontWeight: 700, color: '#334155' }}>
+              <label htmlFor="interview-answer" style={{ fontSize: '0.88rem', fontWeight: 700, color: '#334155' }}>
                 Your Answer:
               </label>
               <textarea
+                id="interview-answer"
+                name="answer"
                 value={currentAnswerText}
                 onChange={(e) => setCurrentAnswerText(e.target.value)}
                 placeholder="Type your structured answer here... (Tip: Explain key definitions, trade-offs, and practical examples)"

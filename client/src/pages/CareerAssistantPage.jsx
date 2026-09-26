@@ -590,10 +590,14 @@ export default function CareerAssistantPage({ onNavigate, initialPrompt }) {
           }}
         >
           <input
+            id="assistant-message"
+            name="message"
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Ask me anything about your career, skills, projects or interview prep..."
+            aria-label="Ask AI Career Assistant"
+            autoComplete="off"
             disabled={sending}
             style={{
               flex: 1,

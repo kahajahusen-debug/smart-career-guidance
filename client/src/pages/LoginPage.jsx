@@ -93,13 +93,16 @@ export default function LoginPage({ onLoginSuccess, onNavigate }) {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172554', marginBottom: 6 }}>
+            <label htmlFor="login-email" style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172554', marginBottom: 6 }}>
               Email Address
             </label>
             <div style={{ position: 'relative' }}>
               <Mail size={18} color="#94A3B8" style={{ position: 'absolute', left: 14, top: 12 }} />
               <input
+                id="login-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -117,13 +120,16 @@ export default function LoginPage({ onLoginSuccess, onNavigate }) {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172554', marginBottom: 6 }}>
+            <label htmlFor="login-password" style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#172554', marginBottom: 6 }}>
               Password
             </label>
             <div style={{ position: 'relative' }}>
               <Lock size={18} color="#94A3B8" style={{ position: 'absolute', left: 14, top: 12 }} />
               <input
+                id="login-password"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
