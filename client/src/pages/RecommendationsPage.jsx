@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import GlassCard from '../components/common/GlassCard';
-import { getRecommendations } from '../services/api';
+import { getRecommendations, regenerateActionPlan } from '../services/api';
 import { 
   Award, 
   CheckCircle2, 
@@ -11,25 +10,39 @@ import {
   HelpCircle,
   FolderGit2,
   Sparkles,
-  Info
+  Info,
+  Search,
+  ArrowUpDown,
+  Target,
+  Check
 } from 'lucide-react';
 
-export default function RecommendationsPage({ assessmentResult, activeCategory, onSelectCareer, onNavigate }) {
+export default function RecommendationsPage({
+  assessmentResult,
+  activeCategory,
+  onSelectCareer,
+  onNavigate,
+  onTargetCareerUpdated
+}) {
   const [recommendationsData, setRecommendationsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState(activeCategory || 'all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('suitability'); // 'suitability' | 'growth' | 'salary' | 'title'
+  const [settingTargetId, setSettingTargetId] = useState(null);
+  const [targetSuccessId, setTargetSuccessId] = useState(null);
 
   useEffect(() => {
     loadRecommendations();
-  }, [activeCategory]);
+  }, [categoryFilter]);
 
   const loadRecommendations = async () => {
     try {
       setLoading(true);
-      const res = await getRecommendations(activeCategory || 'all');
+      const res = await getRecommendations(categoryFilter || 'all');
       setRecommendationsData(res);
     } catch (err) {
       console.log('Error loading dynamic recommendations:', err);
-      // Fallback to prop assessmentResult if available
       if (assessmentResult && assessmentResult.career_recommendations) {
         setRecommendationsData({
           recommendations: assessmentResult.career_recommendations,
@@ -43,86 +56,138 @@ export default function RecommendationsPage({ assessmentResult, activeCategory, 
     }
   };
 
+  const handleSelectAsTargetCareer = async (careerId) => {
+    try {
+      setSettingTargetId(careerId);
+      await regenerateActionPlan(careerId);
+      setTargetSuccessId(careerId);
+      if (onTargetCareerUpdated) {
+        onTargetCareerUpdated(careerId);
+      }
+      setTimeout(() => {
+        onNavigate('actionPlan');
+      }, 700);
+    } catch (err) {
+      console.error('Failed to set target career:', err);
+    } finally {
+      setSettingTargetId(null);
+    }
+  };
+
   if (loading) {
     return (
-      <GlassCard style={{ textAlign: 'center', padding: '48px 24px' }}>
-        <div style={{ color: '#172554', fontWeight: 700, fontSize: '1.1rem' }}>
+      <div style={{
+        background: '#FFFFFF',
+        borderRadius: 16,
+        border: '1px solid #E2E8F0',
+        textAlign: 'center',
+        padding: '56px 24px'
+      }}>
+        <div style={{ color: '#0F172A', fontWeight: 800, fontSize: '1.15rem' }}>
           Calculating Personalized Career Suitability Scores...
         </div>
-      </GlassCard>
+        <p style={{ color: '#64748B', fontSize: '0.85rem', marginTop: 6 }}>
+          Evaluating your profile skills, discovery strengths, and technical benchmarks.
+        </p>
+      </div>
     );
   }
 
   const recs = recommendationsData?.recommendations || assessmentResult?.career_recommendations || [];
   const isIncomplete = recommendationsData?.data_completeness === 'Incomplete';
 
-  const filteredRecs = recs.filter((rec) => {
-    if (!activeCategory || activeCategory === 'all') return true;
-    return rec.category.toLowerCase() === activeCategory.toLowerCase();
-  });
+  // Filter and sort
+  const filteredRecs = recs
+    .filter((rec) => {
+      if (categoryFilter && categoryFilter !== 'all') {
+        if (rec.category.toLowerCase() !== categoryFilter.toLowerCase()) return false;
+      }
+      if (searchTerm.trim()) {
+        const query = searchTerm.toLowerCase();
+        const matchesTitle = rec.title.toLowerCase().includes(query);
+        const matchesSkills = (rec.matching_skills || []).some(s => s.toLowerCase().includes(query));
+        const matchesDesc = (rec.description || '').toLowerCase().includes(query);
+        return matchesTitle || matchesSkills || matchesDesc;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'suitability') {
+        return (b.suitability_score || 0) - (a.suitability_score || 0);
+      }
+      if (sortBy === 'title') {
+        return a.title.localeCompare(b.title);
+      }
+      return 0;
+    });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header Banner */}
-      <GlassCard style={{
-        background: 'linear-gradient(135deg, rgba(23, 37, 84, 0.95) 0%, rgba(79, 70, 229, 0.9) 100%)',
-        color: '#FFFFFF',
-        padding: '32px'
+      <div style={{
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: 16,
+        padding: '28px 32px',
+        boxShadow: 'var(--shadow-sm)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 16
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Award size={20} color="#FBBF24" />
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FCD34D', textTransform: 'uppercase' }}>
-                Phase 5 Recommendation Engine
-              </span>
-            </div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>
-              Your Personalized Career Recommendations
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: '#E2E8F0', marginTop: 6, maxWidth: 650 }}>
-              Calculated dynamically using Skill Match (35%), Career Discovery (25%), Skill Assessment (20%), Education (10%), and Work-style preferences (10%).
-            </p>
+        <div style={{ maxWidth: 700 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span className="saas-badge badge-it">
+              <Award size={13} /> AI Recommendation Matrix
+            </span>
           </div>
-
-          {recommendationsData?.assessment_score !== undefined && (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              padding: '12px 20px',
-              borderRadius: 12,
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              textAlign: 'center'
-            }}>
-              <span style={{ fontSize: '0.75rem', color: '#E2E8F0', display: 'block' }}>Assessment Score</span>
-              <span style={{ fontSize: '1.6rem', fontWeight: 800 }}>{recommendationsData.assessment_score}%</span>
-            </div>
-          )}
+          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+            Personalized Career Recommendations
+          </h2>
+          <p style={{ fontSize: '0.88rem', color: '#64748B', marginTop: 6, margin: 0, lineHeight: 1.5 }}>
+            Ranked based on your Profile Skills (35%), Career Discovery (25%), Skill Assessment (20%), Education (10%), and Domain Interests (10%).
+          </p>
         </div>
-      </GlassCard>
+
+        {recommendationsData?.assessment_score !== undefined && (
+          <div style={{
+            background: '#F8FAFC',
+            padding: '12px 20px',
+            borderRadius: 12,
+            border: '1px solid #E2E8F0',
+            textAlign: 'center'
+          }}>
+            <span style={{ fontSize: '0.72rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Assessment Accuracy</span>
+            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4F46E5', display: 'block' }}>
+              {recommendationsData.assessment_score}%
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Notice Banner for Incomplete Data */}
       {isIncomplete && (
         <div style={{
-          background: 'rgba(245, 158, 11, 0.12)',
-          border: '1px solid rgba(245, 158, 11, 0.4)',
+          background: '#FFFBEB',
+          border: '1px solid #FDE68A',
           color: '#92400E',
-          padding: '18px 24px',
-          borderRadius: 14,
+          padding: '16px 20px',
+          borderRadius: 12,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: 16
+          gap: 14
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Info size={24} color="#D97706" />
+            <Info size={20} color="#D97706" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.98rem' }}>
-                Enhance Your Recommendation Accuracy
+              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                Refine Your Match Accuracy
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#B45309' }}>
-                {recommendationsData.message || "Complete your Profile, Career Discovery, and Skill Assessment to receive fully accurate personalized career recommendations."}
+              <div style={{ fontSize: '0.8rem', color: '#B45309' }}>
+                {recommendationsData.message || "Complete Career Discovery and Skill Assessment to unlock 100% calibrated recommendations."}
               </div>
             </div>
           </div>
@@ -130,58 +195,148 @@ export default function RecommendationsPage({ assessmentResult, activeCategory, 
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               onClick={() => onNavigate('careerDiscovery')}
-              className="btn"
-              style={{ background: 'rgba(217, 119, 6, 0.15)', color: '#D97706', border: '1px solid #D97706', padding: '6px 14px', fontSize: '0.82rem', borderRadius: 8 }}
+              className="btn btn-outline"
+              style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#FFFFFF' }}
             >
               Career Discovery
             </button>
             <button
               onClick={() => onNavigate('assessment')}
-              className="btn"
-              style={{ background: '#D97706', color: '#FFFFFF', padding: '6px 14px', fontSize: '0.82rem', borderRadius: 8, fontWeight: 700 }}
+              className="btn btn-primary"
+              style={{ padding: '6px 14px', fontSize: '0.8rem' }}
             >
-              Skill Assessment →
+              Take Assessment →
             </button>
           </div>
         </div>
       )}
 
+      {/* Filter & Search Toolbar */}
+      <div style={{
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: 12,
+        padding: '12px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 360 }}>
+          <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+          <input
+            type="text"
+            placeholder="Search roles or skills (e.g., Python, Cloud)..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="form-input"
+            style={{ paddingLeft: 32, fontSize: '0.82rem' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Category Filter Pills */}
+          <div style={{ display: 'flex', background: '#F1F5F9', padding: 3, borderRadius: 8 }}>
+            {['all', 'IT', 'Non-IT'].map(cat => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className="btn"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: categoryFilter === cat ? '#FFFFFF' : 'transparent',
+                  color: categoryFilter === cat ? '#0F172A' : '#64748B',
+                  fontWeight: categoryFilter === cat ? 700 : 500,
+                  boxShadow: categoryFilter === cat ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {cat === 'all' ? 'All Roles' : cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort selection */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ArrowUpDown size={14} color="#64748B" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="form-select"
+              style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+            >
+              <option value="suitability">Sort by Suitability Score</option>
+              <option value="title">Sort Alphabetically (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Recommendation Cards List */}
       {!filteredRecs.length ? (
-        <GlassCard style={{ textAlign: 'center', padding: '40px' }}>
+        <div style={{
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: 14,
+          textAlign: 'center',
+          padding: '48px 24px'
+        }}>
           <HelpCircle size={32} color="#D97706" style={{ marginBottom: 12 }} />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554' }}>No Recommendations Available</h3>
-          <p style={{ fontSize: '0.88rem', color: '#64748B' }}>Try selecting 'All' categories or completing your profile setup.</p>
-        </GlassCard>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>No Matching Roles Found</h3>
+          <p style={{ fontSize: '0.85rem', color: '#64748B', maxWidth: 440, margin: '6px auto 0' }}>
+            Try clearing your search query or switching categories.
+          </p>
+        </div>
       ) : (
-        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
+        <div className="grid-2">
           {filteredRecs.map((rec) => {
             const matchingList = rec.matching_skills || [];
             const missingList = rec.missing_skills || rec.skill_gaps?.filter((g) => g.status === 'Improve').map(g => g.skill_name) || [];
+            const isSettingThis = settingTargetId === rec.career_id;
+            const isSuccessThis = targetSuccessId === rec.career_id;
 
             return (
-              <GlassCard key={rec.career_id} style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div
+                key={rec.career_id}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 14,
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                  boxShadow: 'var(--shadow-sm)',
+                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                   <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#172554', margin: 0 }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.3 }}>
                       {rec.title}
                     </h3>
                     <div style={{ marginTop: 6 }}>
-                      <span className={`glass-badge ${rec.category === 'IT' ? 'badge-it' : 'badge-nonit'}`}>
+                      <span className={`saas-badge ${rec.category === 'IT' ? 'badge-it' : 'badge-nonit'}`}>
                         {rec.category} Pathway
                       </span>
                     </div>
                   </div>
 
                   <div style={{
-                    background: 'linear-gradient(135deg, #172554 0%, #4F46E5 100%)',
-                    color: '#FFFFFF',
+                    background: '#EEF2FF',
+                    border: '1px solid #C7D2FE',
+                    color: '#4F46E5',
                     padding: '8px 14px',
                     borderRadius: 12,
                     textAlign: 'center',
-                    minWidth: 85
+                    minWidth: 80
                   }}>
-                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#C7D2FE', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700 }}>
                       Suitability
                     </div>
                     <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>
@@ -190,131 +345,131 @@ export default function RecommendationsPage({ assessmentResult, activeCategory, 
                   </div>
                 </div>
 
-                <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.55 }}>
+                <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, margin: 0 }}>
                   {rec.description}
                 </p>
 
                 {/* Why this matches you */}
                 {rec.reason && (
-                  <div style={{ background: 'rgba(79, 70, 229, 0.06)', borderLeft: '3px solid #4F46E5', padding: '10px 14px', borderRadius: '0 8px 8px 0', fontSize: '0.82rem' }}>
+                  <div style={{
+                    background: '#F8FAFC',
+                    borderLeft: '3px solid #4F46E5',
+                    padding: '10px 14px',
+                    borderRadius: '0 8px 8px 0',
+                    fontSize: '0.8rem'
+                  }}>
                     <strong style={{ color: '#4F46E5', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-                      <Sparkles size={14} /> Why this matches you:
+                      <Sparkles size={13} /> Why this matches you:
                     </strong>
                     <span style={{ color: '#334155' }}>{rec.reason}</span>
                   </div>
                 )}
 
                 {/* Salary & Growth Stats */}
-                <div style={{ display: 'flex', gap: 16, background: '#F8FAFC', padding: 10, borderRadius: 10, fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', gap: 16, background: '#F8FAFC', padding: '10px 14px', borderRadius: 10, fontSize: '0.8rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <DollarSign size={16} color="#10B981" />
+                    <DollarSign size={15} color="#059669" />
                     <div>
                       <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary</div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{rec.average_salary}</div>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{rec.average_salary || 'Competitive'}</div>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <TrendingUp size={16} color="#4F46E5" />
+                    <TrendingUp size={15} color="#4F46E5" />
                     <div>
                       <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Growth Rate</div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{rec.growth_rate}</div>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{rec.growth_rate || 'High Growth'}</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Matching Skills */}
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <CheckCircle2 size={14} /> Matching Skills:
+                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#059669', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <CheckCircle2 size={13} /> Matching Skills:
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {matchingList.length > 0 ? matchingList.map((sk, sIdx) => (
                       <span key={sIdx} style={{
-                        background: 'rgba(16, 185, 129, 0.1)',
+                        background: '#ECFDF5',
                         color: '#065F46',
-                        padding: '3px 8px',
+                        border: '1px solid #A7F3D0',
+                        padding: '2px 8px',
                         borderRadius: 6,
-                        fontSize: '0.76rem',
+                        fontSize: '0.74rem',
                         fontWeight: 600
                       }}>
                         ✓ {sk}
                       </span>
                     )) : (
-                      <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>None identified yet</span>
+                      <span style={{ fontSize: '0.76rem', color: '#94A3B8' }}>None identified yet</span>
                     )}
                   </div>
                 </div>
 
-                {/* Skills to Improve / Missing */}
+                {/* Skills to Improve */}
                 <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#DC2626', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <AlertCircle size={14} /> Skills You Need to Improve:
+                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#DC2626', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <AlertCircle size={13} /> Skills to Improve:
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {missingList.length > 0 ? missingList.map((ms, gIdx) => (
                       <span key={gIdx} style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
+                        background: '#FEF2F2',
                         color: '#991B1B',
-                        padding: '3px 8px',
+                        border: '1px solid #FECACA',
+                        padding: '2px 8px',
                         borderRadius: 6,
-                        fontSize: '0.76rem',
+                        fontSize: '0.74rem',
                         fontWeight: 600
                       }}>
                         • {typeof ms === 'string' ? ms : ms.skill_name}
                       </span>
                     )) : (
-                      <span style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 600 }}>All key skills satisfied!</span>
+                      <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 600 }}>All core skills satisfied!</span>
                     )}
                   </div>
                 </div>
 
-                {/* Recommended Projects preview */}
-                {rec.recommended_projects?.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4F46E5', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <FolderGit2 size={14} /> Recommended Portfolio Projects:
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {rec.recommended_projects.map((p, pIdx) => (
-                        <div key={pIdx} style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 600 }}>
-                          • {p.title || p.project_name}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Footer View & Roadmap Actions */}
+                {/* Footer Action Buttons */}
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 14, marginTop: 'auto', display: 'flex', gap: 10 }}>
                   <button
                     onClick={() => onSelectCareer(rec.career_id)}
                     className="btn btn-outline"
-                    style={{ flex: 1, padding: '9px 12px', fontSize: '0.82rem', fontWeight: 600 }}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '0.82rem', fontWeight: 600 }}
                   >
                     <span>View Details</span>
                     <ChevronRight size={14} />
                   </button>
 
                   <button
-                    onClick={() => onNavigate('actionPlan')}
-                    className="btn"
+                    onClick={() => handleSelectAsTargetCareer(rec.career_id)}
+                    disabled={isSettingThis}
+                    className="btn btn-primary"
                     style={{
-                      flex: 1,
-                      background: 'linear-gradient(135deg, #172554 0%, #4F46E5 100%)',
-                      color: '#FFFFFF',
-                      padding: '9px 12px',
+                      flex: 1.2,
+                      padding: '8px 12px',
                       fontSize: '0.82rem',
-                      fontWeight: 700,
-                      border: 'none',
-                      borderRadius: 8,
-                      cursor: 'pointer'
+                      fontWeight: 700
                     }}
                   >
-                    <span>Build My Career Roadmap →</span>
+                    {isSuccessThis ? (
+                      <>
+                        <Check size={14} />
+                        <span>Target Selected!</span>
+                      </>
+                    ) : isSettingThis ? (
+                      <span>Saving Goal...</span>
+                    ) : (
+                      <>
+                        <Target size={14} />
+                        <span>Select as Target Career</span>
+                      </>
+                    )}
                   </button>
                 </div>
-              </GlassCard>
+              </div>
             );
           })}
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/common/GlassCard';
-import { fetchCareerById, fetchPortfolioProjects, fetchSampleJobs, getPersonalizedCareerDetail } from '../services/api';
+import { fetchCareerById, fetchPortfolioProjects, fetchSampleJobs, getPersonalizedCareerDetail, regenerateActionPlan } from '../services/api';
 import { 
   ArrowLeft, 
   Briefcase, 
@@ -12,15 +12,37 @@ import {
   FolderGit2, 
   ExternalLink,
   Sparkles,
-  Bot
+  Bot,
+  Target,
+  Check
 } from 'lucide-react';
 
-export default function CareerDetailPage({ careerId, assessmentResult, onBack, onNavigate }) {
+export default function CareerDetailPage({ careerId, assessmentResult, onBack, onNavigate, onTargetCareerUpdated }) {
   const [career, setCareer] = useState(null);
   const [recDetail, setRecDetail] = useState(null);
   const [projects, setProjects] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [settingTarget, setSettingTarget] = useState(false);
+  const [targetSet, setTargetSet] = useState(false);
+
+  const handleSetTargetCareer = async () => {
+    try {
+      setSettingTarget(true);
+      await regenerateActionPlan(careerId);
+      setTargetSet(true);
+      if (onTargetCareerUpdated) {
+        onTargetCareerUpdated(careerId);
+      }
+      setTimeout(() => {
+        onNavigate('actionPlan');
+      }, 700);
+    } catch (e) {
+      console.error('Failed to set target career:', e);
+    } finally {
+      setSettingTarget(false);
+    }
+  };
 
   useEffect(() => {
     if (careerId) {
@@ -183,6 +205,22 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
               }}
             >
               <Briefcase size={15} /> Practice Interview
+            </button>
+            <button
+              onClick={handleSetTargetCareer}
+              disabled={settingTarget}
+              className="btn btn-primary"
+              style={{
+                padding: '8px 14px',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              {targetSet ? <Check size={15} /> : <Target size={15} />}
+              <span>{targetSet ? 'Target Selected!' : settingTarget ? 'Saving...' : 'Set as Target Career'}</span>
             </button>
           </div>
         </div>
