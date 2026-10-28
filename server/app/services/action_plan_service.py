@@ -67,6 +67,7 @@ async def get_or_create_action_plan(
         )
 
     # Determine Target Career
+    has_user_selected_target = bool(target_career_id or (existing_doc and existing_doc.get("has_user_selected_target", False)))
     if target_career_id:
         target_rec = next((r for r in recommendations if r.get("career_id") == target_career_id), None)
         if not target_rec:
@@ -252,6 +253,7 @@ async def get_or_create_action_plan(
     action_plan_doc = {
         "id": doc_id,
         "user_id": user_id,
+        "has_user_selected_target": has_user_selected_target,
         "target_career_id": target_rec["career_id"],
         "target_career_title": target_rec["title"],
         "target_career_category": target_rec["category"],

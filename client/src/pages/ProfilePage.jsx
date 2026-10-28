@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ChipInput from '../components/common/ChipInput';
 import { getProfile, saveProfile } from '../services/api';
+import { calculateProfileCompletion } from '../utils/profileCompletion';
 import {
   User,
   BookOpen,
@@ -16,13 +17,13 @@ import {
 export default function ProfilePage({ user, onProfileUpdated }) {
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [educationLevel, setEducationLevel] = useState("Bachelor's Degree");
-  const [degree, setDegree] = useState("B.Tech / B.E.");
-  const [branch, setBranch] = useState("Computer Science");
-  const [graduationYear, setGraduationYear] = useState(2026);
-  const [currentSkills, setCurrentSkills] = useState(["Python", "JavaScript", "SQL", "React"]);
-  const [interests, setInterests] = useState(["Software Engineering", "AI", "Web Development"]);
-  const [preferredCategory, setPreferredCategory] = useState("IT");
+  const [educationLevel, setEducationLevel] = useState('');
+  const [degree, setDegree] = useState('');
+  const [branch, setBranch] = useState('');
+  const [graduationYear, setGraduationYear] = useState('');
+  const [currentSkills, setCurrentSkills] = useState([]);
+  const [interests, setInterests] = useState([]);
+  const [preferredCategory, setPreferredCategory] = useState('IT');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,13 +41,13 @@ export default function ProfilePage({ user, onProfileUpdated }) {
       if (res) {
         setFullName(res.full_name || user?.full_name || '');
         setEmail(res.email || user?.email || '');
-        setEducationLevel(res.education_level || "Bachelor's Degree");
-        setDegree(res.degree || "B.Tech / B.E.");
-        setBranch(res.branch || "Computer Science");
-        setGraduationYear(res.graduation_year || 2026);
-        setCurrentSkills(res.current_skills || []);
-        setInterests(res.interests || []);
-        setPreferredCategory(res.preferred_category || "IT");
+        setEducationLevel(res.education_level || '');
+        setDegree(res.degree || '');
+        setBranch(res.branch || '');
+        setGraduationYear(res.graduation_year || '');
+        setCurrentSkills(Array.isArray(res.current_skills) ? res.current_skills : []);
+        setInterests(Array.isArray(res.interests) ? res.interests : []);
+        setPreferredCategory(res.preferred_category || 'IT');
       }
     } catch (err) {
       console.log('No existing profile found or default initialized:', err);
@@ -55,20 +56,19 @@ export default function ProfilePage({ user, onProfileUpdated }) {
     }
   };
 
-  const calculateCompletion = () => {
-    const checks = [
-      Boolean(fullName.trim()),
-      Boolean(email.trim()),
-      Boolean(educationLevel),
-      Boolean(degree.trim()),
-      Boolean(branch.trim()),
-      Boolean(graduationYear),
-      currentSkills.length >= 2,
-      interests.length >= 1,
-      Boolean(preferredCategory)
-    ];
-    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  };
+  const completionMeta = calculateProfileCompletion({
+    full_name: fullName,
+    email,
+    education_level: educationLevel,
+    degree,
+    branch,
+    graduation_year: graduationYear,
+    current_skills: currentSkills,
+    interests,
+    preferred_category: preferredCategory
+  }, user);
+
+  const completionPct = completionMeta.percentage;
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -115,7 +115,8 @@ export default function ProfilePage({ user, onProfileUpdated }) {
     );
   }
 
-  const completionPct = calculateCompletion();
+  // Computed completion
+  // completionPct calculated above
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -365,8 +366,7 @@ export default function ProfilePage({ user, onProfileUpdated }) {
 
           <ChipInput
             chips={currentSkills}
-            onAddChip={(chip) => setCurrentSkills([...currentSkills, chip])}
-            onRemoveChip={(chip) => setCurrentSkills(currentSkills.filter(c => c !== chip))}
+            onChange={setCurrentSkills}
             placeholder="Add skills (e.g., Python, SQL, React, Data Analysis)..."
           />
         </div>
@@ -391,8 +391,7 @@ export default function ProfilePage({ user, onProfileUpdated }) {
 
           <ChipInput
             chips={interests}
-            onAddChip={(chip) => setInterests([...interests, chip])}
-            onRemoveChip={(chip) => setInterests(interests.filter(c => c !== chip))}
+            onChange={setInterests}
             placeholder="Add interests (e.g., AI, Cloud, Finance, Design, Healthcare)..."
           />
         </div>

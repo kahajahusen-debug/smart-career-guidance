@@ -15,7 +15,7 @@ CAREERS_SEED = [
         "title": "Full Stack Software Engineer",
         "category": "IT",
         "description": "Designs, develops, and maintains both frontend client interfaces and backend server architectures for modern scalable applications.",
-        "average_salary": "$90,000 - $140,000 / yr",
+        "average_salary": "₹6.5 - ₹16 LPA (approx.)",
         "growth_rate": "25% (Much faster than average)",
         "required_skills": [
             {"skill_name": "JavaScript", "weight": 1.0, "target_score": 85},
@@ -32,7 +32,7 @@ CAREERS_SEED = [
         "title": "Data Scientist & ML Engineer",
         "category": "IT",
         "description": "Extracts actionable insights from large datasets and builds predictive statistical models using Machine Learning algorithms.",
-        "average_salary": "$105,000 - $155,000 / yr",
+        "average_salary": "₹8.5 - ₹20 LPA (approx.)",
         "growth_rate": "35% (Extremely High)",
         "required_skills": [
             {"skill_name": "Python", "weight": 1.0, "target_score": 90},
@@ -49,7 +49,7 @@ CAREERS_SEED = [
         "title": "DevOps & Cloud Engineer",
         "category": "IT",
         "description": "Automates deployment pipelines, manages cloud infrastructure (AWS/Azure), and ensures high availability and security.",
-        "average_salary": "$100,000 - $150,000 / yr",
+        "average_salary": "₹7.5 - ₹18 LPA (approx.)",
         "growth_rate": "28% (Very High)",
         "required_skills": [
             {"skill_name": "Docker & Kubernetes", "weight": 1.0, "target_score": 85},
@@ -66,7 +66,7 @@ CAREERS_SEED = [
         "title": "UI/UX Product Designer",
         "category": "IT",
         "description": "Creates intuitive user-centric interfaces, interactive wireframes, and design systems to deliver seamless visual experiences.",
-        "average_salary": "$85,000 - $125,000 / yr",
+        "average_salary": "₹5.5 - ₹14 LPA (approx.)",
         "growth_rate": "16% (Faster than average)",
         "required_skills": [
             {"skill_name": "UI/UX Design", "weight": 1.0, "target_score": 90},
@@ -83,7 +83,7 @@ CAREERS_SEED = [
         "title": "Cybersecurity Analyst",
         "category": "IT",
         "description": "Monitors network traffic, conducts vulnerability testing, and defends organization systems against cyber threats.",
-        "average_salary": "$95,000 - $145,000 / yr",
+        "average_salary": "₹6.5 - ₹16 LPA (approx.)",
         "growth_rate": "32% (Much faster than average)",
         "required_skills": [
             {"skill_name": "Network Security", "weight": 1.0, "target_score": 85},
@@ -102,7 +102,7 @@ CAREERS_SEED = [
         "title": "Digital Marketing Strategist",
         "category": "Non-IT",
         "description": "Plans and executes multi-channel online campaigns, SEO optimization, social media strategies, and ROI performance tracking.",
-        "average_salary": "$65,000 - $105,000 / yr",
+        "average_salary": "₹4.5 - ₹11 LPA (approx.)",
         "growth_rate": "19% (High Growth)",
         "required_skills": [
             {"skill_name": "SEO & SEM", "weight": 1.0, "target_score": 85},
@@ -119,7 +119,7 @@ CAREERS_SEED = [
         "title": "Product Manager",
         "category": "Non-IT",
         "description": "Defines product vision, prioritizes feature roadmaps, aligns engineering and design teams, and manages user feedback loops.",
-        "average_salary": "$110,000 - $165,000 / yr",
+        "average_salary": "₹12 - ₹25 LPA (approx.)",
         "growth_rate": "24% (Very High)",
         "required_skills": [
             {"skill_name": "Product Strategy", "weight": 1.0, "target_score": 90},
@@ -136,7 +136,7 @@ CAREERS_SEED = [
         "title": "Financial Analyst & Risk Specialist",
         "category": "Non-IT",
         "description": "Evaluates financial statements, builds forecasting models, conducts risk assessments, and advises corporate investment strategies.",
-        "average_salary": "$80,000 - $125,000 / yr",
+        "average_salary": "₹5.5 - ₹13 LPA (approx.)",
         "growth_rate": "15% (Steady Growth)",
         "required_skills": [
             {"skill_name": "Financial Modeling", "weight": 1.0, "target_score": 90},
@@ -153,7 +153,7 @@ CAREERS_SEED = [
         "title": "Human Resources & Talent Manager",
         "category": "Non-IT",
         "description": "Oversees talent acquisition, employee engagement, compensation structures, performance evaluations, and HR compliance.",
-        "average_salary": "$70,000 - $110,000 / yr",
+        "average_salary": "₹4.5 - ₹11 LPA (approx.)",
         "growth_rate": "14% (Average Growth)",
         "required_skills": [
             {"skill_name": "Talent Acquisition", "weight": 1.0, "target_score": 85},
@@ -170,7 +170,7 @@ CAREERS_SEED = [
         "title": "Healthcare Operations Administrator",
         "category": "Non-IT",
         "description": "Manages medical facility operations, clinical workflows, patient care compliance, and healthcare facility budgets.",
-        "average_salary": "$85,000 - $130,000 / yr",
+        "average_salary": "₹5 - ₹12 LPA (approx.)",
         "growth_rate": "28% (Much faster than average)",
         "required_skills": [
             {"skill_name": "Healthcare Management", "weight": 1.0, "target_score": 85},

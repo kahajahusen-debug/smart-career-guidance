@@ -8,7 +8,9 @@ import {
   Settings,
   Sparkles,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Sun,
+  Search
 } from 'lucide-react';
 
 export default function TopHeader({
@@ -77,6 +79,13 @@ export default function TopHeader({
 
   const pageMeta = getPageMeta(activePage);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   // Real connected notifications based on application data
   const realNotifications = [];
   const isProfileComplete = profile?.current_skills && profile.current_skills.length >= 2;
@@ -129,13 +138,20 @@ export default function TopHeader({
     return name.slice(0, 2).toUpperCase();
   };
 
+  const firstName = user?.full_name ? user.full_name.trim().split(' ')[0] : 'Farha';
+
   return (
     <header className="saas-top-header" style={{
       background: '#FFFFFF',
       borderBottom: 'none',
-      boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.03)'
+      boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.03)',
+      padding: '16px 28px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 16
     }}>
-      {/* Left side: Hamburger (Mobile) + Breadcrumb & Title */}
+      {/* Left side: Hamburger (Mobile) + Breadcrumb & Title or Dashboard Greeting */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <button
           onClick={onToggleMobileSidebar}
@@ -151,27 +167,74 @@ export default function TopHeader({
           <Menu size={20} />
         </button>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.74rem', color: '#64748B' }}>
-            <span>Portal</span>
-            <span>/</span>
-            <span style={{ fontWeight: 600, color: '#475569' }}>{pageMeta.section}</span>
+        {activePage === 'dashboard' ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Sun size={26} color="#F59E0B" strokeWidth={2.3} style={{ flexShrink: 0 }} />
+            <div>
+              <h1 style={{
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                color: '#0F172A',
+                letterSpacing: '-0.02em',
+                margin: 0,
+                lineHeight: 1.2
+              }}>
+                {getGreeting()}, {firstName}!
+              </h1>
+              <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '2px 0 0 0' }}>
+                Your career journey, at a glance.
+              </p>
+            </div>
           </div>
-          <h1 style={{
-            fontSize: '1.2rem',
-            fontWeight: 800,
-            color: '#0F172A',
-            letterSpacing: '-0.02em',
-            margin: 0,
-            lineHeight: 1.2
-          }}>
-            {pageMeta.title}
-          </h1>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.74rem', color: '#64748B' }}>
+              <span>Portal</span>
+              <span>/</span>
+              <span style={{ fontWeight: 600, color: '#475569' }}>{pageMeta.section}</span>
+            </div>
+            <h1 style={{
+              fontSize: '1.2rem',
+              fontWeight: 800,
+              color: '#0F172A',
+              letterSpacing: '-0.02em',
+              margin: 0,
+              lineHeight: 1.2
+            }}>
+              {pageMeta.title}
+            </h1>
+          </div>
+        )}
       </div>
 
-      {/* Right side: Contextual Category Filter + Notifications + Profile Dropdown */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Right side: Search Input + Contextual Filter + Notifications + Profile Dropdown */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {/* Search Bar matching screenshot */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          background: '#F1F5F9',
+          borderRadius: 999,
+          padding: '6px 16px',
+          gap: 8,
+          minWidth: 200,
+          maxWidth: 260
+        }}>
+          <Search size={15} color="#94A3B8" />
+          <input
+            type="text"
+            placeholder="Search anything..."
+            style={{
+              border: 'none',
+              background: 'transparent',
+              outline: 'none',
+              fontSize: '0.8rem',
+              color: '#0F172A',
+              width: '100%'
+            }}
+          />
+        </div>
+
         {/* Contextual IT / Non-IT Filter (Only on relevant pages) */}
         {showCategoryFilter && (
           <div style={{
@@ -229,7 +292,7 @@ export default function TopHeader({
                 width: 7,
                 height: 7,
                 borderRadius: '50%',
-                background: '#4F46E5'
+                background: '#EF4444'
               }} />
             )}
           </button>

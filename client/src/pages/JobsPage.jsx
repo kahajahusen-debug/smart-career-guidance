@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { fetchSampleJobs, fetchCareers } from '../services/api';
+import { formatSalary } from '../utils/formatters';
 import {
   ExternalLink,
   Briefcase,
   MapPin,
-  DollarSign,
+  IndianRupee,
   Clock,
   CheckCircle2,
   Search,
@@ -278,8 +279,8 @@ export default function JobsPage({ activeCategory, assessmentResult, onSelectCar
                     <span>{j.experience_level}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, gridColumn: 'span 2' }}>
-                    <DollarSign size={14} color="#059669" />
-                    <span style={{ fontWeight: 700, color: '#0F172A' }}>{j.salary_range}</span>
+                    <IndianRupee size={14} color="#059669" />
+                    <span style={{ fontWeight: 700, color: '#0F172A' }}>{formatSalary(j.salary_range)}</span>
                   </div>
                 </div>
 
@@ -393,10 +394,10 @@ export default function JobsPage({ activeCategory, assessmentResult, onSelectCar
                   fontSize: '0.8rem'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <DollarSign size={14} color="#059669" />
+                    <IndianRupee size={14} color="#059669" />
                     <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary</div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{c.average_salary}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary (India)</div>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{formatSalary(c.average_salary)}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

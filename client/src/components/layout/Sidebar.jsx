@@ -301,39 +301,70 @@ export default function Sidebar({
           {!isCollapsed && <span>Settings</span>}
         </button>
 
-        {/* User Account Card & Logout */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isCollapsed ? 'center' : 'space-between',
-          gap: 10,
-          padding: isCollapsed ? '6px 0' : '8px 10px',
-          background: isCollapsed ? 'transparent' : 'rgba(255, 255, 255, 0.06)',
-          borderRadius: 10
-        }}>
-          <div
-            onClick={() => handleItemClick('profile')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              minWidth: 0,
-              cursor: 'pointer',
-              flex: 1
-            }}
-            title={user?.full_name || 'My Profile'}
-          >
+        {/* Logout Button */}
+        <button
+          onClick={onLogout}
+          className="btn btn-ghost"
+          title={isCollapsed ? 'Logout' : undefined}
+          aria-label="Logout"
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
+            gap: 12,
+            padding: isCollapsed ? '8px 0' : '8px 12px',
+            fontSize: '0.84rem',
+            color: '#CBD5E1',
+            fontWeight: 500,
+            borderRadius: 8
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#233568';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#CBD5E1';
+          }}
+        >
+          <LogOut size={17} />
+          {!isCollapsed && <span>Logout</span>}
+        </button>
+
+        {/* User Account Card */}
+        <div
+          onClick={() => handleItemClick('profile')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleItemClick('profile'); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'space-between',
+            gap: 10,
+            padding: isCollapsed ? '6px 0' : '8px 10px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 12,
+            cursor: 'pointer',
+            transition: 'background 0.15s ease'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
+          title={user?.full_name || 'My Profile'}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
             <div style={{
-              width: 32,
-              height: 32,
-              minWidth: 32,
-              borderRadius: 8,
+              width: 34,
+              height: 34,
+              minWidth: 34,
+              borderRadius: '50%',
               background: '#4F46E5',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '0.78rem',
+              fontSize: '0.8rem',
               fontWeight: 700
             }}>
               {getInitials(user?.full_name)}
@@ -364,29 +395,7 @@ export default function Sidebar({
             )}
           </div>
 
-          {!isCollapsed && (
-            <button
-              onClick={onLogout}
-              className="btn btn-ghost"
-              title="Log Out"
-              aria-label="Log Out"
-              style={{
-                padding: '6px',
-                color: '#94A3B8',
-                borderRadius: 6
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#EF4444';
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#94A3B8';
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <LogOut size={16} />
-            </button>
-          )}
+          {!isCollapsed && <ChevronRight size={16} color="#94A3B8" />}
         </div>
       </div>
     </aside>

@@ -17,20 +17,20 @@ async def get_my_profile(current_user: dict = Depends(get_current_user)):
         profile_doc = in_memory_store.get("profiles", {}).get(user_id)
 
     if not profile_doc:
-        # Create initial profile document if not found
+        # Create initial empty profile document if not found
         now_iso = datetime.now(timezone.utc).isoformat()
         profile_doc = {
             "id": str(uuid.uuid4()),
             "user_id": user_id,
             "full_name": current_user.get("full_name", ""),
             "email": current_user.get("email", ""),
-            "education_level": "Bachelor's Degree",
-            "degree": "B.Tech / B.E.",
-            "branch": "Computer Science",
-            "graduation_year": 2026,
-            "current_skills": ["Python", "JavaScript"],
-            "interests": ["Software Engineering"],
-            "preferred_category": "IT",
+            "education_level": "",
+            "degree": "",
+            "branch": "",
+            "graduation_year": None,
+            "current_skills": [],
+            "interests": [],
+            "preferred_category": "Both",
             "updated_at": now_iso
         }
         if db.is_connected and db.db is not None:

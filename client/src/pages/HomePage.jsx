@@ -10,8 +10,9 @@ import {
   ExternalLink, 
   FolderGit2, 
   TrendingUp,
-  DollarSign
+  IndianRupee
 } from 'lucide-react';
+import { formatSalary } from '../utils/formatters';
 
 export default function HomePage({ activeCategory, initialTab = 'careers', onNavigate, user }) {
   const [careers, setCareers] = useState([]);
@@ -176,10 +177,10 @@ export default function HomePage({ activeCategory, initialTab = 'careers', onNav
                 {/* Salary & Growth */}
                 <div style={{ display: 'flex', gap: 16, background: '#F8FAFC', padding: 12, borderRadius: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <DollarSign size={16} color="#10B981" />
+                    <IndianRupee size={16} color="#10B981" />
                     <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>{career.average_salary}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary (India)</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>{formatSalary(career.average_salary)}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

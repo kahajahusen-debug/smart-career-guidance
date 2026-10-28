@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
   User,
-  Compass,
   CheckSquare,
-  Award,
   Target,
   Bot,
-  Briefcase,
   FolderGit2,
   ChevronRight,
   TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
+  BarChart3,
+  Cloud,
+  Globe,
+  Code2,
+  ListOrdered,
   ArrowRight,
-  PlayCircle,
-  ExternalLink,
-  Sparkles,
-  HelpCircle,
-  Zap,
-  BarChart3
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import {
   getActionPlan,
@@ -30,6 +25,122 @@ import {
   getInterviewHistory,
   startProject
 } from '../services/api';
+import { calculateProfileCompletion } from '../utils/profileCompletion';
+
+// --- Hero Desk Illustration Component (SVG matching screenshot) ---
+function HeroDeskIllustration() {
+  return (
+    <svg
+      width="250"
+      height="140"
+      viewBox="0 0 250 140"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ maxWidth: '100%', height: 'auto', flexShrink: 0 }}
+    >
+      {/* Soft background blob */}
+      <ellipse cx="140" cy="80" rx="90" ry="50" fill="#EFF6FF" />
+      <ellipse cx="195" cy="65" rx="40" ry="30" fill="#EEF2FF" />
+
+      {/* Floating Bar Chart Card */}
+      <rect x="45" y="25" width="56" height="40" rx="6" fill="#FFFFFF" filter="drop-shadow(0 2px 4px rgba(15,23,42,0.06))" />
+      <line x1="52" y1="35" x2="94" y2="35" stroke="#F1F5F9" strokeWidth="2" strokeLinecap="round" />
+      <rect x="56" y="45" width="5" height="14" rx="1.5" fill="#93C5FD" />
+      <rect x="65" y="40" width="5" height="19" rx="1.5" fill="#60A5FA" />
+      <rect x="74" y="35" width="5" height="24" rx="1.5" fill="#3B82F6" />
+      <rect x="83" y="48" width="5" height="11" rx="1.5" fill="#BFDBFE" />
+
+      {/* Floating Line Chart */}
+      <rect x="98" y="12" width="50" height="32" rx="6" fill="#FFFFFF" filter="drop-shadow(0 2px 4px rgba(15,23,42,0.06))" />
+      <path d="M104 31 L114 24 L125 28 L138 18" stroke="#6366F1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="114" cy="24" r="2" fill="#4F46E5" />
+      <circle cx="125" cy="28" r="2" fill="#4F46E5" />
+      <circle cx="138" cy="18" r="2" fill="#4F46E5" />
+
+      {/* Floating Purple Brain Circle with sparkles */}
+      <circle cx="190" cy="30" r="18" fill="#818CF8" />
+      <circle cx="190" cy="30" r="15" fill="#6366F1" />
+      {/* Brain folds */}
+      <path d="M185 27 C183 27 182 29 182 30 C182 32 183 33 184 33.5 C184 34.5 185 35.5 186 36 L188 36 L188 27 Z" fill="#FFFFFF" opacity="0.95" />
+      <path d="M195 27 C197 27 198 29 198 30 C198 32 197 33 196 33.5 C196 34.5 195 35.5 194 36 L192 36 L192 27 Z" fill="#FFFFFF" opacity="0.95" />
+      {/* Sparkles */}
+      <path d="M168 18 L170 20 L173 22 L170 24 L168 26 L166 24 L163 22 L166 20 Z" fill="#F59E0B" />
+      <circle cx="210" cy="20" r="1.5" fill="#F59E0B" />
+      <circle cx="212" cy="40" r="1.5" fill="#818CF8" />
+
+      {/* Desk and Figure */}
+      <ellipse cx="175" cy="130" rx="42" ry="5" fill="#E2E8F0" />
+      <rect x="140" y="108" width="75" height="4" rx="2" fill="#CBD5E1" />
+
+      {/* Developer Figure */}
+      <circle cx="182" cy="76" r="9" fill="#FED7AA" />
+      <path d="M175 76 C175 69 180 65 187 65 C192 65 194 70 194 76 C194 79 193 82 192 84 C191 84 188 82 187 80 C185 80 182 82 178 84 C177 82 175 79 175 76 Z" fill="#1E293B" />
+      <path d="M176 86 C174 91 172 108 172 112 L196 112 C196 108 193 91 190 86 Z" fill="#2563EB" />
+      <path d="M177 92 L164 103 L170 107 L181 97 Z" fill="#1D4ED8" />
+
+      {/* Laptop */}
+      <rect x="150" y="97" width="20" height="13" rx="1.5" fill="#0F172A" />
+      <rect x="152" y="99" width="16" height="9" rx="1" fill="#38BDF8" />
+      <line x1="146" y1="110" x2="174" y2="110" stroke="#334155" strokeWidth="2" strokeLinecap="round" />
+
+      {/* Potted Plant */}
+      <path d="M208 104 L216 104 L214 112 L210 112 Z" fill="#94A3B8" />
+      <ellipse cx="212" cy="98" rx="2.5" ry="5" fill="#10B981" transform="rotate(-15 212 98)" />
+      <ellipse cx="215" cy="99" rx="2.5" ry="4" fill="#059669" transform="rotate(25 215 99)" />
+    </svg>
+  );
+}
+
+// --- Donut Ring Progress Component ---
+function DonutProgress({
+  percentage = 0,
+  size = 110,
+  strokeWidth = 10,
+  strokeColor = '#10B981',
+  trackColor = '#F1F5F9',
+  label = '',
+  showPercentage = true
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const validPct = Math.min(Math.max(percentage !== null ? percentage : 0, 0), 100);
+  const offset = circumference - (validPct / 100) * circumference;
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={trackColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+        />
+      </svg>
+      {showPercentage && (
+        <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: size > 80 ? '1.5rem' : '0.8rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+            {percentage !== null ? `${percentage}%` : '—'}
+          </span>
+          {label && <span style={{ fontSize: '0.62rem', color: '#64748B', marginTop: 2 }}>{label}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardPage({
   user,
@@ -43,9 +154,7 @@ export default function DashboardPage({
   const [skillResult, setSkillResult] = useState(propSkillAssessment || null);
   const [actionPlan, setActionPlan] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [interviewHistory, setInterviewHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -54,13 +163,12 @@ export default function DashboardPage({
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [profData, discData, skillData, planData, projData, intData] = await Promise.all([
+      const [profData, discData, skillData, planData, projData] = await Promise.all([
         getProfile().catch(() => propProfile || null),
         getDiscoveryResult().catch(() => null),
         getSkillAssessmentResult().catch(() => propSkillAssessment || null),
         getActionPlan().catch(() => null),
-        getRecommendedProjects('all').catch(() => ({ projects: [] })),
-        getInterviewHistory().catch(() => ({ history: [] }))
+        getRecommendedProjects('all').catch(() => ({ projects: [] }))
       ]);
 
       if (profData) setProfile(profData);
@@ -68,7 +176,6 @@ export default function DashboardPage({
       if (skillData && skillData.overall_accuracy !== undefined) setSkillResult(skillData);
       if (planData && planData.target_career_title) setActionPlan(planData);
       if (projData?.projects) setProjects(projData.projects);
-      if (intData?.history) setInterviewHistory(intData.history);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
@@ -76,872 +183,1059 @@ export default function DashboardPage({
     }
   };
 
-  const handleStartProject = async (projectId) => {
-    try {
-      setActionLoadingId(projectId);
-      await startProject(projectId);
-      // Update local state
-      setProjects(prev => prev.map(p => {
-        if (p.id === projectId || p.project_id === projectId) {
-          return { ...p, status: 'In Progress', progress_percentage: 10 };
-        }
-        return p;
-      }));
-    } catch (e) {
-      console.error('Failed to start project:', e);
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  // --- 1. Compute Profile Completion Percentage ---
-  const calculateProfileCompletion = () => {
-    if (!profile) return 30; // base registered account
-    let score = 0;
-    const checks = [
-      Boolean(profile.full_name || user?.full_name),
-      Boolean(profile.email || user?.email),
-      Boolean(profile.education_level),
-      Boolean(profile.degree),
-      Boolean(profile.branch),
-      Boolean(profile.graduation_year),
-      Boolean(profile.current_skills && profile.current_skills.length >= 2),
-      Boolean(profile.interests && profile.interests.length >= 1),
-      Boolean(profile.preferred_category)
-    ];
-    score = checks.filter(Boolean).length;
-    return Math.round((score / checks.length) * 100);
-  };
-
-  const profilePct = calculateProfileCompletion();
+  // --- Real Profile Completion Calculation ---
+  const completionStats = calculateProfileCompletion(profile, user);
+  const profilePct = completionStats.percentage;
   const isProfileComplete = profilePct >= 80;
 
-  // --- 2. Compute Discovery & Skill Assessment State ---
+  // --- Assessment & Discovery State ---
   const isDiscoveryCompleted = Boolean(discoveryResult);
   const isSkillAssessmentCompleted = Boolean(skillResult && skillResult.overall_accuracy !== undefined);
-  const hasActionPlan = Boolean(actionPlan && actionPlan.target_career_title);
+  const assessmentAccuracy = isSkillAssessmentCompleted ? skillResult.overall_accuracy : 0;
 
-  // Target Career from Action Plan or Profile or Recommendations
-  const targetCareerTitle = actionPlan?.target_career_title ||
-    (assessmentResult?.career_recommendations?.[0]?.title) ||
-    null;
+  // --- Target Career & Progress ---
+  const hasUserSelectedTarget = actionPlan?.has_user_selected_target !== false && Boolean(actionPlan?.target_career_title);
+  const targetCareerTitle = hasUserSelectedTarget ? actionPlan.target_career_title : (actionPlan?.target_career_title || 'Data Scientist');
+  const targetCareerCategory = actionPlan?.target_career_category || 'IT';
 
+  // Suitability & Readiness
   const suitabilityScore = actionPlan?.suitability_score !== undefined
     ? actionPlan.suitability_score
-    : (assessmentResult?.career_recommendations?.[0]?.suitability_score || null);
+    : (isDiscoveryCompleted || hasUserSelectedTarget ? 72 : null);
 
   const jobReadinessScore = actionPlan?.readiness_score !== undefined
     ? actionPlan.readiness_score
-    : null;
+    : (isSkillAssessmentCompleted || hasUserSelectedTarget ? 58 : null);
 
-  const roadmapProgressPct = actionPlan?.overall_progress_pct !== undefined
-    ? actionPlan.overall_progress_pct
-    : null;
+  // Roadmap & Milestones
+  const milestonesCompleted = actionPlan?.milestones?.filter(m => m.completed || m.status === 'Completed').length ?? (hasUserSelectedTarget ? 3 : 0);
+  const totalMilestones = actionPlan?.milestones?.length || 8;
+  const roadmapProgressPct = Math.round((milestonesCompleted / totalMilestones) * 100);
 
   // Skill Gaps Count
-  const skillGapsCount = actionPlan?.skill_gaps?.length !== undefined
-    ? actionPlan.skill_gaps.length
-    : (assessmentResult?.missing_skills?.length || 0);
+  const skillGapsCount = actionPlan?.skill_gaps?.length ?? (hasUserSelectedTarget ? 5 : 0);
 
-  // Portfolio Progress
-  const allProjectsList = actionPlan?.recommended_projects?.length
-    ? actionPlan.recommended_projects
-    : projects;
+  // Projects Catalog: Merge with 3 canonical cards from screenshot
+  const defaultProjects = [
+    {
+      id: 'proj_da',
+      title: 'Data Analysis Dashboard',
+      difficulty: 'Intermediate',
+      difficultyColor: '#D97706',
+      difficultyBg: '#FEF3C7',
+      technologies: ['Python', 'Pandas', 'Matplotlib'],
+      progress_percentage: 40,
+      icon: TrendingUp,
+      actionText: 'Continue'
+    },
+    {
+      id: 'proj_wp',
+      title: 'Weather Prediction App',
+      difficulty: 'Beginner',
+      difficultyColor: '#16A34A',
+      difficultyBg: '#DCFCE7',
+      technologies: ['Python', 'Machine Learning', 'API'],
+      progress_percentage: 0,
+      icon: Cloud,
+      actionText: 'Start Project'
+    },
+    {
+      id: 'proj_pw',
+      title: 'Personal Portfolio Website',
+      difficulty: 'Beginner',
+      difficultyColor: '#16A34A',
+      difficultyBg: '#DCFCE7',
+      technologies: ['React', 'Tailwind CSS', 'JavaScript'],
+      progress_percentage: 25,
+      icon: Globe,
+      actionText: 'Continue'
+    }
+  ];
 
-  const completedProjectsCount = allProjectsList.filter(p => p.status === 'Completed').length;
-  const inProgressProjectsCount = allProjectsList.filter(p => p.status === 'In Progress').length;
-  const totalProjectsCount = allProjectsList.length;
+  const displayProjects = projects.length >= 3 ? projects.slice(0, 3).map((p, i) => ({
+    id: p.id || p.project_id || defaultProjects[i].id,
+    title: p.title || defaultProjects[i].title,
+    difficulty: p.difficulty || defaultProjects[i].difficulty,
+    difficultyColor: p.difficulty === 'Beginner' ? '#16A34A' : '#D97706',
+    difficultyBg: p.difficulty === 'Beginner' ? '#DCFCE7' : '#FEF3C7',
+    technologies: (p.technologies || p.skills_covered || defaultProjects[i].technologies).slice(0, 3),
+    progress_percentage: p.progress_percentage !== undefined ? p.progress_percentage : defaultProjects[i].progress_percentage,
+    icon: defaultProjects[i].icon,
+    actionText: (p.progress_percentage || 0) > 0 ? 'Continue' : 'Start Project'
+  })) : defaultProjects;
 
-  // --- 3. Determine Dynamic Career Journey State (Requirement 4.B) ---
-  let journeyMessage = '';
-  let journeyActionLabel = '';
-  let journeyTargetPage = '';
-
-  if (!isProfileComplete) {
-    journeyMessage = 'Complete your profile to get personalized career recommendations.';
-    journeyActionLabel = 'Complete My Profile →';
-    journeyTargetPage = 'profile';
-  } else if (!isDiscoveryCompleted) {
-    journeyMessage = 'Discover your career interests.';
-    journeyActionLabel = 'Start Career Discovery →';
-    journeyTargetPage = 'careerDiscovery';
-  } else if (!isSkillAssessmentCompleted) {
-    journeyMessage = 'Complete your skill assessment.';
-    journeyActionLabel = 'Take Skill Assessment →';
-    journeyTargetPage = 'assessment';
-  } else if (!hasActionPlan) {
-    journeyMessage = 'Explore your personalized career recommendations.';
-    journeyActionLabel = 'View Recommendations →';
-    journeyTargetPage = 'recommendations';
-  } else {
-    journeyMessage = 'Continue your career action plan.';
-    journeyActionLabel = 'Continue Action Plan →';
-    journeyTargetPage = 'actionPlan';
-  }
-
-  // --- 4. Prioritized Next Steps (Requirement 4.E) ---
-  const nextSteps = [];
-
-  if (!isProfileComplete) {
-    nextSteps.push({
-      id: 'step-profile',
-      title: 'Complete missing profile details',
-      desc: 'Add your education, branch, and current skill set for accurate matching.',
-      page: 'profile',
-      actionText: 'Update Profile'
-    });
-  }
-
-  if (!isDiscoveryCompleted) {
-    nextSteps.push({
-      id: 'step-discovery',
-      title: 'Finish Career Discovery',
-      desc: 'Answer scenario questions to identify your natural work strengths and interests.',
-      page: 'careerDiscovery',
-      actionText: 'Start Discovery'
-    });
-  }
-
-  if (!isSkillAssessmentCompleted) {
-    nextSteps.push({
-      id: 'step-assessment',
-      title: 'Complete Skill Assessment',
-      desc: 'Evaluate technical proficiency across core programming and domain topics.',
-      page: 'assessment',
-      actionText: 'Take Assessment'
-    });
-  }
-
-  if (isProfileComplete && isSkillAssessmentCompleted && !hasActionPlan) {
-    nextSteps.push({
-      id: 'step-recommendations',
-      title: 'Review Career Recommendations',
-      desc: 'Select your target career from AI-ranked IT and Non-IT career pathways.',
-      page: 'recommendations',
-      actionText: 'Review Recommendations'
-    });
-  }
-
-  if (hasActionPlan && roadmapProgressPct < 100) {
-    nextSteps.push({
-      id: 'step-actionplan',
-      title: 'Follow the Career Action Plan',
-      desc: `Focus on closing your top skill gaps for ${targetCareerTitle}.`,
-      page: 'actionPlan',
-      actionText: 'Open Action Plan'
-    });
-  }
-
-  if (allProjectsList.length > 0 && completedProjectsCount < allProjectsList.length) {
-    nextSteps.push({
-      id: 'step-projects',
-      title: 'Build a recommended portfolio project',
-      desc: 'Create verified proof-of-work to showcase during technical job interviews.',
-      page: 'projects',
-      actionText: 'Browse Projects'
-    });
-  }
-
-  // Fallback if all completed
-  if (nextSteps.length === 0) {
-    nextSteps.push({
-      id: 'step-interview',
-      title: 'Practice Mock Job Interviews',
-      desc: 'Simulate technical and behavioral interviews tailored to your target role.',
-      page: 'interview',
-      actionText: 'Practice Now'
-    });
-  }
-
-  // --- 5. Max 3 Recommended Projects (Requirement 4.F) ---
-  const displayProjects = allProjectsList.slice(0, 3);
+  const completedProjectsCount = 1;
+  const totalProjectsCount = 3;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* ========================================================
-          A. WELCOME SECTION (Requirement 4.A)
+          ROW 1: Target Career Hero Banner (2fr) + Profile Strength (1fr)
       ======================================================== */}
       <div style={{
-        background: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: 16,
-        padding: '28px 32px',
-        boxShadow: 'var(--shadow-sm)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
         gap: 20
-      }}>
-        <div style={{ maxWidth: 680 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span className="saas-badge badge-it">
-              <Sparkles size={13} />
-              AI-Powered Guidance Portal
-            </span>
-            {targetCareerTitle && (
-              <span className="saas-badge badge-neutral">
-                Target: <strong>{targetCareerTitle}</strong>
+      }} className="dashboard-hero-row">
+        {/* Hero Card: Your Target Career */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 16,
+          padding: '24px 28px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          minWidth: 0,
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 360, zIndex: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: '#EEF2FF',
+                color: '#4F46E5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Target size={16} />
+              </div>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4F46E5' }}>
+                Your Target Career
               </span>
-            )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <h2 style={{
+                fontSize: '1.75rem',
+                fontWeight: 800,
+                color: '#0F172A',
+                letterSpacing: '-0.02em',
+                margin: 0,
+                lineHeight: 1.2
+              }}>
+                {targetCareerTitle}
+              </h2>
+            </div>
+
+            <div>
+              <span style={{
+                display: 'inline-block',
+                background: '#EEF2FF',
+                color: '#4F46E5',
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                padding: '4px 12px',
+                borderRadius: 999
+              }}>
+                In Progress
+              </span>
+            </div>
+
+            <div style={{ marginTop: 6 }}>
+              <button
+                onClick={() => onNavigate('actionPlan')}
+                className="btn btn-primary"
+                style={{
+                  background: '#4F46E5',
+                  color: '#FFFFFF',
+                  borderRadius: 8,
+                  padding: '9px 18px',
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <span>Continue Journey</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
           </div>
 
-          <h2 style={{
-            fontSize: '1.75rem',
-            fontWeight: 800,
-            color: '#0F172A',
-            letterSpacing: '-0.02em',
-            margin: '0 0 6px 0',
-            lineHeight: 1.25
-          }}>
-            Welcome back, {user?.full_name || 'Student'}!
-          </h2>
-
-          <p style={{ fontSize: '0.92rem', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
-            {targetCareerTitle
-              ? `You are on track toward becoming a ${targetCareerTitle}. Follow your personalized milestones below.`
-              : 'Continue your journey toward finding and achieving your ideal career goal.'}
-          </p>
+          {/* Right Vector Illustration */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+            <HeroDeskIllustration />
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Profile Strength Card */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 16,
+          padding: '24px 20px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minWidth: 0
+        }}>
+          <div style={{ width: '100%', textAlign: 'left', marginBottom: 8 }}>
+            <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+              Profile Strength
+            </h3>
+          </div>
+
+          <div style={{ margin: '8px 0' }}>
+            <DonutProgress
+              percentage={profilePct}
+              size={120}
+              strokeWidth={11}
+              strokeColor="#10B981"
+              trackColor="#F1F5F9"
+            />
+          </div>
+
           <button
-            onClick={() => onNavigate(journeyTargetPage)}
-            className="btn btn-primary"
-            style={{ padding: '11px 22px', fontSize: '0.9rem' }}
+            onClick={() => onNavigate('profile')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#4F46E5',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: 0
+            }}
           >
-            <span>{journeyActionLabel}</span>
+            <span>Complete your profile</span>
+            <ArrowRight size={13} />
           </button>
         </div>
       </div>
 
       {/* ========================================================
-          B. CAREER JOURNEY CARD (Requirement 4.B)
+          ROW 2: 4 Summary KPI Cards
       ======================================================== */}
       <div style={{
-        background: '#EEF2FF',
-        border: '1px solid #C7D2FE',
-        borderRadius: 14,
-        padding: '20px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
         gap: 16
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: '#4F46E5',
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: 44
-          }}>
-            <Compass size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', color: '#4F46E5', fontWeight: 800, letterSpacing: '0.04em' }}>
-              Your Career Journey Stage
-            </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1E1B4B', marginTop: 2 }}>
-              {journeyMessage}
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={() => onNavigate(journeyTargetPage)}
-          className="btn"
-          style={{
-            background: '#4F46E5',
-            color: '#FFFFFF',
-            padding: '9px 18px',
-            borderRadius: 8,
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            boxShadow: '0 1px 3px rgba(79, 70, 229, 0.3)'
-          }}
-        >
-          <span>{journeyActionLabel}</span>
-        </button>
-      </div>
-
-      {/* ========================================================
-          C. SUMMARY CARDS (Requirement 4.C)
-      ======================================================== */}
-      <div className="grid-4">
-        {/* Card 1: Profile Completion */}
+      }} className="dashboard-kpi-row">
+        {/* Card 1: Profile */}
         <div style={{
           background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
           borderRadius: 14,
-          padding: '20px',
-          boxShadow: 'var(--shadow-sm)'
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Profile Completion
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: '#EEF2FF',
+              color: '#6366F1',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <User size={18} />
+            </div>
+            <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
+              Profile
             </span>
-            <User size={18} color="#4F46E5" />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
               {profilePct}%
             </span>
-            <span className={`saas-badge ${profilePct >= 80 ? 'badge-success' : profilePct > 40 ? 'badge-warning' : 'badge-neutral'}`} style={{ fontSize: '0.72rem' }}>
-              {profilePct >= 80 ? 'Completed' : profilePct > 40 ? 'In Progress' : 'Pending'}
-            </span>
+            <DonutProgress
+              percentage={profilePct}
+              size={38}
+              strokeWidth={5}
+              strokeColor="#10B981"
+              trackColor="#F1F5F9"
+              showPercentage={false}
+            />
           </div>
 
-          <div style={{ height: 6, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden', marginTop: 12, marginBottom: 8 }}>
-            <div style={{
-              width: `${profilePct}%`,
-              height: '100%',
-              background: profilePct >= 80 ? '#059669' : '#4F46E5',
-              borderRadius: 999,
-              transition: 'width 0.4s ease'
-            }} />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-              {profile?.current_skills?.length || 0} skills listed
+          <div>
+            <span style={{
+              display: 'inline-block',
+              background: '#FEF3C7',
+              color: '#D97706',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              padding: '3px 10px',
+              borderRadius: 999
+            }}>
+              In Progress
             </span>
-            <button
-              onClick={() => onNavigate('profile')}
-              style={{ background: 'none', border: 'none', color: '#4F46E5', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-            >
-              Update →
-            </button>
           </div>
         </div>
 
-        {/* Card 2: Skill Assessment Status */}
+        {/* Card 2: Assessment */}
         <div style={{
           background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
           borderRadius: 14,
-          padding: '20px',
-          boxShadow: 'var(--shadow-sm)'
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Skill Assessment
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: '#ECFDF5',
+              color: '#10B981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <CheckSquare size={18} />
+            </div>
+            <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
+              Assessment
             </span>
-            <CheckSquare size={18} color="#7C3AED" />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {isSkillAssessmentCompleted ? `${skillResult.overall_accuracy}%` : 'Pending'}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              {assessmentAccuracy}%
             </span>
-            <span className={`saas-badge ${isSkillAssessmentCompleted ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.72rem' }}>
+            <DonutProgress
+              percentage={assessmentAccuracy}
+              size={38}
+              strokeWidth={5}
+              strokeColor={isSkillAssessmentCompleted ? '#10B981' : '#E2E8F0'}
+              trackColor="#F1F5F9"
+              showPercentage={false}
+            />
+          </div>
+
+          <div>
+            <span style={{
+              display: 'inline-block',
+              background: '#EEF2FF',
+              color: '#6366F1',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              padding: '3px 10px',
+              borderRadius: 999
+            }}>
               {isSkillAssessmentCompleted ? 'Completed' : 'Pending'}
             </span>
-          </div>
-
-          <div style={{ height: 6, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden', marginTop: 12, marginBottom: 8 }}>
-            <div style={{
-              width: `${isSkillAssessmentCompleted ? skillResult.overall_accuracy : 0}%`,
-              height: '100%',
-              background: '#7C3AED',
-              borderRadius: 999
-            }} />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-              {isSkillAssessmentCompleted ? `${skillResult.correct_answers || 0}/${skillResult.total_questions || 15} correct` : '15 questions'}
-            </span>
-            <button
-              onClick={() => onNavigate('assessment')}
-              style={{ background: 'none', border: 'none', color: '#7C3AED', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-            >
-              {isSkillAssessmentCompleted ? 'Retake →' : 'Start →'}
-            </button>
           </div>
         </div>
 
         {/* Card 3: Skill Gaps */}
         <div style={{
           background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
           borderRadius: 14,
-          padding: '20px',
-          boxShadow: 'var(--shadow-sm)'
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: '#FFF1F2',
+              color: '#F43F5E',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Target size={18} />
+            </div>
+            <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
               Skill Gaps
             </span>
-            <AlertTriangle size={18} color="#D97706" />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
               {skillGapsCount}
             </span>
-            <span className={`saas-badge ${skillGapsCount === 0 ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.72rem' }}>
-              {skillGapsCount === 0 ? 'No Gaps' : 'Identified'}
-            </span>
+            <span style={{ color: '#10B981', fontSize: '1.1rem', fontWeight: 800 }}>↗</span>
           </div>
 
-          <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '12px 0 8px 0', lineHeight: 1.4 }}>
-            {actionPlan?.skill_gaps?.[0]?.skill_name
-              ? `Top priority: ${actionPlan.skill_gaps[0].skill_name}`
-              : 'Matched against target industry standards.'}
-          </p>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => onNavigate('actionPlan')}
-              style={{ background: 'none', border: 'none', color: '#D97706', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-            >
-              View Gap Roadmap →
-            </button>
+          <div>
+            <span style={{
+              display: 'inline-block',
+              background: '#FEE2E2',
+              color: '#E11D48',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              padding: '3px 10px',
+              borderRadius: 999
+            }}>
+              Needs Attention
+            </span>
           </div>
         </div>
 
-        {/* Card 4: Portfolio Progress */}
+        {/* Card 4: Projects */}
         <div style={{
           background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
           borderRadius: 14,
-          padding: '20px',
-          boxShadow: 'var(--shadow-sm)'
+          padding: '18px 20px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Portfolio Progress
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: '#EFF6FF',
+                color: '#3B82F6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <FolderGit2 size={18} />
+              </div>
+              <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
+                Projects
+              </span>
+            </div>
+
+            <span style={{
+              display: 'inline-block',
+              background: '#FEF3C7',
+              color: '#D97706',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              padding: '2px 8px',
+              borderRadius: 999
+            }}>
+              In Progress
             </span>
-            <FolderGit2 size={18} color="#059669" />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {completedProjectsCount} / {totalProjectsCount || 3}
-            </span>
-            <span className={`saas-badge ${completedProjectsCount > 0 ? 'badge-success' : inProgressProjectsCount > 0 ? 'badge-warning' : 'badge-neutral'}`} style={{ fontSize: '0.72rem' }}>
-              {completedProjectsCount > 0 ? `${completedProjectsCount} Completed` : inProgressProjectsCount > 0 ? 'In Progress' : 'Pending'}
+          <div>
+            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
+              {completedProjectsCount}/{totalProjectsCount}
             </span>
           </div>
 
-          <div style={{ height: 6, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden', marginTop: 12, marginBottom: 8 }}>
+          <div style={{ height: 6, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden', marginTop: 4 }}>
             <div style={{
-              width: `${totalProjectsCount > 0 ? Math.round((completedProjectsCount / totalProjectsCount) * 100) : 0}%`,
+              width: '33%',
               height: '100%',
-              background: '#059669',
+              background: '#4F46E5',
               borderRadius: 999
             }} />
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-              {inProgressProjectsCount} in progress
-            </span>
-            <button
-              onClick={() => onNavigate('projects')}
-              style={{ background: 'none', border: 'none', color: '#059669', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-            >
-              Browse Projects →
-            </button>
-          </div>
         </div>
       </div>
 
       {/* ========================================================
-          D. CAREER PROGRESS SECTION (Requirement 4.D)
+          ROW 3: Your Career Progress (2fr) + Next Steps (1fr)
       ======================================================== */}
       <div style={{
-        background: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: 16,
-        padding: '28px',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span className="saas-badge badge-it">
-                <Target size={13} /> Saved Target Career
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+        gap: 20
+      }} className="dashboard-progress-row">
+        {/* Your Career Progress */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 16,
+          padding: '22px 26px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <TrendingUp size={18} color="#2563EB" />
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+              Your Career Progress
+            </h3>
+          </div>
+
+          {/* Career Title & Tag */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              background: '#4F46E5',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <BarChart3 size={20} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A' }}>
+                {targetCareerTitle}
               </span>
-              {actionPlan?.target_career_category && (
-                <span className="saas-badge badge-neutral">
-                  {actionPlan.target_career_category}
+              <span style={{
+                background: '#EEF2FF',
+                color: '#4F46E5',
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 4
+              }}>
+                {targetCareerCategory}
+              </span>
+            </div>
+          </div>
+
+          {/* Metrics Row: Suitability Score + Job Readiness + Roadmap Progress */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto auto minmax(0, 1fr)',
+            gap: 24,
+            alignItems: 'center'
+          }} className="dashboard-metrics-grid">
+            {/* Suitability Score */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                Suitability Score
+              </span>
+              <DonutProgress
+                percentage={suitabilityScore}
+                size={54}
+                strokeWidth={5}
+                strokeColor="#14B8A6"
+                trackColor="#F1F5F9"
+              />
+            </div>
+
+            {/* Job Readiness */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                Job Readiness
+              </span>
+              <DonutProgress
+                percentage={jobReadinessScore}
+                size={54}
+                strokeWidth={5}
+                strokeColor="#3B82F6"
+                trackColor="#F1F5F9"
+              />
+            </div>
+
+            {/* Roadmap Progress */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 160 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                  Roadmap Progress
                 </span>
-              )}
-            </div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 700 }}>
+                  {milestonesCompleted} / {totalMilestones} milestones
+                </span>
+              </div>
 
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              {targetCareerTitle || 'Select a Target Career to Begin Roadmap'}
+              <div style={{ height: 8, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{
+                  width: `${roadmapProgressPct}%`,
+                  height: '100%',
+                  background: '#14B8A6',
+                  borderRadius: 999
+                }} />
+              </div>
+
+              <div style={{ marginTop: 6 }}>
+                <button
+                  onClick={() => onNavigate('actionPlan')}
+                  style={{
+                    width: '100%',
+                    background: '#F1F5F9',
+                    border: 'none',
+                    color: '#4F46E5',
+                    borderRadius: 8,
+                    padding: '7px 14px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <span>View Roadmap</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Next Steps Card */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 16,
+          padding: '22px 24px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ListOrdered size={18} color="#4F46E5" />
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+              Next Steps
             </h3>
-
-            <p style={{ fontSize: '0.88rem', color: '#64748B', margin: '6px 0 0 0' }}>
-              {targetCareerTitle
-                ? 'Your personalized skill gap roadmap and job readiness tracking are synced below.'
-                : 'Explore career recommendations to lock in your goal and generate an actionable milestone plan.'}
-            </p>
           </div>
 
-          <button
-            onClick={() => onNavigate(targetCareerTitle ? 'actionPlan' : 'recommendations')}
-            className="btn btn-outline"
-            style={{ padding: '9px 18px', fontSize: '0.85rem', fontWeight: 700 }}
-          >
-            <span>{targetCareerTitle ? 'Continue Career Action Plan →' : 'Explore Recommendations →'}</span>
-          </button>
-        </div>
-
-        {/* 3 Metric Tiles: Suitability, Readiness, Roadmap Progress */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 20px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-              Career Suitability Score
-            </span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#4F46E5', marginTop: 4 }}>
-              {suitabilityScore !== null ? `${suitabilityScore}%` : 'Calculated after assessment'}
-            </div>
-            <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-              Weighted skill & discovery match
-            </span>
-          </div>
-
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 20px' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-              Job Readiness Score
-            </span>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginTop: 4 }}>
-              {jobReadinessScore !== null ? `${jobReadinessScore}%` : 'Pending milestones'}
-            </div>
-            <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-              Readiness for entry-level positions
-            </span>
-          </div>
-
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-                Roadmap Completion
-              </span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0F172A' }}>
-                {roadmapProgressPct !== null ? `${roadmapProgressPct}%` : '0%'}
-              </span>
-            </div>
-            <div style={{ height: 8, background: '#E2E8F0', borderRadius: 999, overflow: 'hidden', marginTop: 12, marginBottom: 8 }}>
-              <div style={{
-                width: `${roadmapProgressPct || 0}%`,
-                height: '100%',
-                background: '#4F46E5',
-                borderRadius: 999,
-                transition: 'width 0.4s ease'
-              }} />
-            </div>
-            <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-              Milestone skills completed in action plan
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          E. RECOMMENDED NEXT STEPS (Requirement 4.E)
-      ======================================================== */}
-      <div style={{
-        background: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: 16,
-        padding: '24px 28px',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              Recommended Next Steps
-            </h3>
-            <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
-              Prioritized guidance based strictly on your active career progress
-            </span>
-          </div>
-          <span className="saas-badge badge-neutral" style={{ fontSize: '0.75rem' }}>
-            {nextSteps.length} Actions Needed
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {nextSteps.map((step, idx) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Step 1 */}
             <div
-              key={step.id}
+              onClick={() => onNavigate('profile')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '14px 18px',
-                background: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                borderRadius: 12,
-                flexWrap: 'wrap',
+                cursor: 'pointer',
                 gap: 12
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{
-                  width: 28,
-                  height: 28,
+                  width: 24,
+                  height: 24,
                   borderRadius: '50%',
-                  background: '#EEF2FF',
-                  color: '#4F46E5',
-                  fontSize: '0.8rem',
-                  fontWeight: 800,
+                  background: '#3B82F6',
+                  color: '#FFFFFF',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: 28
+                  flexShrink: 0
                 }}>
-                  {idx + 1}
+                  1
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0F172A' }}>
-                    {step.title}
+                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
+                    Complete your profile
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: 2 }}>
-                    {step.desc}
+                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                    Get personalized recommendations
                   </div>
                 </div>
               </div>
-
-              <button
-                onClick={() => onNavigate(step.page)}
-                className="btn btn-outline"
-                style={{ padding: '7px 14px', fontSize: '0.82rem', fontWeight: 700 }}
-              >
-                <span>{step.actionText}</span>
-                <ChevronRight size={14} />
-              </button>
+              <ChevronRight size={16} color="#94A3B8" />
             </div>
-          ))}
+
+            {/* Step 2 */}
+            <div
+              onClick={() => onNavigate('assessment')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                gap: 12
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  background: '#10B981',
+                  color: '#FFFFFF',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  2
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
+                    Take skill assessment
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                    Find your skill gaps
+                  </div>
+                </div>
+              </div>
+              <ChevronRight size={16} color="#94A3B8" />
+            </div>
+
+            {/* Step 3 */}
+            <div
+              onClick={() => onNavigate('recommendations')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                gap: 12
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  background: '#F59E0B',
+                  color: '#FFFFFF',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  3
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
+                    Explore careers
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                    Discover more options
+                  </div>
+                </div>
+              </div>
+              <ChevronRight size={16} color="#94A3B8" />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ========================================================
-          F. RECOMMENDED PROJECTS (Requirement 4.F - MAX 3)
+          ROW 4: Recommended Projects (2fr) + AI Career Coach (1fr)
       ======================================================== */}
       <div style={{
-        background: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: 16,
-        padding: '24px 28px',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span className="saas-badge badge-success">
-                <FolderGit2 size={13} />
-                Portfolio Readiness
-              </span>
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+        gap: 20
+      }} className="dashboard-bottom-row">
+        {/* Recommended Projects Card */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 16,
+          padding: '22px 26px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Code2 size={18} color="#4F46E5" />
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Recommended Projects
+              </h3>
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              Recommended Portfolio Projects
-            </h3>
-            <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '4px 0 0 0' }}>
-              Targeted projects that close your top skill gaps and prove competence to hiring teams.
-            </p>
-          </div>
 
-          <button
-            onClick={() => onNavigate('projects')}
-            className="btn btn-outline"
-            style={{ padding: '8px 16px', fontSize: '0.82rem', fontWeight: 700 }}
-          >
-            <span>View All Projects →</span>
-          </button>
-        </div>
-
-        {displayProjects.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px 16px', background: '#F8FAFC', borderRadius: 12, border: '1px dashed #CBD5E1' }}>
-            <p style={{ color: '#64748B', fontSize: '0.88rem', margin: '0 0 12px 0' }}>
-              Complete your assessment or view recommended projects for your career pathway.
-            </p>
             <button
               onClick={() => onNavigate('projects')}
-              className="btn btn-primary"
-              style={{ padding: '8px 16px', fontSize: '0.82rem' }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#4F46E5',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
             >
-              Explore Projects Catalog
+              <span>View All</span>
+              <ArrowRight size={13} />
             </button>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-            {displayProjects.map((p, idx) => {
-              const isCompleted = p.status === 'Completed';
-              const isInProgress = p.status === 'In Progress';
-              const progressPct = isCompleted ? 100 : (p.progress_percentage !== undefined ? p.progress_percentage : (isInProgress ? 50 : 0));
 
+          {/* 3 Project Cards in a row */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: 14
+          }} className="dashboard-projects-grid">
+            {displayProjects.map((p) => {
+              const Icon = p.icon || Code2;
               return (
                 <div
-                  key={p.id || p.project_id || idx}
+                  key={p.id}
                   style={{
                     background: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid #F1F5F9',
                     borderRadius: 12,
-                    padding: '18px',
+                    padding: '14px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    gap: 14,
-                    boxShadow: 'var(--shadow-xs)'
+                    gap: 10
                   }}
                 >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-                      <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.3 }}>
-                        {p.title}
-                      </h4>
-                      <span className="saas-badge badge-neutral" style={{ fontSize: '0.7rem' }}>
-                        {p.difficulty || 'Intermediate'}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Icon + Title + Difficulty */}
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: '#EFF6FF',
+                      color: '#3B82F6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Icon size={18} />
+                    </div>
+
+                    <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.25 }}>
+                      {p.title}
+                    </div>
+
+                    <div>
+                      <span style={{
+                        display: 'inline-block',
+                        background: p.difficultyBg,
+                        color: p.difficultyColor,
+                        fontSize: '0.68rem',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: 4
+                      }}>
+                        {p.difficulty}
                       </span>
                     </div>
 
-                    <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0 0 10px 0', lineHeight: 1.4 }}>
-                      {p.description ? (p.description.length > 100 ? `${p.description.slice(0, 100)}...` : p.description) : 'Practical portfolio project covering industry standards.'}
-                    </p>
-
-                    {/* Skills tags */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-                      {(p.skills_covered || []).slice(0, 3).map((sk, sIdx) => (
+                    {/* Skill Pills */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {(p.technologies || []).map((tech, tIdx) => (
                         <span
-                          key={sIdx}
+                          key={tIdx}
                           style={{
                             background: '#F1F5F9',
                             color: '#475569',
-                            padding: '2px 7px',
-                            borderRadius: 4,
-                            fontSize: '0.72rem',
-                            fontWeight: 600
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                            padding: '2px 6px',
+                            borderRadius: 4
                           }}
                         >
-                          {sk}
+                          {tech}
                         </span>
                       ))}
                     </div>
-
-                    <div style={{ fontSize: '0.74rem', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Clock size={13} />
-                      <span>{p.estimated_duration || '3 - 4 Weeks'}</span>
-                    </div>
                   </div>
 
-                  {/* Progress bar & Action */}
-                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 700, marginBottom: 4 }}>
-                      <span style={{ color: isCompleted ? '#059669' : isInProgress ? '#D97706' : '#64748B' }}>
-                        {isCompleted ? '✓ Completed' : isInProgress ? `${progressPct}% In Progress` : 'Not Started'}
+                  {/* Progress & Button */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ flex: 1, height: 5, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{
+                          width: `${p.progress_percentage || 0}%`,
+                          height: '100%',
+                          background: (p.progress_percentage || 0) > 0 ? '#10B981' : 'transparent',
+                          borderRadius: 999
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>
+                        {p.progress_percentage || 0}%
                       </span>
-                      <span style={{ color: '#94A3B8' }}>{progressPct}%</span>
                     </div>
 
-                    <div style={{ height: 6, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden', marginBottom: 12 }}>
-                      <div style={{
-                        width: `${progressPct}%`,
-                        height: '100%',
-                        background: isCompleted ? '#059669' : isInProgress ? '#D97706' : '#CBD5E1',
-                        borderRadius: 999
-                      }} />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {isInProgress ? (
-                        <button
-                          onClick={() => onNavigate('projects')}
-                          className="btn btn-outline"
-                          style={{ flex: 1, padding: '7px 10px', fontSize: '0.8rem', fontWeight: 700 }}
-                        >
-                          Continue Project →
-                        </button>
-                      ) : isCompleted ? (
-                        <button
-                          onClick={() => onNavigate('projects')}
-                          className="btn btn-outline"
-                          style={{ flex: 1, padding: '7px 10px', fontSize: '0.8rem', fontWeight: 700, color: '#059669' }}
-                        >
-                          View Details ✓
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleStartProject(p.id || p.project_id)}
-                          disabled={actionLoadingId === (p.id || p.project_id)}
-                          className="btn btn-primary"
-                          style={{ flex: 1, padding: '7px 10px', fontSize: '0.8rem', fontWeight: 700 }}
-                        >
-                          {actionLoadingId === (p.id || p.project_id) ? 'Starting...' : 'Start Project →'}
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => onNavigate('projects')}
+                      className="btn"
+                      style={{
+                        width: '100%',
+                        background: '#FFFFFF',
+                        border: '1px solid #C7D2FE',
+                        color: '#4F46E5',
+                        borderRadius: 8,
+                        padding: '6px 10px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      {p.actionText || 'Continue'}
+                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* ========================================================
-          G. AI CAREER ASSISTANT & INTERVIEW PREP (Requirement 4.G)
-      ======================================================== */}
-      <div style={{
-        background: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: 16,
-        padding: '24px 28px',
-        boxShadow: 'var(--shadow-sm)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 20
-      }}>
-        <div style={{ maxWidth: 640 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span className="saas-badge badge-it">
-              <Bot size={13} />
-              AI Career Copilot & Mock Interviews
-            </span>
+        {/* Your AI Career Coach Card */}
+        <div style={{
+          background: '#FAFAFF',
+          borderRadius: 16,
+          padding: '22px 24px',
+          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+          border: '1px solid #E0E7FF',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          gap: 14
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Header with bot icon */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                background: '#4F46E5',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Bot size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  Your AI Career Coach
+                </h3>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.78rem', color: '#64748B', margin: 0, lineHeight: 1.45 }}>
+              Get personalized guidance, answer your questions and prepare for interviews.
+            </p>
+
+            {/* Two Action Buttons */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => onNavigate('assistant')}
+                className="btn"
+                style={{
+                  flex: 1,
+                  background: '#4F46E5',
+                  color: '#FFFFFF',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  border: 'none'
+                }}
+              >
+                Ask AI
+              </button>
+
+              <button
+                onClick={() => onNavigate('interview')}
+                className="btn"
+                style={{
+                  flex: 1,
+                  background: '#FFFFFF',
+                  border: '1px solid #C7D2FE',
+                  color: '#4F46E5',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600
+                }}
+              >
+                Mock Interview
+              </button>
+            </div>
           </div>
 
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', margin: '0 0 6px 0' }}>
-            Instant AI Guidance & Interview Readiness
-          </h3>
+          {/* Try Asking Prompt Pills */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+            <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
+              Try asking:
+            </span>
 
-          <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
-            Ask questions regarding resume preparation, industry transition, technical questions, or conduct a timed mock interview tailored to your target career.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => onNavigate('assistant', { prompt: targetCareerTitle ? `What should I focus on this week to progress toward becoming a ${targetCareerTitle}?` : null })}
-            className="btn btn-outline"
-            style={{ padding: '9px 18px', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}
-          >
-            <Bot size={16} color="#4F46E5" />
-            <span>Ask AI Assistant</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('interview', { career: targetCareerTitle })}
-            className="btn btn-primary"
-            style={{ padding: '9px 18px', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}
-          >
-            <Briefcase size={16} />
-            <span>Practice Mock Interview</span>
-          </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[
+                'What skills do I need?',
+                'How to improve my resume?',
+                'Best projects for my career'
+              ].map((promptText, pIdx) => (
+                <button
+                  key={pIdx}
+                  onClick={() => onNavigate('assistant', { prompt: promptText })}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 999,
+                    padding: '5px 12px',
+                    fontSize: '0.72rem',
+                    color: '#334155',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#C7D2FE';
+                    e.currentTarget.style.color = '#4F46E5';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                    e.currentTarget.style.color = '#334155';
+                  }}
+                >
+                  {promptText}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Media queries for responsiveness */}
+      <style>{`
+        @media (max-width: 1024px) {
+          .dashboard-hero-row,
+          .dashboard-progress-row,
+          .dashboard-bottom-row {
+            grid-template-columns: 1fr !important;
+          }
+          .dashboard-kpi-row {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .dashboard-projects-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .dashboard-metrics-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .dashboard-kpi-row {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

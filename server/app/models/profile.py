@@ -5,13 +5,13 @@ from pydantic import BaseModel, Field
 class UserProfileBase(BaseModel):
     full_name: str
     email: str
-    education_level: Optional[str] = "Bachelor's Degree"
-    degree: Optional[str] = "B.Tech / B.E."
-    branch: Optional[str] = "Computer Science"
-    graduation_year: Optional[int] = 2026
+    education_level: Optional[str] = ""
+    degree: Optional[str] = ""
+    branch: Optional[str] = ""
+    graduation_year: Optional[int] = None
     current_skills: List[str] = Field(default_factory=list)
     interests: List[str] = Field(default_factory=list)
-    preferred_category: str = Field(default="IT", description="IT, Non-IT, or Both")
+    preferred_category: Optional[str] = Field(default="Both", description="IT, Non-IT, or Both")
 
 class UserProfileCreate(UserProfileBase):
     pass

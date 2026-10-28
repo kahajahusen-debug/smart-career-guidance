@@ -5,7 +5,7 @@ import {
   ArrowLeft, 
   Briefcase, 
   MapPin, 
-  DollarSign, 
+  IndianRupee, 
   Clock, 
   ExternalLink, 
   Bookmark, 
@@ -17,6 +17,7 @@ import {
   TrendingUp,
   FileCheck
 } from 'lucide-react';
+import { formatSalary } from '../utils/formatters';
 
 export default function JobDetailPage({ jobId, onBack, onNavigate }) {
   const [job, setJob] = useState(null);
@@ -210,8 +211,8 @@ export default function JobDetailPage({ jobId, onBack, onNavigate }) {
               </div>
               {(job.salary_range || job.stipend) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <DollarSign size={16} color="#10B981" />
-                  <span style={{ fontWeight: 700, color: '#0F172A' }}>{job.salary_range || job.stipend}</span>
+                  <IndianRupee size={16} color="#10B981" />
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>{formatSalary(job.salary_range || job.stipend)}</span>
                 </div>
               )}
             </div>

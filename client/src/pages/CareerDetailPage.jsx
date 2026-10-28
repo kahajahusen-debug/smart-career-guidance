@@ -4,7 +4,7 @@ import { fetchCareerById, fetchPortfolioProjects, fetchSampleJobs, getPersonaliz
 import { 
   ArrowLeft, 
   Briefcase, 
-  DollarSign, 
+  IndianRupee, 
   TrendingUp, 
   BookOpen, 
   CheckCircle2, 
@@ -16,6 +16,7 @@ import {
   Target,
   Check
 } from 'lucide-react';
+import { formatSalary } from '../utils/formatters';
 
 export default function CareerDetailPage({ careerId, assessmentResult, onBack, onNavigate, onTargetCareerUpdated }) {
   const [career, setCareer] = useState(null);
@@ -228,10 +229,10 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
         {/* Stats Summary Strip */}
         <div style={{ display: 'flex', gap: 24, marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.2)', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <DollarSign size={18} color="#34D399" />
+            <IndianRupee size={18} color="#34D399" />
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Average Salary</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{activeCareer.average_salary}</div>
+              <div style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Average Salary (India)</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{formatSalary(activeCareer.average_salary)}</div>
             </div>
           </div>
 

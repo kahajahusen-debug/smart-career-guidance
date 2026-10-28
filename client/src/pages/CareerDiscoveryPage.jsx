@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/common/GlassCard';
 import { fetchDiscoveryQuestions, submitDiscoveryAnswers, getDiscoveryResult } from '../services/api';
+import { formatSalary } from '../utils/formatters';
 import { 
   Compass, 
   ChevronLeft, 
@@ -329,7 +330,7 @@ export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer }
                 </p>
 
                 <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                  Avg Salary: <strong>{car.average_salary}</strong>
+                  Avg Salary (India): <strong>{formatSalary(car.average_salary)}</strong>
                 </div>
 
                 <button

@@ -60,14 +60,40 @@
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+img,
+svg {
+  max-width: 100%;
+}
+
 html, body {
   min-height: 100%;
+  overflow-x: hidden;
+}
+
+/* Container & Card Min-Width Guard */
+.saas-content-area,
+.page-container,
+.saas-card,
+.glass-card,
+.glass-panel,
+.project-card,
+.recommendation-card,
+.dashboard-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Prevent text overflow */
+h1, h2, h3, h4, h5, h6, p, span {
+  overflow-wrap: break-word;
 }
 
 body {

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getRecommendations, regenerateActionPlan } from '../services/api';
+import { formatSalary } from '../utils/formatters';
 import { 
   Award, 
   CheckCircle2, 
   AlertCircle, 
-  DollarSign, 
+  IndianRupee, 
   TrendingUp, 
   ChevronRight, 
   HelpCircle,
@@ -368,10 +369,10 @@ export default function RecommendationsPage({
                 {/* Salary & Growth Stats */}
                 <div style={{ display: 'flex', gap: 16, background: '#F8FAFC', padding: '10px 14px', borderRadius: 10, fontSize: '0.8rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <DollarSign size={15} color="#059669" />
+                    <IndianRupee size={15} color="#059669" />
                     <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary</div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{rec.average_salary || 'Competitive'}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary (India)</div>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{formatSalary(rec.average_salary) || 'Competitive'}</div>
                     </div>
                   </div>
 
