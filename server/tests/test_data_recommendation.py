@@ -7,10 +7,11 @@ from app.main import app
 
 def test_data_enthusiast_recommendations():
     with TestClient(app) as client:
-        # 1. Signup new user
+        import time
+        unique_email = f"data_enthusiast_{int(time.time())}@example.com"
         res = client.post('/api/v1/auth/signup', json={
             'full_name': 'Data Enthusiast',
-            'email': 'data_enthusiast_test@example.com',
+            'email': unique_email,
             'password': 'password123',
             'confirm_password': 'password123'
         })
