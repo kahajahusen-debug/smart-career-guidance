@@ -137,31 +137,43 @@ export default function RecommendationsPage({
         flexWrap: 'wrap',
         gap: 16
       }}>
-        <div style={{ maxWidth: 700 }}>
+        <div style={{ maxWidth: 720 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <span className="saas-badge badge-it">
               <Award size={13} /> AI Recommendation Matrix
             </span>
+            <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>
+              • Calibrated for India Tech & Non-Tech Pathways
+            </span>
           </div>
-          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.3px' }}>
             Personalized Career Recommendations
           </h2>
-          <p style={{ fontSize: '0.88rem', color: '#64748B', marginTop: 6, margin: 0, lineHeight: 1.5 }}>
-            Ranked based on your Profile Skills (35%), Career Discovery (25%), Skill Assessment (20%), Education (10%), and Domain Interests (10%).
+          <p style={{ fontSize: '0.88rem', color: '#64748B', marginTop: 8, margin: 0, lineHeight: 1.55 }}>
+            Recommendations are evaluated independently across <strong>Career Discovery Interests</strong>, <strong>Profile Skills</strong>, <strong>Technical Skill Assessment</strong>, and <strong>Educational Fit</strong>.
           </p>
+          <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#94A3B8' }}>
+            * Note: Suitability percentages represent personalized compatibility estimates and do not guarantee hiring or employment.
+          </div>
         </div>
 
         {recommendationsData?.assessment_score !== undefined && (
           <div style={{
             background: '#F8FAFC',
-            padding: '12px 20px',
-            borderRadius: 12,
+            padding: '14px 22px',
+            borderRadius: 14,
             border: '1px solid #E2E8F0',
-            textAlign: 'center'
+            textAlign: 'center',
+            minWidth: 150
           }}>
-            <span style={{ fontSize: '0.72rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Assessment Accuracy</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4F46E5', display: 'block' }}>
-              {recommendationsData.assessment_score}%
+            <span style={{ fontSize: '0.72rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+              {recommendationsData.has_assessment === false ? 'Assessment Status' : 'Assessment Accuracy'}
+            </span>
+            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: recommendationsData.has_assessment === false ? '#D97706' : '#4F46E5', display: 'block', marginTop: 2 }}>
+              {recommendationsData.has_assessment === false ? 'Pending' : `${recommendationsData.assessment_score}%`}
+            </span>
+            <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 500 }}>
+              {recommendationsData.has_assessment === false ? 'Technical test pending' : 'Verified by testing'}
             </span>
           </div>
         )}
@@ -181,32 +193,32 @@ export default function RecommendationsPage({
           flexWrap: 'wrap',
           gap: 14
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Info size={20} color="#D97706" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 260 }}>
+            <Info size={22} color="#D97706" style={{ flexShrink: 0 }} />
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                Refine Your Match Accuracy
+                Skill Assessment Pending — Unlock Verified Technical Suitability
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#B45309' }}>
-                {recommendationsData.message || "Complete Career Discovery and Skill Assessment to unlock 100% calibrated recommendations."}
+              <div style={{ fontSize: '0.8rem', color: '#B45309', marginTop: 2, lineHeight: 1.45 }}>
+                {recommendationsData.message || "Your recommendations currently reflect your Career Discovery domain interests and profile. Complete the Skill Assessment to verify matching skills and discover exact skill gaps."}
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
             <button
               onClick={() => onNavigate('careerDiscovery')}
               className="btn btn-outline"
-              style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#FFFFFF' }}
+              style={{ padding: '7px 14px', fontSize: '0.8rem', background: '#FFFFFF' }}
             >
               Career Discovery
             </button>
             <button
               onClick={() => onNavigate('assessment')}
               className="btn btn-primary"
-              style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+              style={{ padding: '7px 16px', fontSize: '0.8rem' }}
             >
-              Take Assessment →
+              Take Skill Assessment →
             </button>
           </div>
         </div>
@@ -229,7 +241,7 @@ export default function RecommendationsPage({
           <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
           <input
             type="text"
-            placeholder="Search roles or skills (e.g., Python, Cloud)..."
+            placeholder="Search roles or skills (e.g., Python, Data, Cloud)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="form-input"
@@ -246,8 +258,8 @@ export default function RecommendationsPage({
                 onClick={() => setCategoryFilter(cat)}
                 className="btn"
                 style={{
-                  padding: '4px 10px',
-                  fontSize: '0.75rem',
+                  padding: '5px 12px',
+                  fontSize: '0.78rem',
                   borderRadius: 6,
                   border: 'none',
                   background: categoryFilter === cat ? '#FFFFFF' : 'transparent',
@@ -257,7 +269,7 @@ export default function RecommendationsPage({
                   cursor: 'pointer'
                 }}
               >
-                {cat === 'all' ? 'All Roles' : cat}
+                {cat === 'all' ? 'All Roles' : `${cat} Careers`}
               </button>
             ))}
           </div>
@@ -269,9 +281,9 @@ export default function RecommendationsPage({
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="form-select"
-              style={{ padding: '5px 8px', fontSize: '0.78rem', width: 'auto' }}
+              style={{ padding: '6px 10px', fontSize: '0.78rem', width: 'auto' }}
             >
-              <option value="suitability">Sort by Suitability Score</option>
+              <option value="suitability">Sort by Fit / Suitability</option>
               <option value="title">Sort Alphabetically (A-Z)</option>
             </select>
           </div>
@@ -300,6 +312,7 @@ export default function RecommendationsPage({
             const missingList = rec.missing_skills || rec.skill_gaps?.filter((g) => g.status === 'Improve').map(g => g.skill_name) || [];
             const isSettingThis = settingTargetId === rec.career_id;
             const isSuccessThis = targetSuccessId === rec.career_id;
+            const isPending = Boolean(rec.is_assessment_pending);
 
             return (
               <div
@@ -307,46 +320,83 @@ export default function RecommendationsPage({
                 style={{
                   background: '#FFFFFF',
                   border: '1px solid #E2E8F0',
-                  borderRadius: 14,
+                  borderRadius: 16,
                   padding: '24px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 16,
                   boxShadow: 'var(--shadow-sm)',
+                  boxSizing: 'border-box',
+                  minWidth: 0,
+                  height: '100%',
                   transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.3 }}>
+                {/* Header: Title + Category + Suitability Badge */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{
+                      fontSize: '1.22rem',
+                      fontWeight: 800,
+                      color: '#0F172A',
+                      margin: 0,
+                      lineHeight: 1.35,
+                      wordBreak: 'break-word'
+                    }}>
                       {rec.title}
                     </h3>
-                    <div style={{ marginTop: 6 }}>
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span className={`saas-badge ${rec.category === 'IT' ? 'badge-it' : 'badge-nonit'}`}>
                         {rec.category} Pathway
                       </span>
+                      {isPending && (
+                        <span style={{
+                          background: '#FEF3C7',
+                          color: '#92400E',
+                          border: '1px solid #FDE68A',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: 9999
+                        }}>
+                          Assessment Pending
+                        </span>
+                      )}
                     </div>
                   </div>
 
+                  {/* Suitability / Preliminary Fit Badge */}
                   <div style={{
-                    background: '#EEF2FF',
-                    border: '1px solid #C7D2FE',
-                    color: '#4F46E5',
-                    padding: '8px 14px',
+                    background: isPending ? '#FFFBEB' : '#EEF2FF',
+                    border: `1px solid ${isPending ? '#FDE68A' : '#C7D2FE'}`,
+                    color: isPending ? '#B45309' : '#4F46E5',
+                    padding: '8px 12px',
                     borderRadius: 12,
                     textAlign: 'center',
-                    minWidth: 80
+                    minWidth: 90,
+                    flexShrink: 0
                   }}>
-                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Suitability
+                    <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.4px' }}>
+                      {isPending ? 'Preliminary Fit' : 'Suitability'}
                     </div>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>
-                      {rec.suitability_score}%
+                    <div style={{ fontSize: '1.35rem', fontWeight: 800, lineHeight: 1.1, marginTop: 2 }}>
+                      {rec.suitability_score !== undefined ? `${rec.suitability_score}%` : 'N/A'}
+                    </div>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 600, color: isPending ? '#D97706' : '#059669', marginTop: 2 }}>
+                      {isPending ? 'Discovery Est.' : 'Verified Fit'}
                     </div>
                   </div>
                 </div>
 
-                <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+                {/* Description */}
+                <p style={{
+                  fontSize: '0.85rem',
+                  color: '#475569',
+                  lineHeight: 1.5,
+                  margin: 0,
+                  minWidth: 0,
+                  wordBreak: 'break-word'
+                }}>
                   {rec.description}
                 </p>
 
@@ -357,102 +407,260 @@ export default function RecommendationsPage({
                     borderLeft: '3px solid #4F46E5',
                     padding: '10px 14px',
                     borderRadius: '0 8px 8px 0',
-                    fontSize: '0.8rem'
+                    fontSize: '0.8rem',
+                    minWidth: 0
                   }}>
-                    <strong style={{ color: '#4F46E5', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-                      <Sparkles size={13} /> Why this matches you:
+                    <strong style={{ color: '#4F46E5', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                      <Sparkles size={14} /> Why this matches you:
                     </strong>
-                    <span style={{ color: '#334155' }}>{rec.reason}</span>
+                    <span style={{ color: '#334155', lineHeight: 1.45, display: 'block' }}>{rec.reason}</span>
                   </div>
                 )}
 
-                {/* Salary & Growth Stats */}
-                <div style={{ display: 'flex', gap: 16, background: '#F8FAFC', padding: '10px 14px', borderRadius: 10, fontSize: '0.8rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <IndianRupee size={15} color="#059669" />
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Salary (India)</div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{formatSalary(rec.average_salary) || 'Competitive'}</div>
+                {/* Salary & Growth Stats Strip (2-Column Grid with No-Wrap protection) */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  gap: 12,
+                  background: '#F8FAFC',
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #F1F5F9',
+                  boxSizing: 'border-box'
+                }}>
+                  {/* Salary Column */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: '#ECFDF5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <IndianRupee size={16} color="#059669" />
+                    </div>
+                    <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                        Avg Salary (India)
+                      </div>
+                      <div style={{
+                        fontWeight: 700,
+                        color: '#0F172A',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {formatSalary(rec.average_salary) || '₹6.5 - ₹16 LPA (approx.)'}
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <TrendingUp size={15} color="#4F46E5" />
-                    <div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Growth Rate</div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{rec.growth_rate || 'High Growth'}</div>
+                  {/* Growth Rate Column */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: '#EEF2FF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <TrendingUp size={16} color="#4F46E5" />
+                    </div>
+                    <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                        Growth Rate
+                      </div>
+                      <div style={{
+                        fontWeight: 700,
+                        color: '#0F172A',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {rec.growth_rate || 'High Growth'}
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Score Alignment Indicator */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.74rem',
+                  color: '#64748B',
+                  background: '#FAFAFA',
+                  padding: '7px 12px',
+                  borderRadius: 8,
+                  border: '1px dashed #E2E8F0',
+                  flexWrap: 'wrap',
+                  gap: 6
+                }}>
+                  <span>
+                    <strong>Interest Match:</strong> {rec.interest_match !== undefined ? `${rec.interest_match}%` : '50%'}
+                  </span>
+                  <span>
+                    <strong>Skill Assessment:</strong>{' '}
+                    {isPending ? (
+                      <span style={{ color: '#D97706', fontWeight: 700 }}>Pending</span>
+                    ) : (
+                      <span style={{ color: '#059669', fontWeight: 700 }}>{rec.assessment_match}%</span>
+                    )}
+                  </span>
                 </div>
 
                 {/* Matching Skills */}
                 <div>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#059669', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <CheckCircle2 size={13} /> Matching Skills:
+                  <div style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: '#059669',
+                    marginBottom: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5
+                  }}>
+                    <CheckCircle2 size={14} /> Matching Skills:
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {matchingList.length > 0 ? matchingList.map((sk, sIdx) => (
-                      <span key={sIdx} style={{
-                        background: '#ECFDF5',
-                        color: '#065F46',
-                        border: '1px solid #A7F3D0',
-                        padding: '2px 8px',
+                    {matchingList.length > 0 ? (
+                      matchingList.map((sk, sIdx) => (
+                        <span key={sIdx} style={{
+                          background: '#ECFDF5',
+                          color: '#065F46',
+                          border: '1px solid #A7F3D0',
+                          padding: '3px 9px',
+                          borderRadius: 6,
+                          fontSize: '0.74rem',
+                          fontWeight: 600
+                        }}>
+                          ✓ {sk}
+                        </span>
+                      ))
+                    ) : isPending ? (
+                      <div style={{
+                        fontSize: '0.76rem',
+                        color: '#64748B',
+                        background: '#F8FAFC',
+                        border: '1px dashed #CBD5E1',
+                        padding: '6px 12px',
                         borderRadius: 6,
-                        fontSize: '0.74rem',
-                        fontWeight: 600
+                        fontStyle: 'italic',
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}>
-                        ✓ {sk}
+                        Complete your Skill Assessment to identify matching skills.
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontStyle: 'italic' }}>
+                        No matching verified skills yet for this role.
                       </span>
-                    )) : (
-                      <span style={{ fontSize: '0.76rem', color: '#94A3B8' }}>None identified yet</span>
                     )}
                   </div>
                 </div>
 
-                {/* Skills to Improve */}
+                {/* Skills to Improve / Target Competencies */}
                 <div>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#DC2626', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <AlertCircle size={13} /> Skills to Improve:
+                  <div style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: isPending ? '#475569' : '#DC2626',
+                    marginBottom: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5
+                  }}>
+                    <AlertCircle size={14} color={isPending ? '#D97706' : '#DC2626'} />
+                    {isPending ? 'Required Role Competencies (Pending Assessment):' : 'Skills to Improve:'}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {missingList.length > 0 ? missingList.map((ms, gIdx) => (
-                      <span key={gIdx} style={{
-                        background: '#FEF2F2',
-                        color: '#991B1B',
-                        border: '1px solid #FECACA',
-                        padding: '2px 8px',
+                    {missingList.length > 0 ? (
+                      missingList.map((ms, gIdx) => (
+                        <span key={gIdx} style={{
+                          background: isPending ? '#F1F5F9' : '#FEF2F2',
+                          color: isPending ? '#334155' : '#991B1B',
+                          border: isPending ? '1px solid #E2E8F0' : '1px solid #FECACA',
+                          padding: '3px 9px',
+                          borderRadius: 6,
+                          fontSize: '0.74rem',
+                          fontWeight: 600
+                        }}>
+                          • {typeof ms === 'string' ? ms : ms.skill_name}
+                        </span>
+                      ))
+                    ) : isPending ? (
+                      <div style={{
+                        fontSize: '0.76rem',
+                        color: '#64748B',
+                        background: '#F8FAFC',
+                        border: '1px dashed #CBD5E1',
+                        padding: '6px 12px',
                         borderRadius: 6,
-                        fontSize: '0.74rem',
-                        fontWeight: 600
+                        fontStyle: 'italic',
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}>
-                        • {typeof ms === 'string' ? ms : ms.skill_name}
+                        Complete your Skill Assessment to identify verified skill gaps.
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 600 }}>
+                        All core skills verified and satisfied!
                       </span>
-                    )) : (
-                      <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 600 }}>All core skills satisfied!</span>
                     )}
                   </div>
                 </div>
 
-                {/* Footer Action Buttons */}
-                <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 14, marginTop: 'auto', display: 'flex', gap: 10 }}>
+                {/* Footer Action Buttons (Anchored cleanly to bottom of card) */}
+                <div style={{
+                  borderTop: '1px solid #F1F5F9',
+                  paddingTop: 16,
+                  marginTop: 'auto',
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'center'
+                }}>
                   <button
+                    type="button"
                     onClick={() => onSelectCareer(rec.career_id)}
                     className="btn btn-outline"
-                    style={{ flex: 1, padding: '8px 12px', fontSize: '0.82rem', fontWeight: 600 }}
+                    style={{
+                      flex: 1,
+                      padding: '9px 12px',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
                   >
                     <span>View Details</span>
                     <ChevronRight size={14} />
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => handleSelectAsTargetCareer(rec.career_id)}
                     disabled={isSettingThis}
                     className="btn btn-primary"
                     style={{
-                      flex: 1.2,
-                      padding: '8px 12px',
+                      flex: 1.25,
+                      padding: '9px 12px',
                       fontSize: '0.82rem',
-                      fontWeight: 700
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6
                     }}
                   >
                     {isSuccessThis ? (

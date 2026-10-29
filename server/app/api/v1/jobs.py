@@ -22,12 +22,12 @@ async def load_user_context(user_id: str):
         profile_doc = await db.db.profiles.find_one({"user_id": user_id}, {"_id": 0})
         disc_doc = await db.db.discovery_results.find_one({"user_id": user_id}, {"_id": 0})
         skill_doc = await db.db.skill_assessment_results.find_one({"user_id": user_id}, {"_id": 0})
-        action_plan_doc = await db.db.action_plans.find_one({"user_id": user_id}, {"_id": 0}) if hasattr(db.db, 'action_plans') else None
+        action_plan_doc = await db.db.career_action_plans.find_one({"user_id": user_id}, {"_id": 0}) if hasattr(db.db, 'career_action_plans') else None
     else:
         profile_doc = in_memory_store.get("profiles", {}).get(user_id)
         disc_doc = in_memory_store.get("discovery_results", {}).get(user_id)
         skill_doc = in_memory_store.get("skill_assessment_results", {}).get(user_id)
-        action_plan_doc = in_memory_store.get("action_plans", {}).get(user_id)
+        action_plan_doc = in_memory_store.get("career_action_plans", {}).get(user_id)
 
     rec_res = await calculate_personalized_recommendations(
         user_id=user_id,

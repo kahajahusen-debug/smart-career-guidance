@@ -69,19 +69,20 @@ async def signup(user_in: UserSignup):
     else:
         in_memory_store["users"].append(user_doc)
 
-    # Initialize default profile document for seamless user experience
+    # Initialize profile document with user's actual entered data
     profile_doc = {
         "_id": str(uuid.uuid4()),
         "user_id": user_id,
         "full_name": user_in.full_name.strip(),
         "email": email_clean,
-        "education_level": "Bachelor's Degree",
-        "degree": "B.Tech / B.E.",
-        "branch": "Computer Science",
-        "graduation_year": 2026,
-        "current_skills": ["Python", "JavaScript"],
-        "interests": ["Software Engineering", "AI"],
-        "preferred_category": "IT",
+        "education_level": (user_in.education_level or "").strip(),
+        "degree": (user_in.degree or "").strip(),
+        "branch": (user_in.branch or "").strip(),
+        "experience_level": (user_in.experience_level or "Student / Fresher").strip(),
+        "graduation_year": user_in.graduation_year,
+        "current_skills": [s.strip() for s in (user_in.current_skills or []) if isinstance(s, str) and s.strip()],
+        "interests": [i.strip() for i in (user_in.interests or []) if isinstance(i, str) and i.strip()],
+        "preferred_category": (user_in.preferred_category or "Undecided").strip(),
         "updated_at": now_iso
     }
 

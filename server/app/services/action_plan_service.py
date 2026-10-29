@@ -47,6 +47,29 @@ async def get_or_create_action_plan(
         prog_store = in_memory_store.get("user_project_progress", {})
         user_prog_list = [v for k, v in prog_store.items() if k.startswith(f"{user_id}_")]
 
+    has_assessment = skill_doc is not None and skill_doc.get("overall_accuracy") is not None
+    has_discovery = disc_doc is not None and bool(disc_doc.get("top_areas"))
+
+    # For a new user who has not selected a target career and has not completed discovery or assessment,
+    # return an uncreated action plan state without fabricating a roadmap or target career.
+    if not existing_doc and not target_career_id and not has_assessment and not has_discovery:
+        return {
+            "user_id": user_id,
+            "has_user_selected_target": False,
+            "target_career_id": None,
+            "target_career_title": None,
+            "target_career_category": None,
+            "suitability_score": None,
+            "readiness_score": None,
+            "readiness_breakdown": None,
+            "skill_gaps": [],
+            "roadmap": [],
+            "recommended_projects": [],
+            "progress": {},
+            "overall_progress_pct": 0,
+            "status": "Not Created"
+        }
+
     # Build existing progress map from existing_doc and user_project_progress
     existing_progress = existing_doc.get("progress", {}).copy() if existing_doc else {}
     for up in user_prog_list:

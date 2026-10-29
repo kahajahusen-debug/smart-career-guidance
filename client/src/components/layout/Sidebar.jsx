@@ -31,7 +31,6 @@ export default function Sidebar({
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'careerDiscovery', label: 'Career Discovery', icon: Compass },
-    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'assessment', label: 'Skill Assessment', icon: CheckSquare },
     { id: 'recommendations', label: 'Career Recommendations', icon: Award },
     { id: 'actionPlan', label: 'Career Action Plan', icon: Target },

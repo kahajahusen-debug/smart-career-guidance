@@ -27,10 +27,11 @@ async def get_my_profile(current_user: dict = Depends(get_current_user)):
             "education_level": "",
             "degree": "",
             "branch": "",
+            "experience_level": "Student / Fresher",
             "graduation_year": None,
             "current_skills": [],
             "interests": [],
-            "preferred_category": "Both",
+            "preferred_category": "Undecided",
             "updated_at": now_iso
         }
         if db.is_connected and db.db is not None:

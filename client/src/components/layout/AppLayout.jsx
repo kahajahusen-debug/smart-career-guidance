@@ -19,6 +19,12 @@ export default function AppLayout({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState('profile');
+
+  const handleOpenSettings = (tab = 'profile') => {
+    setSettingsInitialTab(tab);
+    setIsSettingsOpen(true);
+  };
 
   // Auto-collapse sidebar on smaller screens or restore on resize
   useEffect(() => {
@@ -72,7 +78,7 @@ export default function AppLayout({
         onCloseMobile={() => setIsMobileOpen(false)}
         user={user}
         onLogout={onLogout}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={(tab) => handleOpenSettings(tab || 'account')}
       />
 
       {/* Main Content Area Wrapper */}
@@ -89,12 +95,16 @@ export default function AppLayout({
           skillAssessmentResult={skillAssessmentResult}
           onLogout={onLogout}
           onToggleMobileSidebar={() => setIsMobileOpen(!isMobileOpen)}
-          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenSettings={handleOpenSettings}
         />
 
         {/* Dynamic Page Content Slot */}
         <main className="saas-content-area" id="main-content">
-          {children}
+          {React.Children.map(children, child =>
+            React.isValidElement(child)
+              ? React.cloneElement(child, { onOpenSettings: handleOpenSettings })
+              : child
+          )}
         </main>
       </div>
 
@@ -104,6 +114,8 @@ export default function AppLayout({
         onClose={() => setIsSettingsOpen(false)}
         user={user}
         profile={profile}
+        initialTab={settingsInitialTab}
+        onProfileUpdated={onProfileUpdated}
         onSaveCategoryPreference={handleSaveCategoryPreference}
       />
     </div>

@@ -8,10 +8,11 @@ class UserProfileBase(BaseModel):
     education_level: Optional[str] = ""
     degree: Optional[str] = ""
     branch: Optional[str] = ""
+    experience_level: Optional[str] = "Student / Fresher"
     graduation_year: Optional[int] = None
     current_skills: List[str] = Field(default_factory=list)
     interests: List[str] = Field(default_factory=list)
-    preferred_category: Optional[str] = Field(default="Both", description="IT, Non-IT, or Both")
+    preferred_category: Optional[str] = Field(default="Undecided", description="IT, Non-IT, or Undecided")
 
 class UserProfileCreate(UserProfileBase):
     pass
@@ -22,6 +23,7 @@ class UserProfileUpdate(BaseModel):
     education_level: Optional[str] = None
     degree: Optional[str] = None
     branch: Optional[str] = None
+    experience_level: Optional[str] = None
     graduation_year: Optional[int] = None
     current_skills: Optional[List[str]] = None
     interests: Optional[List[str]] = None

@@ -93,7 +93,7 @@ function HeroDeskIllustration() {
 
 // --- Donut Ring Progress Component ---
 function DonutProgress({
-  percentage = 0,
+  percentage = null,
   size = 110,
   strokeWidth = 10,
   strokeColor = '#10B981',
@@ -103,7 +103,8 @@ function DonutProgress({
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const validPct = Math.min(Math.max(percentage !== null ? percentage : 0, 0), 100);
+  const isNumber = typeof percentage === 'number' && !isNaN(percentage);
+  const validPct = isNumber ? Math.min(Math.max(percentage, 0), 100) : 0;
   const offset = circumference - (validPct / 100) * circumference;
 
   return (
@@ -117,23 +118,25 @@ function DonutProgress({
           strokeWidth={strokeWidth}
           fill="none"
         />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-        />
+        {isNumber && validPct > 0 && (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+          />
+        )}
       </svg>
       {showPercentage && (
         <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: size > 80 ? '1.5rem' : '0.8rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
-            {percentage !== null ? `${percentage}%` : '—'}
+            {isNumber ? `${percentage}%` : '—'}
           </span>
           {label && <span style={{ fontSize: '0.62rem', color: '#64748B', marginTop: 2 }}>{label}</span>}
         </div>
@@ -147,13 +150,15 @@ export default function DashboardPage({
   profile: propProfile,
   assessmentResult,
   skillAssessmentResult: propSkillAssessment,
-  onNavigate
+  onNavigate,
+  onOpenSettings
 }) {
   const [profile, setProfile] = useState(propProfile || null);
   const [discoveryResult, setDiscoveryResult] = useState(null);
   const [skillResult, setSkillResult] = useState(propSkillAssessment || null);
   const [actionPlan, setActionPlan] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [projectSummary, setProjectSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -168,14 +173,17 @@ export default function DashboardPage({
         getDiscoveryResult().catch(() => null),
         getSkillAssessmentResult().catch(() => propSkillAssessment || null),
         getActionPlan().catch(() => null),
-        getRecommendedProjects('all').catch(() => ({ projects: [] }))
+        getRecommendedProjects('all').catch(() => ({ projects: [], summary: {} }))
       ]);
 
       if (profData) setProfile(profData);
       if (discData?.success && discData?.result) setDiscoveryResult(discData.result);
       if (skillData && skillData.overall_accuracy !== undefined) setSkillResult(skillData);
-      if (planData && planData.target_career_title) setActionPlan(planData);
-      if (projData?.projects) setProjects(projData.projects);
+      if (planData && !planData.detail) setActionPlan(planData);
+      if (projData?.projects) {
+        setProjects(projData.projects);
+        if (projData.summary) setProjectSummary(projData.summary);
+      }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
@@ -186,36 +194,48 @@ export default function DashboardPage({
   // --- Real Profile Completion Calculation ---
   const completionStats = calculateProfileCompletion(profile, user);
   const profilePct = completionStats.percentage;
-  const isProfileComplete = profilePct >= 80;
+  const isProfileComplete = profilePct >= 100;
 
   // --- Assessment & Discovery State ---
   const isDiscoveryCompleted = Boolean(discoveryResult);
   const isSkillAssessmentCompleted = Boolean(skillResult && skillResult.overall_accuracy !== undefined);
-  const assessmentAccuracy = isSkillAssessmentCompleted ? skillResult.overall_accuracy : 0;
+  const assessmentAccuracy = isSkillAssessmentCompleted ? skillResult.overall_accuracy : null;
 
-  // --- Target Career & Progress ---
-  const hasUserSelectedTarget = actionPlan?.has_user_selected_target !== false && Boolean(actionPlan?.target_career_title);
-  const targetCareerTitle = hasUserSelectedTarget ? actionPlan.target_career_title : (actionPlan?.target_career_title || 'Data Scientist');
-  const targetCareerCategory = actionPlan?.target_career_category || 'IT';
+  // --- Target Career & Progress (Strictly Real) ---
+  const hasUserSelectedTarget = Boolean(
+    actionPlan?.has_user_selected_target !== false &&
+    actionPlan?.target_career_title &&
+    actionPlan?.status !== 'Not Created'
+  );
+  const targetCareerTitle = hasUserSelectedTarget ? actionPlan.target_career_title : 'Not Selected';
+  const targetCareerCategory = hasUserSelectedTarget
+    ? (actionPlan.target_career_category || profile?.preferred_category || 'IT')
+    : (profile?.preferred_category || 'Pending');
 
-  // Suitability & Readiness
-  const suitabilityScore = actionPlan?.suitability_score !== undefined
+  // Suitability & Readiness (Strictly Real, No Sample Fabrication)
+  const suitabilityScore = hasUserSelectedTarget && typeof actionPlan?.suitability_score === 'number'
     ? actionPlan.suitability_score
-    : (isDiscoveryCompleted || hasUserSelectedTarget ? 72 : null);
+    : null;
 
-  const jobReadinessScore = actionPlan?.readiness_score !== undefined
+  const jobReadinessScore = hasUserSelectedTarget && typeof actionPlan?.readiness_score === 'number'
     ? actionPlan.readiness_score
-    : (isSkillAssessmentCompleted || hasUserSelectedTarget ? 58 : null);
+    : null;
 
-  // Roadmap & Milestones
-  const milestonesCompleted = actionPlan?.milestones?.filter(m => m.completed || m.status === 'Completed').length ?? (hasUserSelectedTarget ? 3 : 0);
-  const totalMilestones = actionPlan?.milestones?.length || 8;
-  const roadmapProgressPct = Math.round((milestonesCompleted / totalMilestones) * 100);
+  // Roadmap & Milestones (Strictly Real, No Sample Fabrication)
+  const hasRoadmap = hasUserSelectedTarget && Array.isArray(actionPlan?.milestones) && actionPlan.milestones.length > 0;
+  const milestonesCompleted = hasRoadmap
+    ? actionPlan.milestones.filter(m => m.completed || m.status === 'Completed').length
+    : 0;
+  const totalMilestones = hasRoadmap ? actionPlan.milestones.length : 0;
+  const roadmapProgressPct = hasRoadmap && totalMilestones > 0
+    ? Math.round((milestonesCompleted / totalMilestones) * 100)
+    : 0;
 
-  // Skill Gaps Count
-  const skillGapsCount = actionPlan?.skill_gaps?.length ?? (hasUserSelectedTarget ? 5 : 0);
+  // Skill Gaps Count (Strictly Real)
+  const hasSkillGapsData = isSkillAssessmentCompleted && Array.isArray(actionPlan?.skill_gaps);
+  const skillGapsCount = hasSkillGapsData ? actionPlan.skill_gaps.length : null;
 
-  // Projects Catalog: Merge with 3 canonical cards from screenshot
+  // Projects Catalog (Strictly Real User Progress)
   const defaultProjects = [
     {
       id: 'proj_da',
@@ -224,9 +244,9 @@ export default function DashboardPage({
       difficultyColor: '#D97706',
       difficultyBg: '#FEF3C7',
       technologies: ['Python', 'Pandas', 'Matplotlib'],
-      progress_percentage: 40,
+      progress_percentage: 0,
       icon: TrendingUp,
-      actionText: 'Continue'
+      actionText: 'Start Project'
     },
     {
       id: 'proj_wp',
@@ -245,26 +265,41 @@ export default function DashboardPage({
       difficulty: 'Beginner',
       difficultyColor: '#16A34A',
       difficultyBg: '#DCFCE7',
-      technologies: ['React', 'Tailwind CSS', 'JavaScript'],
-      progress_percentage: 25,
+      technologies: ['React', 'CSS', 'JavaScript'],
+      progress_percentage: 0,
       icon: Globe,
-      actionText: 'Continue'
+      actionText: 'Start Project'
     }
   ];
 
-  const displayProjects = projects.length >= 3 ? projects.slice(0, 3).map((p, i) => ({
-    id: p.id || p.project_id || defaultProjects[i].id,
-    title: p.title || defaultProjects[i].title,
-    difficulty: p.difficulty || defaultProjects[i].difficulty,
-    difficultyColor: p.difficulty === 'Beginner' ? '#16A34A' : '#D97706',
-    difficultyBg: p.difficulty === 'Beginner' ? '#DCFCE7' : '#FEF3C7',
-    technologies: (p.technologies || p.skills_covered || defaultProjects[i].technologies).slice(0, 3),
-    progress_percentage: p.progress_percentage !== undefined ? p.progress_percentage : defaultProjects[i].progress_percentage,
-    icon: defaultProjects[i].icon,
-    actionText: (p.progress_percentage || 0) > 0 ? 'Continue' : 'Start Project'
-  })) : defaultProjects;
+  const rawProjects = Array.isArray(projects) && projects.length > 0 ? projects : defaultProjects;
+  const displayProjects = rawProjects.slice(0, 3).map((p, i) => {
+    const fallback = defaultProjects[i] || defaultProjects[0];
+    const pct = typeof p.progress_percentage === 'number' ? p.progress_percentage : 0;
+    const isCompleted = p.status === 'Completed' || pct >= 100;
+    const isStarted = pct > 0 || p.status === 'In Progress';
+    return {
+      id: p.id || p.project_id || fallback.id,
+      title: p.title || fallback.title,
+      difficulty: p.difficulty || fallback.difficulty,
+      difficultyColor: p.difficulty === 'Beginner' ? '#16A34A' : '#D97706',
+      difficultyBg: p.difficulty === 'Beginner' ? '#DCFCE7' : '#FEF3C7',
+      technologies: (p.technologies || p.skills_covered || fallback.technologies).slice(0, 3),
+      progress_percentage: pct,
+      icon: fallback.icon,
+      status: p.status || (isCompleted ? 'Completed' : (isStarted ? 'In Progress' : 'Not Started')),
+      actionText: isCompleted ? 'Completed' : (isStarted ? 'Continue' : 'Start Project')
+    };
+  });
 
-  const completedProjectsCount = 1;
+  const completedProjectsCount = projectSummary?.completed_count !== undefined
+    ? projectSummary.completed_count
+    : displayProjects.filter(p => p.status === 'Completed').length;
+
+  const inProgressProjectsCount = projectSummary?.in_progress_count !== undefined
+    ? projectSummary.in_progress_count
+    : displayProjects.filter(p => p.status === 'In Progress').length;
+
   const totalProjectsCount = 3;
 
   return (
@@ -292,21 +327,21 @@ export default function DashboardPage({
           position: 'relative',
           overflow: 'hidden'
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 360, zIndex: 2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 380, zIndex: 2 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: '#EEF2FF',
-                color: '#4F46E5',
+                background: hasUserSelectedTarget ? '#EEF2FF' : '#F1F5F9',
+                color: hasUserSelectedTarget ? '#4F46E5' : '#64748B',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
                 <Target size={16} />
               </div>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4F46E5' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: hasUserSelectedTarget ? '#4F46E5' : '#64748B' }}>
                 Your Target Career
               </span>
             </div>
@@ -315,7 +350,7 @@ export default function DashboardPage({
               <h2 style={{
                 fontSize: '1.75rem',
                 fontWeight: 800,
-                color: '#0F172A',
+                color: hasUserSelectedTarget ? '#0F172A' : '#475569',
                 letterSpacing: '-0.02em',
                 margin: 0,
                 lineHeight: 1.2
@@ -327,20 +362,20 @@ export default function DashboardPage({
             <div>
               <span style={{
                 display: 'inline-block',
-                background: '#EEF2FF',
-                color: '#4F46E5',
+                background: hasUserSelectedTarget ? '#EEF2FF' : '#F1F5F9',
+                color: hasUserSelectedTarget ? '#4F46E5' : '#64748B',
                 fontSize: '0.74rem',
                 fontWeight: 600,
                 padding: '4px 12px',
                 borderRadius: 999
               }}>
-                In Progress
+                {hasUserSelectedTarget ? 'In Progress' : 'Not Selected'}
               </span>
             </div>
 
             <div style={{ marginTop: 6 }}>
               <button
-                onClick={() => onNavigate('actionPlan')}
+                onClick={() => onNavigate(hasUserSelectedTarget ? 'actionPlan' : 'recommendations')}
                 className="btn btn-primary"
                 style={{
                   background: '#4F46E5',
@@ -354,7 +389,7 @@ export default function DashboardPage({
                   gap: 6
                 }}
               >
-                <span>Continue Journey</span>
+                <span>{hasUserSelectedTarget ? 'Continue Journey' : 'Choose Target Career'}</span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -396,7 +431,13 @@ export default function DashboardPage({
           </div>
 
           <button
-            onClick={() => onNavigate('profile')}
+            onClick={() => {
+              if (onOpenSettings) {
+                onOpenSettings('profile');
+              } else {
+                onNavigate('dashboard');
+              }
+            }}
             style={{
               background: 'none',
               border: 'none',
@@ -410,7 +451,7 @@ export default function DashboardPage({
               padding: 0
             }}
           >
-            <span>Complete your profile</span>
+            <span>{profilePct >= 100 ? 'View profile details' : 'Complete your profile'}</span>
             <ArrowRight size={13} />
           </button>
         </div>
@@ -470,14 +511,14 @@ export default function DashboardPage({
           <div>
             <span style={{
               display: 'inline-block',
-              background: '#FEF3C7',
-              color: '#D97706',
+              background: profilePct >= 100 ? '#ECFDF5' : (profilePct > 0 ? '#FEF3C7' : '#F1F5F9'),
+              color: profilePct >= 100 ? '#065F46' : (profilePct > 0 ? '#D97706' : '#64748B'),
               fontSize: '0.72rem',
               fontWeight: 600,
               padding: '3px 10px',
               borderRadius: 999
             }}>
-              In Progress
+              {profilePct >= 100 ? 'Completed' : (profilePct > 0 ? 'In Progress' : 'Not Started')}
             </span>
           </div>
         </div>
@@ -498,8 +539,8 @@ export default function DashboardPage({
               width: 34,
               height: 34,
               borderRadius: 10,
-              background: '#ECFDF5',
-              color: '#10B981',
+              background: isSkillAssessmentCompleted ? '#ECFDF5' : '#F1F5F9',
+              color: isSkillAssessmentCompleted ? '#10B981' : '#64748B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -512,14 +553,14 @@ export default function DashboardPage({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {assessmentAccuracy}%
+            <span style={{ fontSize: isSkillAssessmentCompleted ? '1.75rem' : '1.25rem', fontWeight: 800, color: isSkillAssessmentCompleted ? '#0F172A' : '#64748B', letterSpacing: '-0.02em' }}>
+              {isSkillAssessmentCompleted ? `${assessmentAccuracy}%` : 'Not Assessed'}
             </span>
             <DonutProgress
-              percentage={assessmentAccuracy}
+              percentage={isSkillAssessmentCompleted ? assessmentAccuracy : null}
               size={38}
               strokeWidth={5}
-              strokeColor={isSkillAssessmentCompleted ? '#10B981' : '#E2E8F0'}
+              strokeColor="#10B981"
               trackColor="#F1F5F9"
               showPercentage={false}
             />
@@ -528,14 +569,14 @@ export default function DashboardPage({
           <div>
             <span style={{
               display: 'inline-block',
-              background: '#EEF2FF',
-              color: '#6366F1',
+              background: isSkillAssessmentCompleted ? '#EEF2FF' : '#F1F5F9',
+              color: isSkillAssessmentCompleted ? '#6366F1' : '#64748B',
               fontSize: '0.72rem',
               fontWeight: 600,
               padding: '3px 10px',
               borderRadius: 999
             }}>
-              {isSkillAssessmentCompleted ? 'Completed' : 'Pending'}
+              {isSkillAssessmentCompleted ? 'Completed' : 'Not Assessed'}
             </span>
           </div>
         </div>
@@ -556,8 +597,8 @@ export default function DashboardPage({
               width: 34,
               height: 34,
               borderRadius: 10,
-              background: '#FFF1F2',
-              color: '#F43F5E',
+              background: hasSkillGapsData ? '#FFF1F2' : '#F1F5F9',
+              color: hasSkillGapsData ? '#F43F5E' : '#64748B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -570,23 +611,25 @@ export default function DashboardPage({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {skillGapsCount}
+            <span style={{ fontSize: hasSkillGapsData ? '1.75rem' : '1.25rem', fontWeight: 800, color: hasSkillGapsData ? '#0F172A' : '#64748B', letterSpacing: '-0.02em' }}>
+              {hasSkillGapsData ? skillGapsCount : 'Not Assessed'}
             </span>
-            <span style={{ color: '#10B981', fontSize: '1.1rem', fontWeight: 800 }}>↗</span>
+            {hasSkillGapsData && (
+              <span style={{ color: skillGapsCount > 0 ? '#E11D48' : '#10B981', fontSize: '1.1rem', fontWeight: 800 }}>↗</span>
+            )}
           </div>
 
           <div>
             <span style={{
               display: 'inline-block',
-              background: '#FEE2E2',
-              color: '#E11D48',
+              background: hasSkillGapsData ? (skillGapsCount > 0 ? '#FEE2E2' : '#DCFCE7') : '#F1F5F9',
+              color: hasSkillGapsData ? (skillGapsCount > 0 ? '#E11D48' : '#16A34A') : '#64748B',
               fontSize: '0.72rem',
               fontWeight: 600,
               padding: '3px 10px',
               borderRadius: 999
             }}>
-              Needs Attention
+              {hasSkillGapsData ? (skillGapsCount > 0 ? 'Needs Attention' : 'Optimal') : 'Not Assessed'}
             </span>
           </div>
         </div>
@@ -623,14 +666,14 @@ export default function DashboardPage({
 
             <span style={{
               display: 'inline-block',
-              background: '#FEF3C7',
-              color: '#D97706',
+              background: completedProjectsCount > 0 || inProgressProjectsCount > 0 ? '#FEF3C7' : '#F1F5F9',
+              color: completedProjectsCount > 0 || inProgressProjectsCount > 0 ? '#D97706' : '#64748B',
               fontSize: '0.72rem',
               fontWeight: 600,
               padding: '2px 8px',
               borderRadius: 999
             }}>
-              In Progress
+              {completedProjectsCount > 0 || inProgressProjectsCount > 0 ? 'In Progress' : 'Not Started'}
             </span>
           </div>
 
@@ -642,7 +685,7 @@ export default function DashboardPage({
 
           <div style={{ height: 6, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden', marginTop: 4 }}>
             <div style={{
-              width: '33%',
+              width: `${totalProjectsCount > 0 ? Math.round((completedProjectsCount / totalProjectsCount) * 100) : 0}%`,
               height: '100%',
               background: '#4F46E5',
               borderRadius: 999
@@ -684,7 +727,7 @@ export default function DashboardPage({
               width: 36,
               height: 36,
               borderRadius: 8,
-              background: '#4F46E5',
+              background: hasUserSelectedTarget ? '#4F46E5' : '#94A3B8',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
@@ -693,12 +736,12 @@ export default function DashboardPage({
               <BarChart3 size={20} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A' }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: hasUserSelectedTarget ? '#0F172A' : '#64748B' }}>
                 {targetCareerTitle}
               </span>
               <span style={{
-                background: '#EEF2FF',
-                color: '#4F46E5',
+                background: hasUserSelectedTarget ? '#EEF2FF' : '#F1F5F9',
+                color: hasUserSelectedTarget ? '#4F46E5' : '#64748B',
                 fontSize: '0.7rem',
                 fontWeight: 700,
                 padding: '2px 8px',
@@ -728,6 +771,9 @@ export default function DashboardPage({
                 strokeColor="#14B8A6"
                 trackColor="#F1F5F9"
               />
+              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                {suitabilityScore !== null ? `${suitabilityScore}% match` : 'Not Assessed'}
+              </span>
             </div>
 
             {/* Job Readiness */}
@@ -742,6 +788,9 @@ export default function DashboardPage({
                 strokeColor="#3B82F6"
                 trackColor="#F1F5F9"
               />
+              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                {jobReadinessScore !== null ? `${jobReadinessScore}% ready` : 'Not Assessed'}
+              </span>
             </div>
 
             {/* Roadmap Progress */}
@@ -750,8 +799,8 @@ export default function DashboardPage({
                 <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
                   Roadmap Progress
                 </span>
-                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 700 }}>
-                  {milestonesCompleted} / {totalMilestones} milestones
+                <span style={{ fontSize: '0.78rem', color: hasRoadmap ? '#0F172A' : '#64748B', fontWeight: 700 }}>
+                  {hasRoadmap ? `${milestonesCompleted} / ${totalMilestones} milestones` : 'Not Created'}
                 </span>
               </div>
 
@@ -766,7 +815,7 @@ export default function DashboardPage({
 
               <div style={{ marginTop: 6 }}>
                 <button
-                  onClick={() => onNavigate('actionPlan')}
+                  onClick={() => onNavigate(hasRoadmap ? 'actionPlan' : 'recommendations')}
                   style={{
                     width: '100%',
                     background: '#F1F5F9',
@@ -783,7 +832,7 @@ export default function DashboardPage({
                     gap: 6
                   }}
                 >
-                  <span>View Roadmap</span>
+                  <span>{hasRoadmap ? 'View Roadmap' : 'Create Action Plan'}</span>
                   <ArrowRight size={13} />
                 </button>
               </div>
@@ -812,7 +861,9 @@ export default function DashboardPage({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Step 1 */}
             <div
-              onClick={() => onNavigate('profile')}
+              onClick={() => {
+                if (onOpenSettings) onOpenSettings('profile');
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -826,7 +877,7 @@ export default function DashboardPage({
                   width: 24,
                   height: 24,
                   borderRadius: '50%',
-                  background: '#3B82F6',
+                  background: isProfileComplete ? '#10B981' : '#3B82F6',
                   color: '#FFFFFF',
                   fontSize: '0.75rem',
                   fontWeight: 700,
@@ -835,14 +886,14 @@ export default function DashboardPage({
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  1
+                  {isProfileComplete ? '✓' : '1'}
                 </div>
                 <div>
                   <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
-                    Complete your profile
+                    {isProfileComplete ? 'Profile completed' : 'Complete your profile'}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                    Get personalized recommendations
+                    {isProfileComplete ? 'Qualifications verified' : 'Get tailored recommendations'}
                   </div>
                 </div>
               </div>
@@ -865,7 +916,7 @@ export default function DashboardPage({
                   width: 24,
                   height: 24,
                   borderRadius: '50%',
-                  background: '#10B981',
+                  background: isSkillAssessmentCompleted ? '#10B981' : '#F59E0B',
                   color: '#FFFFFF',
                   fontSize: '0.75rem',
                   fontWeight: 700,
@@ -874,14 +925,14 @@ export default function DashboardPage({
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  2
+                  {isSkillAssessmentCompleted ? '✓' : '2'}
                 </div>
                 <div>
                   <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
-                    Take skill assessment
+                    {isSkillAssessmentCompleted ? 'Assessment completed' : 'Take skill assessment'}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                    Find your skill gaps
+                    {isSkillAssessmentCompleted ? `${assessmentAccuracy}% accuracy score` : 'Find your skill gaps'}
                   </div>
                 </div>
               </div>
@@ -904,7 +955,7 @@ export default function DashboardPage({
                   width: 24,
                   height: 24,
                   borderRadius: '50%',
-                  background: '#F59E0B',
+                  background: hasUserSelectedTarget ? '#10B981' : '#6366F1',
                   color: '#FFFFFF',
                   fontSize: '0.75rem',
                   fontWeight: 700,
@@ -913,14 +964,14 @@ export default function DashboardPage({
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  3
+                  {hasUserSelectedTarget ? '✓' : '3'}
                 </div>
                 <div>
                   <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
-                    Explore careers
+                    {hasUserSelectedTarget ? 'Career selected' : 'Explore & choose career'}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                    Discover more options
+                    {hasUserSelectedTarget ? targetCareerTitle : 'Discover matched roles'}
                   </div>
                 </div>
               </div>
@@ -1082,7 +1133,7 @@ export default function DashboardPage({
                         fontWeight: 700
                       }}
                     >
-                      {p.actionText || 'Continue'}
+                      {p.actionText || 'Start Project'}
                     </button>
                   </div>
                 </div>

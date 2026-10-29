@@ -5,7 +5,6 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
-import ProfilePage from './pages/ProfilePage';
 import CareerDiscoveryPage from './pages/CareerDiscoveryPage';
 import AssessmentPage from './pages/AssessmentPage';
 import RecommendationsPage from './pages/RecommendationsPage';
@@ -97,6 +96,11 @@ export default function App() {
 
     if (options.prompt) setAssistantPrompt(options.prompt);
     if (options.career) setInterviewPreselectedCareer(options.career);
+
+    if (targetPage === 'profile') {
+      setActivePage('dashboard');
+      return;
+    }
 
     setActivePage(targetPage);
   };
@@ -259,13 +263,6 @@ export default function App() {
             assessmentResult={assessmentResult}
             skillAssessmentResult={skillAssessmentResult}
             onNavigate={handleNavigate}
-          />
-        )}
-
-        {activePage === 'profile' && (
-          <ProfilePage
-            user={user}
-            onProfileUpdated={setProfile}
           />
         )}
 

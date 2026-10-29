@@ -23,6 +23,67 @@ async def get_all_careers_data() -> List[Dict[str, Any]]:
         return careers
     return CAREERS_SEED
 
+# Helper for fuzzy and alias skill matching
+def is_skill_match(req_skill: str, candidate_skill: str) -> bool:
+    if not req_skill or not candidate_skill:
+        return False
+    r = req_skill.strip().lower()
+    c = candidate_skill.strip().lower()
+    if r == c:
+        return True
+    if len(r) >= 3 and len(c) >= 3:
+        if r in c or c in r:
+            return True
+    synonyms_map = {
+        "machine learning": ["ml", "scikit-learn", "deep learning", "ai"],
+        "python": ["python 3", "py", "pandas"],
+        "javascript": ["js", "es6", "vanilla js"],
+        "react": ["reactjs", "react.js", "frontend"],
+        "docker & kubernetes": ["docker", "kubernetes", "k8s", "containers"],
+        "linux": ["unix", "bash", "shell scripting", "linux administration"],
+        "sql": ["mysql", "postgresql", "postgres", "sqlite", "relational database"],
+        "ui/ux design": ["ui", "ux", "ui/ux", "ui design", "ux design", "product design"],
+        "figma & wireframing": ["figma", "wireframing", "prototyping"],
+        "seo & sem": ["seo", "sem", "google analytics", "digital marketing"],
+        "content strategy": ["content marketing", "copywriting"],
+        "marketing analytics": ["analytics", "google analytics", "kpis"],
+        "statistics": ["prob & stats", "probability", "statistical analysis"],
+        "data visualization": ["power bi", "tableau", "matplotlib", "seaborn"],
+        "network security": ["networking", "firewall", "cybersecurity"],
+        "ethical hacking": ["penetration testing", "pen testing", "vulnerability assessment"],
+        "incident response": ["soc", "threat hunting"],
+        "cryptography": ["encryption", "security protocols"],
+        "ci/cd": ["continuous integration", "github actions", "jenkins"],
+        "cloud architecture": ["aws", "azure", "gcp", "cloud computing"],
+        "product strategy": ["roadmap", "product management", "rice framework"],
+        "user research": ["user testing", "interviews", "personas"],
+        "agile & scrum": ["scrum", "agile", "sprints", "jira"],
+        "financial analysis": ["financial modeling", "dcf", "valuation", "accounting"],
+        "risk assessment": ["risk management", "credit risk", "market risk"],
+        "talent acquisition": ["recruitment", "hiring", "sourcing"],
+        "employee engagement": ["retention", "hr policies", "onboarding"],
+        "healthcare operations": ["hospital administration", "patient workflow"],
+        "compliance & regulation": ["hipaa", "nabh", "healthcare regulations"]
+    }
+    for base, syns in synonyms_map.items():
+        if (r == base or r in syns) and (c == base or c in syns):
+            return True
+    return False
+
+# Career domain affinity weights for Career Discovery alignment
+CAREER_DOMAIN_WEIGHTS = {
+    "car_it_01": {"technical": 0.85, "data": 0.15},
+    "car_it_02": {"data": 0.95, "technical": 0.05},
+    "car_it_03": {"technical": 0.90, "data": 0.10},
+    "car_it_04": {"design": 0.95, "technical": 0.05},
+    "car_it_05": {"technical": 0.65, "data": 0.35},
+    "car_nonit_01": {"business": 0.65, "data": 0.35},
+    "car_nonit_02": {"business": 0.80, "technical": 0.10, "design": 0.10},
+    "car_nonit_03": {"data": 0.75, "business": 0.25},
+    "car_nonit_04": {"business": 0.90, "design": 0.10},
+    "car_nonit_05": {"business": 0.85, "data": 0.15}
+}
+
 async def calculate_personalized_recommendations(
     user_id: str,
     profile_doc: Optional[Dict[str, Any]] = None,
@@ -33,12 +94,18 @@ async def calculate_personalized_recommendations(
     """
     Phase 5 Dynamic Personalized Career Recommendation Engine.
     
-    Weights:
+    Weights (with completed skill assessment):
     - Skill Match: 35%
     - Career Discovery Match: 25%
     - Skill Assessment Match: 20%
     - Education Match: 10%
     - Work Style Match: 10%
+    
+    Weights (when skill assessment is pending):
+    - Skill Profile Match: 35%
+    - Career Discovery Interest Match: 35%
+    - Education Match: 15%
+    - Work Style Match: 15%
     """
     has_profile = profile_doc is not None and bool(profile_doc.get("current_skills") or profile_doc.get("interests"))
     has_discovery = discovery_doc is not None and bool(discovery_doc.get("top_areas"))
@@ -53,31 +120,40 @@ async def calculate_personalized_recommendations(
         if not has_profile: missing_parts.append("Profile")
         if not has_discovery: missing_parts.append("Career Discovery")
         if not has_assessment: missing_parts.append("Skill Assessment")
-        message = f"Complete your {', '.join(missing_parts)} to receive fully accurate personalized recommendations."
+        message = f"Complete your {', '.join(missing_parts)} to receive fully verified technical suitability scores."
 
     # Extract user attributes
-    current_skills_user = [s.strip().lower() for s in (profile_doc.get("current_skills", []) if profile_doc else [])]
-    user_interests = [i.strip().lower() for i in (profile_doc.get("interests", []) if profile_doc else [])]
+    current_skills_user = [s.strip() for s in (profile_doc.get("current_skills", []) if profile_doc else []) if s.strip()]
+    user_interests = [i.strip() for i in (profile_doc.get("interests", []) if profile_doc else []) if i.strip()]
     user_pref_cat = (profile_doc.get("preferred_category", "Both") if profile_doc else "Both").strip().lower()
     user_degree = (profile_doc.get("degree", "") or profile_doc.get("education_level", "") if profile_doc else "").strip().lower()
     user_major = (profile_doc.get("major", "") if profile_doc else "").strip().lower()
     user_work_style = (profile_doc.get("work_style", "") if profile_doc else "").strip().lower()
 
-    # Extract Discovery attributes
+    # Extract Discovery attributes & domain percentages
     top_disc_areas = []
-    if discovery_doc and "top_areas" in discovery_doc:
-        for ta in discovery_doc["top_areas"]:
-            top_disc_areas.append({
-                "area": ta.get("area", "").lower(),
-                "pct": float(ta.get("percentage", 0.0))
-            })
+    disc_percentages = {}
+    if discovery_doc:
+        disc_percentages = discovery_doc.get("percentages", {})
+        if "top_areas" in discovery_doc:
+            for ta in discovery_doc["top_areas"]:
+                top_disc_areas.append({
+                    "area": ta.get("area", "").lower(),
+                    "pct": float(ta.get("percentage", 0.0))
+                })
+
+    # Normalized domain percentages
+    data_pct = float(disc_percentages.get("data", 0.0))
+    tech_pct = float(disc_percentages.get("technical", 0.0))
+    design_pct = float(disc_percentages.get("design", 0.0))
+    biz_pct = float(disc_percentages.get("business", 0.0))
 
     # Extract Skill Assessment attributes
-    ass_accuracy = float(skill_assessment_doc.get("overall_accuracy", 50.0)) if skill_assessment_doc else 50.0
-    ass_strong_skills = [s.lower() for s in (skill_assessment_doc.get("strong_skills", []) if skill_assessment_doc else [])]
-    ass_moderate_skills = [s.lower() for s in (skill_assessment_doc.get("moderate_skills", []) if skill_assessment_doc else [])]
-    ass_improve_skills = [s.lower() for s in (skill_assessment_doc.get("improve_skills", []) if skill_assessment_doc else [])]
-    ass_skill_scores = {k.lower(): float(v) for k, v in (skill_assessment_doc.get("skill_scores", {}).items() if skill_assessment_doc else {})}
+    ass_accuracy = float(skill_assessment_doc.get("overall_accuracy", 0.0)) if skill_assessment_doc else 0.0
+    ass_strong_skills = [s for s in (skill_assessment_doc.get("strong_skills", []) if skill_assessment_doc else [])]
+    ass_moderate_skills = [s for s in (skill_assessment_doc.get("moderate_skills", []) if skill_assessment_doc else [])]
+    ass_improve_skills = [s for s in (skill_assessment_doc.get("improve_skills", []) if skill_assessment_doc else [])]
+    ass_skill_scores = {k: float(v) for k, v in (skill_assessment_doc.get("skill_scores", {}).items() if skill_assessment_doc else {})}
 
     all_careers = await get_all_careers_data()
 
@@ -119,37 +195,50 @@ async def calculate_personalized_recommendations(
             target_score = float(req.get("target_score", 75))
             weight = float(req.get("weight", 1.0))
             total_skill_weight += weight
-            sk_name_lower = sk_name.lower()
 
-            # Profile skill presence
-            has_profile_skill = any(sk_name_lower in s or s in sk_name_lower for s in current_skills_user if len(s) >= 2)
+            # Profile skill presence using fuzzy matching
+            has_profile_skill = any(is_skill_match(sk_name, s) for s in current_skills_user)
             
             # Assessment score for this skill
-            if sk_name_lower in ass_skill_scores:
-                eval_score = ass_skill_scores[sk_name_lower]
-            elif sk_name_lower in ass_strong_skills:
-                eval_score = 85.0
-            elif sk_name_lower in ass_moderate_skills:
-                eval_score = 65.0
-            elif sk_name_lower in ass_improve_skills:
-                eval_score = 40.0
-            else:
-                eval_score = 70.0 if has_profile_skill else 35.0
+            eval_score = 0.0
+            matched_in_assessment = False
+            for ass_k, ass_v in ass_skill_scores.items():
+                if is_skill_match(sk_name, ass_k):
+                    eval_score = max(eval_score, ass_v)
+                    matched_in_assessment = True
+            if not matched_in_assessment:
+                if any(is_skill_match(sk_name, s) for s in ass_strong_skills):
+                    eval_score = 85.0
+                    matched_in_assessment = True
+                elif any(is_skill_match(sk_name, s) for s in ass_moderate_skills):
+                    eval_score = 65.0
+                    matched_in_assessment = True
+                elif any(is_skill_match(sk_name, s) for s in ass_improve_skills):
+                    eval_score = 40.0
+                    matched_in_assessment = True
 
-            # Combined user score
-            if has_profile_skill:
-                user_score = round(max(eval_score, 65.0 if has_assessment else 75.0), 1)
+            # Combined user score calculation
+            if has_assessment:
+                if matched_in_assessment:
+                    user_score = eval_score
+                elif has_profile_skill:
+                    user_score = 65.0
+                else:
+                    user_score = 35.0
             else:
-                user_score = round(eval_score, 1)
+                if has_profile_skill:
+                    user_score = 75.0
+                else:
+                    user_score = 30.0
 
             match_ratio = min(1.0, user_score / target_score) if target_score > 0 else 1.0
             weighted_skill_sum += (match_ratio * weight)
 
-            if user_score >= (target_score * 0.8):
+            if user_score >= (target_score * 0.75):
                 status_tier = "Strong"
                 car_matching_skills.append(sk_name)
                 global_matched_skills.add(sk_name)
-            elif user_score >= (target_score * 0.6):
+            elif user_score >= (target_score * 0.60):
                 status_tier = "Good"
                 car_matching_skills.append(sk_name)
                 global_matched_skills.add(sk_name)
@@ -165,64 +254,59 @@ async def calculate_personalized_recommendations(
                 "status": status_tier
             })
 
-        skill_match_score = round((weighted_skill_sum / total_skill_weight * 100.0), 1) if total_skill_weight > 0 else 60.0
+        skill_match_score = round((weighted_skill_sum / total_skill_weight * 100.0), 1) if total_skill_weight > 0 else 50.0
 
         # ----------------------------------------------------
-        # 2. CAREER DISCOVERY / INTEREST MATCH (25%)
+        # 2. CAREER DISCOVERY / INTEREST MATCH (25% or 35%)
         # ----------------------------------------------------
-        disc_match_score = 50.0
-        if top_disc_areas:
+        if has_discovery and (data_pct > 0 or tech_pct > 0 or design_pct > 0 or biz_pct > 0):
+            domain_weights = CAREER_DOMAIN_WEIGHTS.get(car_id, {"technical": 0.5, "data": 0.5})
+            raw_interest = (
+                (domain_weights.get("data", 0.0) * data_pct) +
+                (domain_weights.get("technical", 0.0) * tech_pct) +
+                (domain_weights.get("design", 0.0) * design_pct) +
+                (domain_weights.get("business", 0.0) * biz_pct)
+            )
+            # Apply baseline floor so unselected domains don't drop below 25.0
+            disc_match_score = max(25.0, min(100.0, raw_interest))
+        elif top_disc_areas:
             primary_area = top_disc_areas[0]["area"]
             primary_pct = top_disc_areas[0]["pct"]
+            if ("data" in primary_area or "analytics" in primary_area) and any(k in car_title.lower() for k in ["data", "ml", "financial"]):
+                disc_match_score = min(100.0, primary_pct + 10.0)
+            elif ("technical" in primary_area or "software" in primary_area) and car_category.lower() == "it":
+                disc_match_score = min(100.0, primary_pct + 10.0)
+            elif ("design" in primary_area or "ux" in primary_area) and any(k in car_title.lower() for k in ["design", "ui/ux"]):
+                disc_match_score = min(100.0, primary_pct + 10.0)
+            elif ("business" in primary_area or "management" in primary_area) and car_category.lower() == "non-it":
+                disc_match_score = min(100.0, primary_pct + 10.0)
+            else:
+                disc_match_score = 40.0
+        else:
+            disc_match_score = 50.0
 
-            if "technical" in primary_area or "software" in primary_area:
-                if car_category.lower() == "it":
-                    disc_match_score = min(100.0, primary_pct + 15.0)
-                else:
-                    disc_match_score = 50.0
-            elif "data" in primary_area or "analytics" in primary_area:
-                if "data" in car_title.lower() or "ml" in car_title.lower() or "financial" in car_title.lower():
-                    disc_match_score = min(100.0, primary_pct + 20.0)
-                elif car_category.lower() == "it":
-                    disc_match_score = 75.0
-                else:
-                    disc_match_score = 60.0
-            elif "design" in primary_area or "ux" in primary_area:
-                if "ui/ux" in car_title.lower() or "designer" in car_title.lower():
-                    disc_match_score = min(100.0, primary_pct + 25.0)
-                else:
-                    disc_match_score = 55.0
-            elif "business" in primary_area or "management" in primary_area:
-                if car_category.lower() == "non-it" or "manager" in car_title.lower() or "strategist" in car_title.lower():
-                    disc_match_score = min(100.0, primary_pct + 20.0)
-                else:
-                    disc_match_score = 60.0
-
-        # Profile Interest boost
+        # Profile Interest keyword boost
         if user_interests:
-            intr_text = " ".join(user_interests)
             search_blob = f"{car_title} {car_category} {car_desc}".lower()
-            if any(intr in search_blob for intr in user_interests):
+            if any(intr.lower() in search_blob for intr in user_interests):
                 disc_match_score = min(100.0, disc_match_score + 15.0)
 
-        disc_match_score = round(max(30.0, min(100.0, disc_match_score)), 1)
+        disc_match_score = round(max(20.0, min(100.0, disc_match_score)), 1)
 
         # ----------------------------------------------------
-        # 3. SKILL ASSESSMENT MATCH SCORE (20%)
+        # 3. SKILL ASSESSMENT MATCH SCORE (20% when present)
         # ----------------------------------------------------
         if has_assessment:
-            # Check how many required skills for this career were tested as Strong vs Improve
-            strong_matches = sum(1 for req in required_skills if req.get("skill_name", "").lower() in ass_strong_skills)
-            improve_matches = sum(1 for req in required_skills if req.get("skill_name", "").lower() in ass_improve_skills)
+            strong_matches = sum(1 for req in required_skills if any(is_skill_match(req.get("skill_name", ""), s) for s in ass_strong_skills))
+            improve_matches = sum(1 for req in required_skills if any(is_skill_match(req.get("skill_name", ""), s) for s in ass_improve_skills))
 
-            assessment_match_score = ass_accuracy + (strong_matches * 8.0) - (improve_matches * 6.0)
+            assessment_match_score = ass_accuracy + (strong_matches * 6.0) - (improve_matches * 5.0)
+            assessment_match_score = round(max(20.0, min(100.0, assessment_match_score)), 1)
         else:
-            assessment_match_score = 70.0
-
-        assessment_match_score = round(max(20.0, min(100.0, assessment_match_score)), 1)
+            assessment_match_score = None
 
         # ----------------------------------------------------
-        # 4. EDUCATION MATCH SCORE (10%)
+        # 4. EDUCATION MATCH SCORE (10% or 15%)
         # ----------------------------------------------------
         edu_score = 70.0
         combo_edu = f"{user_degree} {user_major}"
@@ -244,7 +328,7 @@ async def calculate_personalized_recommendations(
         edu_score = round(edu_score, 1)
 
         # ----------------------------------------------------
-        # 5. WORK STYLE MATCH SCORE (10%)
+        # 5. WORK STYLE MATCH SCORE (10% or 15%)
         # ----------------------------------------------------
         work_style_score = 75.0
         if user_work_style:
@@ -258,27 +342,39 @@ async def calculate_personalized_recommendations(
         work_style_score = round(work_style_score, 1)
 
         # ----------------------------------------------------
-        # FINAL WEIGHTED SUITABILITY SCORE
-        # Formula: Skill (35%) + Discovery (25%) + Assessment (20%) + Education (10%) + WorkStyle (10%)
+        # FINAL SUITABILITY SCORE
+        # Formula:
+        # If assessment taken: Skill (35%) + Discovery (25%) + Assessment (20%) + Education (10%) + WorkStyle (10%)
+        # If assessment pending: Skill (35%) + Discovery (35%) + Education (15%) + WorkStyle (15%)
         # ----------------------------------------------------
-        final_score = (
-            (skill_match_score * 0.35) +
-            (disc_match_score * 0.25) +
-            (assessment_match_score * 0.20) +
-            (edu_score * 0.10) +
-            (work_style_score * 0.10)
-        )
+        if has_assessment:
+            final_score = (
+                (skill_match_score * 0.35) +
+                (disc_match_score * 0.25) +
+                (assessment_match_score * 0.20) +
+                (edu_score * 0.10) +
+                (work_style_score * 0.10)
+            )
+        else:
+            final_score = (
+                (skill_match_score * 0.35) +
+                (disc_match_score * 0.35) +
+                (edu_score * 0.15) +
+                (work_style_score * 0.15)
+            )
 
         final_score = round(max(25.0, min(99.0, final_score)), 1)
 
         # Build Explainable Reason String
         reasons = []
         if car_matching_skills:
-            reasons.append(f"Matching strengths in {', '.join(car_matching_skills[:3])}")
-        if disc_match_score >= 75.0:
-            reasons.append("High career interest alignment")
-        if assessment_match_score >= 75.0:
-            reasons.append("Strong skill assessment score")
+            reasons.append(f"Matching skills in {', '.join(car_matching_skills[:3])}")
+        if disc_match_score >= 80.0:
+            reasons.append("High Career Discovery interest alignment")
+        if has_assessment and assessment_match_score and assessment_match_score >= 75.0:
+            reasons.append("Strong technical assessment score")
+        elif not has_assessment:
+            reasons.append("Technical skill assessment pending")
         if edu_score >= 85.0:
             reasons.append("Compatible educational background")
 
@@ -306,6 +402,7 @@ async def calculate_personalized_recommendations(
             "assessment_match": assessment_match_score,
             "education_match": edu_score,
             "work_style_match": work_style_score,
+            "is_assessment_pending": not has_assessment,
             "reason": reason_str,
             "average_salary": car.get("average_salary", "N/A"),
             "growth_rate": car.get("growth_rate", "N/A"),

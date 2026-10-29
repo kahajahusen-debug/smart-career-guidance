@@ -9,8 +9,7 @@ import {
   Sparkles,
   CheckCircle2,
   AlertTriangle,
-  Sun,
-  Search
+  Sun
 } from 'lucide-react';
 
 export default function TopHeader({
@@ -96,7 +95,7 @@ export default function TopHeader({
       id: 'notif-prof',
       title: 'Profile Incomplete',
       desc: 'Add skills and education to unlock personalized matching.',
-      page: 'profile',
+      action: 'openProfileSettings',
       icon: AlertTriangle,
       color: '#D97706'
     });
@@ -138,7 +137,7 @@ export default function TopHeader({
     return name.slice(0, 2).toUpperCase();
   };
 
-  const firstName = user?.full_name ? user.full_name.trim().split(' ')[0] : 'Farha';
+  const firstName = user?.full_name ? user.full_name.trim().split(' ')[0] : 'User';
 
   return (
     <header className="saas-top-header" style={{
@@ -207,34 +206,8 @@ export default function TopHeader({
         )}
       </div>
 
-      {/* Right side: Search Input + Contextual Filter + Notifications + Profile Dropdown */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        {/* Search Bar matching screenshot */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          background: '#F1F5F9',
-          borderRadius: 999,
-          padding: '6px 16px',
-          gap: 8,
-          minWidth: 200,
-          maxWidth: 260
-        }}>
-          <Search size={15} color="#94A3B8" />
-          <input
-            type="text"
-            placeholder="Search anything..."
-            style={{
-              border: 'none',
-              background: 'transparent',
-              outline: 'none',
-              fontSize: '0.8rem',
-              color: '#0F172A',
-              width: '100%'
-            }}
-          />
-        </div>
-
+      {/* Right side: Contextual Filter + Notifications + Profile Dropdown */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         {/* Contextual IT / Non-IT Filter (Only on relevant pages) */}
         {showCategoryFilter && (
           <div style={{
@@ -333,7 +306,14 @@ export default function TopHeader({
                     return (
                       <div
                         key={n.id}
-                        onClick={() => { setNotificationsOpen(false); onNavigate(n.page); }}
+                        onClick={() => {
+                          setNotificationsOpen(false);
+                          if (n.action === 'openProfileSettings') {
+                            onOpenSettings && onOpenSettings('profile');
+                          } else if (n.page) {
+                            onNavigate(n.page);
+                          }
+                        }}
                         style={{
                           padding: '12px 16px',
                           borderBottom: '1px solid #F8FAFC',
@@ -427,7 +407,7 @@ export default function TopHeader({
 
               <div style={{ padding: '6px' }}>
                 <button
-                  onClick={() => { setProfileDropdownOpen(false); onNavigate('profile'); }}
+                  onClick={() => { setProfileDropdownOpen(false); onOpenSettings && onOpenSettings('profile'); }}
                   className="btn btn-ghost"
                   style={{
                     width: '100%',
@@ -439,7 +419,7 @@ export default function TopHeader({
                     borderRadius: 6
                   }}
                 >
-                  <UserIcon size={16} /> My Profile
+                  <UserIcon size={16} /> Edit Profile
                 </button>
 
                 <button

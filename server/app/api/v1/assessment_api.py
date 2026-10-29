@@ -44,9 +44,9 @@ async def submit_assessment(
         profile_doc = {
             "user_id": user_id,
             "full_name": current_user.get("full_name", ""),
-            "current_skills": ["Python", "JavaScript"],
-            "interests": ["Software Engineering"],
-            "preferred_category": "IT"
+            "current_skills": [],
+            "interests": [],
+            "preferred_category": "Undecided"
         }
 
     # Execute recommendation scoring engine
@@ -179,9 +179,9 @@ async def submit_skill_assessment(
         profile_doc = {
             "user_id": user_id,
             "full_name": current_user.get("full_name", ""),
-            "current_skills": ["Python", "JavaScript"],
-            "interests": ["Software Engineering"],
-            "preferred_category": "IT"
+            "current_skills": [],
+            "interests": [],
+            "preferred_category": "Undecided"
         }
 
     rec_response = await generate_career_recommendations(user_id, profile_doc, submission.answers)

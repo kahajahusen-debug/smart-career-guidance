@@ -270,23 +270,40 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
                     ✓ {sk}
                   </span>
                 ))
+              ) : recItem.is_assessment_pending ? (
+                <div style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic', background: '#F8FAFC', border: '1px dashed #CBD5E1', padding: '8px 14px', borderRadius: 8, width: '100%' }}>
+                  Complete your Skill Assessment to identify matching skills.
+                </div>
               ) : (
-                <span style={{ fontSize: '0.85rem', color: '#64748B' }}>None identified yet. Update your profile skills!</span>
+                <span style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic' }}>No matching verified skills yet for this role.</span>
               )}
             </div>
           </GlassCard>
 
-          <GlassCard style={{ padding: '24px', borderTop: '4px solid #EF4444' }}>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#B91C1C', marginTop: 0, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertTriangle size={20} /> Skills You Need to Improve
+          <GlassCard style={{ padding: '24px', borderTop: recItem.is_assessment_pending ? '4px solid #F59E0B' : '4px solid #EF4444' }}>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: recItem.is_assessment_pending ? '#92400E' : '#B91C1C', marginTop: 0, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AlertTriangle size={20} color={recItem.is_assessment_pending ? '#D97706' : '#B91C1C'} />
+              {recItem.is_assessment_pending ? 'Required Role Competencies (Pending Assessment)' : 'Skills You Need to Improve'}
             </h4>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {(recItem.missing_skills || recItem.skill_gaps?.filter(g => g.status === 'Improve').map(g => g.skill_name))?.length > 0 ? (
                 (recItem.missing_skills || recItem.skill_gaps?.filter(g => g.status === 'Improve').map(g => g.skill_name)).map((ms, idx) => (
-                  <span key={idx} style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA', padding: '6px 12px', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700 }}>
+                  <span key={idx} style={{
+                    background: recItem.is_assessment_pending ? '#F1F5F9' : '#FEF2F2',
+                    color: recItem.is_assessment_pending ? '#334155' : '#991B1B',
+                    border: recItem.is_assessment_pending ? '1px solid #E2E8F0' : '1px solid #FECACA',
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    fontSize: '0.85rem',
+                    fontWeight: 700
+                  }}>
                     • {typeof ms === 'string' ? ms : ms.skill_name}
                   </span>
                 ))
+              ) : recItem.is_assessment_pending ? (
+                <div style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic', background: '#F8FAFC', border: '1px dashed #CBD5E1', padding: '8px 14px', borderRadius: 8, width: '100%' }}>
+                  Complete your Skill Assessment to identify verified skill gaps.
+                </div>
               ) : (
                 <span style={{ fontSize: '0.85rem', color: '#047857', fontWeight: 700 }}>Great job! All required skills satisfied.</span>
               )}
