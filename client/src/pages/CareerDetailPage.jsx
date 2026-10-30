@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/common/GlassCard';
-import { fetchCareerById, fetchPortfolioProjects, fetchSampleJobs, getPersonalizedCareerDetail, regenerateActionPlan } from '../services/api';
+import { fetchCareerById, fetchPortfolioProjects, fetchSampleJobs, getPersonalizedCareerDetail, setTargetCareerResult } from '../services/api';
 import { 
   ArrowLeft, 
   Briefcase, 
@@ -30,7 +30,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
   const handleSetTargetCareer = async () => {
     try {
       setSettingTarget(true);
-      await regenerateActionPlan(careerId);
+      await setTargetCareerResult(careerId);
       setTargetSet(true);
       if (onTargetCareerUpdated) {
         onTargetCareerUpdated(careerId);

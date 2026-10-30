@@ -68,7 +68,7 @@ export default function TopHeader({
       case 'jobs':
         return { title: 'Careers & Jobs', section: 'Opportunities' };
       case 'careerDetail':
-        return { title: 'Career Profile', section: 'Recommendations' };
+        return { title: 'Career Profile', section: 'Career Results' };
       case 'projects':
         return { title: 'Portfolio Projects', section: 'Proof of Work' };
       case 'projectDetail':

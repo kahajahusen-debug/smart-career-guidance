@@ -108,7 +108,7 @@ async def set_target_career(
     current_user: dict = Depends(get_current_user)
 ):
     user_id = current_user["id"]
-    new_plan = await regenerate_action_plan_service(user_id, payload.target_career_id)
+    new_plan = await get_or_create_action_plan(user_id, payload.target_career_id, force_rebuild=True)
     return {
         "success": True,
         "message": f"Target career successfully updated to {new_plan.get('target_career_title')}.",
