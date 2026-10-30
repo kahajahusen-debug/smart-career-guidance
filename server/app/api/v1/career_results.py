@@ -39,17 +39,37 @@ async def get_career_results(
         disc_doc = in_memory_store.get("discovery_results", {}).get(user_id)
         skill_doc = in_memory_store.get("skill_assessment_results", {}).get(user_id)
 
+    # Validate actual completion status from stored records — do not trust frontend flags
+    discovery_completed = (
+        disc_doc is not None
+        and bool(disc_doc.get("top_areas"))
+    )
+    skill_assessment_completed = (
+        skill_doc is not None
+        and skill_doc.get("overall_accuracy") is not None
+        and isinstance(skill_doc.get("overall_accuracy"), (int, float))
+    )
+
     # Calculate dynamic personalized recommendations
+    # The recommendation engine itself enforces the gate — returns empty list when incomplete
     recs = await calculate_personalized_recommendations(
         user_id=user_id,
         profile_doc=profile_doc,
-        discovery_doc=disc_doc,
-        skill_assessment_doc=skill_doc,
+        discovery_doc=disc_doc if discovery_completed else None,
+        skill_assessment_doc=skill_doc if skill_assessment_completed else None,
         category_filter=category
     )
 
-    # Retrieve user's action plan / learning roadmap
-    action_plan = await get_or_create_action_plan(user_id)
+    # Add explicit completion status flags to response
+    recs["discovery_completed"] = discovery_completed
+    recs["skill_assessment_completed"] = skill_assessment_completed
+    recs["both_assessments_complete"] = discovery_completed and skill_assessment_completed
+
+    # Retrieve user's action plan / learning roadmap (only if assessments done)
+    if discovery_completed and skill_assessment_completed:
+        action_plan = await get_or_create_action_plan(user_id)
+    else:
+        action_plan = {"status": "Not Created", "has_user_selected_target": False}
 
     recs["action_plan"] = action_plan
     recs["target_career_id"] = action_plan.get("target_career_id")

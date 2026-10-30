@@ -3,8 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 class UserProfileBase(BaseModel):
-    full_name: str
-    email: str
+    full_name: Optional[str] = ""
+    email: Optional[str] = ""
     education_level: Optional[str] = ""
     degree: Optional[str] = ""
     branch: Optional[str] = ""

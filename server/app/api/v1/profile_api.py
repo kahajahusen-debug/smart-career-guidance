@@ -50,20 +50,44 @@ async def save_profile(profile_in: UserProfileCreate, current_user: dict = Depen
     profile_dict["user_id"] = user_id
     profile_dict["updated_at"] = now_iso
 
+    # Ensure email and full_name are populated from authenticated user if omitted
+    if not profile_dict.get("email"):
+        profile_dict["email"] = current_user.get("email", "")
+    if not profile_dict.get("full_name"):
+        profile_dict["full_name"] = current_user.get("full_name", "")
+
     if db.is_connected and db.db is not None:
         existing = await db.db.profiles.find_one({"user_id": user_id})
         if existing:
-            await db.db.profiles.update_one({"user_id": user_id}, {"$set": profile_dict})
+            # Preserve existing profile id
             profile_dict["id"] = str(existing.get("id", existing.get("_id", str(uuid.uuid4()))))
+            await db.db.profiles.update_one({"user_id": user_id}, {"$set": profile_dict})
         else:
             new_id = str(uuid.uuid4())
             profile_dict["id"] = new_id
             db_doc = profile_dict.copy()
             db_doc["_id"] = new_id
             await db.db.profiles.insert_one(db_doc)
+
+        # Keep users collection in sync with name and email updates
+        user_updates = {}
+        if profile_dict.get("full_name"):
+            user_updates["full_name"] = profile_dict["full_name"]
+        if profile_dict.get("email"):
+            user_updates["email"] = profile_dict["email"]
+        if user_updates:
+            await db.db.users.update_one({"_id": user_id}, {"$set": user_updates})
+            await db.db.users.update_one({"id": user_id}, {"$set": user_updates})
     else:
-        profile_dict["id"] = str(uuid.uuid4())
+        existing = in_memory_store.get("profiles", {}).get(user_id, {})
+        profile_dict["id"] = existing.get("id", str(uuid.uuid4()))
         in_memory_store["profiles"][user_id] = profile_dict
+        for u in in_memory_store.get("users", []):
+            if u.get("id") == user_id or u.get("_id") == user_id:
+                if profile_dict.get("full_name"):
+                    u["full_name"] = profile_dict["full_name"]
+                if profile_dict.get("email"):
+                    u["email"] = profile_dict["email"]
 
     return UserProfile(**profile_dict)
 
@@ -78,14 +102,63 @@ async def update_my_profile(profile_in: UserProfileUpdate, current_user: dict = 
     if db.is_connected and db.db is not None:
         existing = await db.db.profiles.find_one({"user_id": user_id})
         if not existing:
-            raise HTTPException(status_code=404, detail="Profile not found for current user.")
+            # Create if not existing yet (upsert behavior)
+            new_id = str(uuid.uuid4())
+            profile_doc = {
+                "_id": new_id,
+                "id": new_id,
+                "user_id": user_id,
+                "full_name": current_user.get("full_name", ""),
+                "email": current_user.get("email", ""),
+                "education_level": "",
+                "degree": "",
+                "branch": "",
+                "year_of_study": "",
+                "graduation_year": None,
+                "experience_level": "Student / Fresher",
+                "current_skills": [],
+                "interests": [],
+                "preferred_category": "Undecided",
+                "updated_at": now_iso
+            }
+            profile_doc.update(update_fields)
+            await db.db.profiles.insert_one(profile_doc)
+            updated = await db.db.profiles.find_one({"user_id": user_id}, {"_id": 0})
+            return UserProfile(**updated)
+
         await db.db.profiles.update_one({"user_id": user_id}, {"$set": update_fields})
+        # Keep users collection in sync
+        user_updates = {}
+        if "full_name" in update_fields:
+            user_updates["full_name"] = update_fields["full_name"]
+        if "email" in update_fields:
+            user_updates["email"] = update_fields["email"]
+        if user_updates:
+            await db.db.users.update_one({"_id": user_id}, {"$set": user_updates})
+            await db.db.users.update_one({"id": user_id}, {"$set": user_updates})
+
         updated = await db.db.profiles.find_one({"user_id": user_id}, {"_id": 0})
         return UserProfile(**updated)
     else:
         existing = in_memory_store.get("profiles", {}).get(user_id)
         if not existing:
-            raise HTTPException(status_code=404, detail="Profile not found for current user.")
+            existing = {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "full_name": current_user.get("full_name", ""),
+                "email": current_user.get("email", ""),
+                "education_level": "",
+                "degree": "",
+                "branch": "",
+                "year_of_study": "",
+                "graduation_year": None,
+                "experience_level": "Student / Fresher",
+                "current_skills": [],
+                "interests": [],
+                "preferred_category": "Undecided",
+                "updated_at": now_iso
+            }
+            in_memory_store["profiles"][user_id] = existing
         existing.update(update_fields)
         return UserProfile(**existing)
 

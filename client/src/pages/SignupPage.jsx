@@ -135,11 +135,11 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
 
       const res = await signupUser(payload);
 
-      // On successful signup, redirect user to Career Discovery
+      // On successful signup, display success message and redirect user to Login page
       if (onSignupSuccess) {
-        onSignupSuccess(res.access_token, res.user);
+        onSignupSuccess(res);
       } else {
-        onNavigate('careerDiscovery');
+        onNavigate('login');
       }
     } catch (err) {
       console.error('Registration error:', err);

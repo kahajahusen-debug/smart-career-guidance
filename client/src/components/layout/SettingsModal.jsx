@@ -20,6 +20,7 @@ export default function SettingsModal({
   const [educationLevel, setEducationLevel] = useState(profile?.education_level || '');
   const [degree, setDegree] = useState(profile?.degree || '');
   const [branch, setBranch] = useState(profile?.branch || '');
+  const [yearOfStudy, setYearOfStudy] = useState(profile?.year_of_study || '');
   const [experienceLevel, setExperienceLevel] = useState(profile?.experience_level || 'Student / Fresher');
   const [preferredCategory, setPreferredCategory] = useState(profile?.preferred_category || 'IT');
   const [currentSkills, setCurrentSkills] = useState(Array.isArray(profile?.current_skills) ? profile.current_skills : []);
@@ -47,6 +48,7 @@ export default function SettingsModal({
         setEducationLevel(profile.education_level || '');
         setDegree(profile.degree || '');
         setBranch(profile.branch || '');
+        setYearOfStudy(profile.year_of_study || '');
         setExperienceLevel(profile.experience_level || 'Student / Fresher');
         setPreferredCategory(profile.preferred_category || 'IT');
         setCurrentSkills(Array.isArray(profile.current_skills) ? profile.current_skills : []);
@@ -66,12 +68,18 @@ export default function SettingsModal({
     setSavedNotice(null);
     setErrorNotice(null);
 
+    if (!fullName.trim()) {
+      setErrorNotice('Full name is required.');
+      return;
+    }
+
     const payload = {
       full_name: fullName.trim(),
-      email: email.trim(),
+      email: (email || user?.email || '').trim(),
       education_level: educationLevel.trim(),
       degree: degree.trim(),
       branch: branch.trim(),
+      year_of_study: yearOfStudy.trim(),
       experience_level: experienceLevel,
       preferred_category: preferredCategory,
       current_skills: currentSkills,
@@ -88,10 +96,11 @@ export default function SettingsModal({
       if (onSaveCategoryPreference && preferredCategory !== profile?.preferred_category) {
         onSaveCategoryPreference(preferredCategory);
       }
-      setSavedNotice('Profile and preferences updated successfully!');
+      setSavedNotice('Profile updated successfully!');
+      // Requirement 9: Close the modal or page after successful saving
       setTimeout(() => {
-        setSavedNotice(null);
-      }, 3000);
+        if (onClose) onClose();
+      }, 500);
     } catch (err) {
       console.error('Failed to save profile in settings:', err);
       setErrorNotice(err.response?.data?.detail || 'Failed to update profile. Please verify your details.');
@@ -309,6 +318,24 @@ export default function SettingsModal({
                 </div>
 
                 <div>
+                  <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Current Year of Study</label>
+                  <select
+                    className="form-select"
+                    value={yearOfStudy}
+                    onChange={(e) => setYearOfStudy(e.target.value)}
+                  >
+                    <option value="">Select Year of Study</option>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year / Final Year</option>
+                    <option value="Graduated">Graduated / Working</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                <div>
                   <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Experience Level</label>
                   <select
                     className="form-select"
@@ -320,6 +347,19 @@ export default function SettingsModal({
                     <option value="Mid Level (2-5 yrs)">Mid Level (2-5 yrs)</option>
                     <option value="Senior Level (5+ yrs)">Senior Level (5+ yrs)</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Graduation / Completion Year</label>
+                  <input
+                    type="number"
+                    value={graduationYear}
+                    onChange={(e) => setGraduationYear(e.target.value)}
+                    placeholder="e.g. 2026"
+                    min="1990"
+                    max="2035"
+                    className="form-input"
+                  />
                 </div>
               </div>
 
@@ -335,19 +375,6 @@ export default function SettingsModal({
                     <option value="Non-IT">Non-IT & Core / Management</option>
                     <option value="Undecided">Undecided / Exploring</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="form-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Graduation / Completion Year</label>
-                  <input
-                    type="number"
-                    value={graduationYear}
-                    onChange={(e) => setGraduationYear(e.target.value)}
-                    placeholder="e.g. 2026"
-                    min="1990"
-                    max="2035"
-                    className="form-input"
-                  />
                 </div>
               </div>
 

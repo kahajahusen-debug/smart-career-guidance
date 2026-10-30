@@ -93,34 +93,63 @@ async def calculate_personalized_recommendations(
 ) -> Dict[str, Any]:
     """
     Phase 5 Dynamic Personalized Career Recommendation Engine.
-    
+
+    GATE: Career matches and compatibility scores are ONLY generated when BOTH
+    Career Discovery AND Skill Assessment are completed. If either is missing,
+    an empty recommendations list is returned with a clear message.
+
     Weights (with completed skill assessment):
     - Skill Match: 35%
     - Career Discovery Match: 25%
     - Skill Assessment Match: 20%
     - Education Match: 10%
     - Work Style Match: 10%
-    
-    Weights (when skill assessment is pending):
-    - Skill Profile Match: 35%
-    - Career Discovery Interest Match: 35%
-    - Education Match: 15%
-    - Work Style Match: 15%
     """
-    has_profile = profile_doc is not None and bool(profile_doc.get("current_skills") or profile_doc.get("interests"))
-    has_discovery = discovery_doc is not None and bool(discovery_doc.get("top_areas"))
-    has_assessment = skill_assessment_doc is not None and skill_assessment_doc.get("overall_accuracy") is not None
+    has_discovery = (
+        discovery_doc is not None
+        and bool(discovery_doc.get("top_areas"))
+        and bool(discovery_doc.get("completed", True))  # must have submitted discovery
+    )
+    has_assessment = (
+        skill_assessment_doc is not None
+        and skill_assessment_doc.get("overall_accuracy") is not None
+        and isinstance(skill_assessment_doc.get("overall_accuracy"), (int, float))
+    )
+    has_profile = profile_doc is not None and bool(
+        profile_doc.get("current_skills") or profile_doc.get("interests")
+    )
 
-    if has_profile and has_discovery and has_assessment:
-        data_completeness = "Complete"
-        message = "Recommendations dynamically calculated from your complete profile, discovery, and assessment metrics."
-    else:
-        data_completeness = "Incomplete"
+    # ---------------------------------------------------------------
+    # STRICT GATE: Both assessments must be completed to show results
+    # ---------------------------------------------------------------
+    if not has_discovery or not has_assessment:
         missing_parts = []
-        if not has_profile: missing_parts.append("Profile")
-        if not has_discovery: missing_parts.append("Career Discovery")
-        if not has_assessment: missing_parts.append("Skill Assessment")
-        message = f"Complete your {', '.join(missing_parts)} to receive fully verified technical suitability scores."
+        if not has_discovery:
+            missing_parts.append("Career Discovery")
+        if not has_assessment:
+            missing_parts.append("Skill Assessment")
+        gate_message = (
+            f"Complete your {' and '.join(missing_parts)} to see personalized career matches and compatibility scores."
+        )
+        return {
+            "user_id": user_id,
+            "assessment_score": 0,
+            "recommendations": [],
+            "career_recommendations": [],
+            "matched_skills": [],
+            "missing_skills": [],
+            "recommended_projects": [],
+            "has_profile": has_profile,
+            "has_discovery": has_discovery,
+            "has_assessment": has_assessment,
+            "data_completeness": "Incomplete",
+            "message": gate_message,
+            "assessments_complete": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+
+    data_completeness = "Complete" if has_profile else "Partial"
+    message = "Recommendations dynamically calculated from your complete profile, discovery, and assessment metrics."
 
     # Extract user attributes
     current_skills_user = [s.strip() for s in (profile_doc.get("current_skills", []) if profile_doc else []) if s.strip()]
@@ -363,7 +392,7 @@ async def calculate_personalized_recommendations(
                 (work_style_score * 0.15)
             )
 
-        final_score = round(max(25.0, min(99.0, final_score)), 1)
+        final_score = round(max(10.0, min(99.0, final_score)), 1)
 
         # Build Explainable Reason String
         reasons = []
@@ -438,6 +467,7 @@ async def calculate_personalized_recommendations(
         "has_profile": has_profile,
         "has_discovery": has_discovery,
         "has_assessment": has_assessment,
+        "assessments_complete": True,
         "data_completeness": data_completeness,
         "message": message,
         "created_at": datetime.now(timezone.utc).isoformat()

@@ -20,6 +20,7 @@ export default function ProfilePage({ user, onProfileUpdated }) {
   const [educationLevel, setEducationLevel] = useState('');
   const [degree, setDegree] = useState('');
   const [branch, setBranch] = useState('');
+  const [yearOfStudy, setYearOfStudy] = useState('');
   const [graduationYear, setGraduationYear] = useState('');
   const [currentSkills, setCurrentSkills] = useState([]);
   const [interests, setInterests] = useState([]);
@@ -44,6 +45,7 @@ export default function ProfilePage({ user, onProfileUpdated }) {
         setEducationLevel(res.education_level || '');
         setDegree(res.degree || '');
         setBranch(res.branch || '');
+        setYearOfStudy(res.year_of_study || '');
         setGraduationYear(res.graduation_year || '');
         setCurrentSkills(Array.isArray(res.current_skills) ? res.current_skills : []);
         setInterests(Array.isArray(res.interests) ? res.interests : []);
@@ -76,12 +78,13 @@ export default function ProfilePage({ user, onProfileUpdated }) {
     setErrorMsg(null);
 
     const payload = {
-      full_name: fullName,
-      email,
-      education_level: educationLevel,
-      degree,
-      branch,
-      graduation_year: Number(graduationYear),
+      full_name: fullName.trim(),
+      email: email.trim(),
+      education_level: educationLevel.trim(),
+      degree: degree.trim(),
+      branch: branch.trim(),
+      year_of_study: yearOfStudy.trim(),
+      graduation_year: graduationYear ? Number(graduationYear) : null,
       current_skills: currentSkills,
       interests,
       preferred_category: preferredCategory

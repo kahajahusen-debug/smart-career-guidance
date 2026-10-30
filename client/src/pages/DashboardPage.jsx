@@ -156,7 +156,8 @@ export default function DashboardPage({
   assessmentResult,
   skillAssessmentResult: propSkillAssessment,
   onNavigate,
-  onOpenSettings
+  onOpenSettings,
+  onProfileUpdated
 }) {
   const [profile, setProfile] = useState(propProfile || null);
   const [discoveryResult, setDiscoveryResult] = useState(null);
@@ -170,6 +171,12 @@ export default function DashboardPage({
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (propProfile) {
+      setProfile(propProfile);
+    }
+  }, [propProfile]);
 
   const loadDashboardData = async () => {
     try {
@@ -205,9 +212,14 @@ export default function DashboardPage({
   const isProfileComplete = profilePct >= 100;
 
   // --- Assessment & Discovery State ---
-  const isDiscoveryCompleted = Boolean(discoveryResult);
-  const isSkillAssessmentCompleted = Boolean(skillResult && skillResult.overall_accuracy !== undefined);
+  // Discovery is complete ONLY when the backend has a real result with top_areas
+  const isDiscoveryCompleted = Boolean(discoveryResult && discoveryResult.top_areas && discoveryResult.top_areas.length > 0);
+  // Skill Assessment is complete ONLY when backend result has actual overall_accuracy number
+  const isSkillAssessmentCompleted = Boolean(skillResult && typeof skillResult.overall_accuracy === 'number');
   const assessmentAccuracy = isSkillAssessmentCompleted ? skillResult.overall_accuracy : null;
+
+  // GATE: Both assessments must be completed to show career matches and skills
+  const bothAssessmentsComplete = isDiscoveryCompleted && isSkillAssessmentCompleted;
 
   // --- Target Career & Progress (Strictly Real) ---
   const hasUserSelectedTarget = Boolean(
@@ -239,17 +251,37 @@ export default function DashboardPage({
     ? Math.round((milestonesCompleted / totalMilestones) * 100)
     : 0;
 
-  // Real Career Matches and Skill Breakdown from actual MongoDB data
-  const topCareerMatches = (careerResults?.recommendations || assessmentResult?.career_recommendations || []).slice(0, 3);
-  const strongestSkills = (skillResult?.strong_skills && skillResult.strong_skills.length > 0)
-    ? skillResult.strong_skills
-    : (profile?.current_skills || []);
-  const skillsToImprove = (skillResult?.improve_skills && skillResult.improve_skills.length > 0)
-    ? skillResult.improve_skills
-    : (actionPlan?.skill_gaps?.map(g => typeof g === 'string' ? g : g.skill_name) || []).slice(0, 5);
+  // Real Career Matches: ONLY shown when both assessments are complete AND backend returned actual results
+  // Never fall back to assessmentResult prop or profile skills as "career matches"
+  const topCareerMatches = (
+    bothAssessmentsComplete &&
+    careerResults?.assessments_complete &&
+    Array.isArray(careerResults?.recommendations) &&
+    careerResults.recommendations.length > 0
+  )
+    ? careerResults.recommendations.slice(0, 3)
+    : [];
 
-  // Skill Gaps Count (Strictly Real)
-  const hasSkillGapsData = isSkillAssessmentCompleted && Array.isArray(actionPlan?.skill_gaps);
+  // Strongest Skills: ONLY from actual skill assessment results — never from profile.current_skills
+  const strongestSkills = (
+    isSkillAssessmentCompleted &&
+    skillResult?.strong_skills &&
+    skillResult.strong_skills.length > 0
+  )
+    ? skillResult.strong_skills
+    : [];
+
+  // Skills to Improve: ONLY from actual skill assessment results
+  const skillsToImprove = (
+    isSkillAssessmentCompleted &&
+    skillResult?.improve_skills &&
+    skillResult.improve_skills.length > 0
+  )
+    ? skillResult.improve_skills
+    : [];
+
+  // Skill Gaps Count (Strictly Real — only when both assessments done)
+  const hasSkillGapsData = bothAssessmentsComplete && isSkillAssessmentCompleted && Array.isArray(actionPlan?.skill_gaps);
   const skillGapsCount = hasSkillGapsData ? actionPlan.skill_gaps.length : null;
 
   // Projects Catalog (Strictly Real User Progress)
@@ -392,7 +424,15 @@ export default function DashboardPage({
 
             <div style={{ marginTop: 6 }}>
               <button
-                onClick={() => onNavigate('careerResults')}
+                onClick={() => {
+                  if (bothAssessmentsComplete) {
+                    onNavigate('careerResults');
+                  } else if (!isDiscoveryCompleted) {
+                    onNavigate('careerDiscovery');
+                  } else {
+                    onNavigate('assessment');
+                  }
+                }}
                 className="btn btn-primary"
                 style={{
                   background: '#4F46E5',
@@ -406,7 +446,13 @@ export default function DashboardPage({
                   gap: 6
                 }}
               >
-                <span>Open Career Results</span>
+                <span>
+                  {bothAssessmentsComplete
+                    ? 'Open Career Results'
+                    : !isDiscoveryCompleted
+                    ? 'Start Career Discovery'
+                    : 'Continue Skill Assessment'}
+                </span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -431,10 +477,21 @@ export default function DashboardPage({
           justifyContent: 'space-between',
           minWidth: 0
         }}>
-          <div style={{ width: '100%', textAlign: 'left', marginBottom: 8 }}>
+          <div style={{ width: '100%', textAlign: 'left', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
               Profile Strength
             </h3>
+            <span style={{
+              display: 'inline-block',
+              background: isProfileComplete ? '#ECFDF5' : '#FEF3C7',
+              color: isProfileComplete ? '#065F46' : '#D97706',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: 999
+            }}>
+              {isProfileComplete ? 'Profile Complete' : 'Profile Incomplete'}
+            </span>
           </div>
 
           <div style={{ margin: '8px 0' }}>
@@ -442,7 +499,7 @@ export default function DashboardPage({
               percentage={profilePct}
               size={120}
               strokeWidth={11}
-              strokeColor="#10B981"
+              strokeColor={isProfileComplete ? '#10B981' : '#F59E0B'}
               trackColor="#F1F5F9"
             />
           </div>
@@ -455,20 +512,21 @@ export default function DashboardPage({
                 onNavigate('dashboard');
               }
             }}
+            className="btn btn-outline"
             style={{
-              background: 'none',
-              border: 'none',
-              color: '#4F46E5',
+              padding: '7px 16px',
               fontSize: '0.82rem',
-              fontWeight: 600,
+              fontWeight: 700,
+              color: '#4F46E5',
+              borderColor: '#C7D2FE',
+              borderRadius: 8,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 4,
-              padding: 0
+              gap: 6
             }}
           >
-            <span>{profilePct >= 100 ? 'View profile details' : 'Complete your profile'}</span>
+            <span>Edit Profile</span>
             <ArrowRight size={13} />
           </button>
         </div>
@@ -532,14 +590,14 @@ export default function DashboardPage({
           <div>
             <span style={{
               display: 'inline-block',
-              background: isDiscoveryCompleted ? '#ECFDF5' : '#FEF3C7',
-              color: isDiscoveryCompleted ? '#065F46' : '#D97706',
+              background: isDiscoveryCompleted ? '#ECFDF5' : '#EEF2FF',
+              color: isDiscoveryCompleted ? '#065F46' : '#4F46E5',
               fontSize: '0.72rem',
-              fontWeight: 600,
+              fontWeight: 700,
               padding: '3px 10px',
               borderRadius: 999
             }}>
-              {isDiscoveryCompleted ? '100% Verified' : 'Action Required'}
+              {isDiscoveryCompleted ? 'Completed' : 'Start Career Discovery →'}
             </span>
           </div>
         </div>
@@ -594,14 +652,16 @@ export default function DashboardPage({
           <div>
             <span style={{
               display: 'inline-block',
-              background: isSkillAssessmentCompleted ? '#EEF2FF' : '#FEF3C7',
-              color: isSkillAssessmentCompleted ? '#6366F1' : '#D97706',
+              background: isSkillAssessmentCompleted ? '#ECFDF5' : (isDiscoveryCompleted ? '#EEF2FF' : '#FEF3C7'),
+              color: isSkillAssessmentCompleted ? '#065F46' : (isDiscoveryCompleted ? '#4F46E5' : '#D97706'),
               fontSize: '0.72rem',
-              fontWeight: 600,
+              fontWeight: 700,
               padding: '3px 10px',
               borderRadius: 999
             }}>
-              {isSkillAssessmentCompleted ? 'Completed' : 'Pending Action'}
+              {isSkillAssessmentCompleted
+                ? 'Completed'
+                : (isDiscoveryCompleted ? 'Continue Skill Assessment →' : 'Pending Discovery')}
             </span>
           </div>
         </div>
@@ -809,15 +869,15 @@ export default function DashboardPage({
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{
-                      background: (car.suitability_score || 75) >= 80 ? '#ECFDF5' : '#EEF2FF',
-                      color: (car.suitability_score || 75) >= 80 ? '#065F46' : '#4F46E5',
-                      border: `1px solid ${(car.suitability_score || 75) >= 80 ? '#A7F3D0' : '#C7D2FE'}`,
+                      background: car.suitability_score >= 80 ? '#ECFDF5' : '#EEF2FF',
+                      color: car.suitability_score >= 80 ? '#065F46' : '#4F46E5',
+                      border: `1px solid ${car.suitability_score >= 80 ? '#A7F3D0' : '#C7D2FE'}`,
                       borderRadius: 8,
                       padding: '4px 10px',
                       fontSize: '0.84rem',
                       fontWeight: 800
                     }}>
-                      {car.suitability_score || 75}%
+                      {car.suitability_score}%
                     </div>
                     <ChevronRight size={16} color="#94A3B8" />
                   </div>
@@ -834,26 +894,43 @@ export default function DashboardPage({
             }}>
               <AlertCircle size={24} color="#94A3B8" style={{ marginBottom: 8 }} />
               <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A' }}>
-                No Career Matches Yet
+                {!isDiscoveryCompleted && !isSkillAssessmentCompleted
+                  ? 'Complete Both Assessments to See Matches'
+                  : !isDiscoveryCompleted
+                  ? 'Career Discovery Not Completed'
+                  : 'Skill Assessment Not Completed'}
               </div>
               <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '4px 0 14px 0' }}>
                 Complete Career Discovery and Skill Assessment to calculate your personalized career recommendations.
               </p>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-                <button
-                  onClick={() => onNavigate('careerDiscovery')}
-                  className="btn btn-outline"
-                  style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
-                >
-                  Start Discovery →
-                </button>
-                <button
-                  onClick={() => onNavigate('assessment')}
-                  className="btn btn-primary"
-                  style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
-                >
-                  Take Assessment →
-                </button>
+                {!isDiscoveryCompleted && (
+                  <button
+                    onClick={() => onNavigate('careerDiscovery')}
+                    className="btn btn-outline"
+                    style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                  >
+                    Start Discovery →
+                  </button>
+                )}
+                {!isSkillAssessmentCompleted && (
+                  <button
+                    onClick={() => onNavigate('assessment')}
+                    className="btn btn-primary"
+                    style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                  >
+                    Take Assessment →
+                  </button>
+                )}
+                {isDiscoveryCompleted && isSkillAssessmentCompleted && (
+                  <button
+                    onClick={() => onNavigate('careerResults')}
+                    className="btn btn-primary"
+                    style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                  >
+                    View Career Results →
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -893,7 +970,11 @@ export default function DashboardPage({
                   ))
                 ) : (
                   <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontStyle: 'italic' }}>
-                    Complete assessment to identify strong skills
+                    {!isDiscoveryCompleted
+                      ? 'Complete Career Discovery first'
+                      : !isSkillAssessmentCompleted
+                      ? 'Complete Skill Assessment to identify strong skills'
+                      : 'Complete assessment to identify strong skills'}
                   </span>
                 )}
               </div>
@@ -912,7 +993,7 @@ export default function DashboardPage({
                     </span>
                   ))
                 ) : (
-                  <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.75rem', color: isSkillAssessmentCompleted ? '#059669' : '#94A3B8', fontWeight: 600 }}>
                     {isSkillAssessmentCompleted ? '✓ All required benchmarks satisfied' : 'Pending assessment analysis'}
                   </span>
                 )}

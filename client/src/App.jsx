@@ -117,14 +117,6 @@ export default function App() {
       // Workflow routing rule for returning users / initial load:
       setActivePage((prev) => {
         if (prev === 'home' || prev === 'login' || prev === 'signup' || (prev === 'dashboard' && initialPath === '/dashboard')) {
-          if (!hasCompletedDiscovery) {
-            window.history.replaceState({ page: 'careerDiscovery' }, '', '/discovery');
-            return 'careerDiscovery';
-          }
-          if (!hasCompletedSkill) {
-            window.history.replaceState({ page: 'assessment' }, '', '/assessment');
-            return 'assessment';
-          }
           window.history.replaceState({ page: 'dashboard' }, '', '/dashboard');
           return 'dashboard';
         }
@@ -205,51 +197,25 @@ export default function App() {
       if (profData) setProfile(profData);
       if (skillData && skillData.success !== false) setSkillAssessmentResult(skillData);
       if (planData && !planData.detail) setActionPlan(planData);
-
-      const hasCompletedDiscovery = Boolean(discData?.result || discData?.has_completed);
-      const hasCompletedSkill = Boolean(
-        skillData &&
-        skillData.success !== false &&
-        (skillData.completed || skillData.overall_accuracy !== undefined || (skillData.results && Object.keys(skillData.results).length > 0))
-      );
-
-      // Requirement 3: Subsequent login routing
-      if (!hasCompletedDiscovery) {
-        setActivePage('careerDiscovery');
-        window.history.pushState({ page: 'careerDiscovery' }, '', '/discovery');
-      } else if (!hasCompletedSkill) {
-        setActivePage('assessment');
-        window.history.pushState({ page: 'assessment' }, '', '/assessment');
-      } else {
-        setActivePage('dashboard');
-        window.history.pushState({ page: 'dashboard' }, '', '/dashboard');
-      }
     } catch (e) {
       console.log('Error loading post-login data:', e);
+    } finally {
+      // Requirement B: Every successful login must open Dashboard first, regardless of assessment status
       setActivePage('dashboard');
       window.history.pushState({ page: 'dashboard' }, '', '/dashboard');
     }
   };
 
-  const handleSignupSuccess = async (token, userData) => {
-    localStorage.setItem('auth_token', token);
-    setUser(userData);
-    setAuthNotice(null);
-
-    try {
-      const profData = await getProfile().catch(() => null);
-      if (profData) setProfile(profData);
-    } catch {
-      // ignore
-    }
-
-    // Requirement 1 & 2: Redirect to Career Discovery after signup
-    setActivePage('careerDiscovery');
-    window.history.pushState({ page: 'careerDiscovery' }, '', '/discovery');
+  const handleSignupSuccess = () => {
+    // Requirement A: After successful signup, display success message and redirect to Login
+    // Do not automatically log the user in; do not redirect to Discovery or Dashboard
+    setAuthNotice('Registration successful! Please log in with your credentials.');
+    setActivePage('login');
+    window.history.pushState({ page: 'login' }, '', '/login');
   };
 
   const handleDiscoveryCompleted = () => {
-    // Requirement 3: Automatically navigate to Skill Assessment after completing discovery
+    // Requirement D: Automatically navigate to Skill Assessment after completing discovery
     setActivePage('assessment');
     window.history.pushState({ page: 'assessment' }, '', '/assessment');
   };
@@ -261,8 +227,9 @@ export default function App() {
     setAssessmentResult(null);
     setSkillAssessmentResult(null);
     setActionPlan(null);
-    setActivePage('home');
-    window.history.pushState({ page: 'home' }, '', '/');
+    setAuthNotice(null);
+    setActivePage('login');
+    window.history.pushState({ page: 'login' }, '', '/login');
   };
 
   const handleSelectCareerDetail = (careerId) => {
@@ -391,6 +358,7 @@ export default function App() {
             profile={profile}
             assessmentResult={assessmentResult}
             skillAssessmentResult={skillAssessmentResult}
+            onProfileUpdated={setProfile}
             onNavigate={handleNavigate}
           />
         )}
@@ -514,16 +482,16 @@ export default function App() {
       }}>
         {authNotice && (
           <div style={{
-            background: '#FEF2F2',
-            border: '1px solid #FECACA',
-            color: '#991B1B',
+            background: authNotice.toLowerCase().includes('success') ? '#ECFDF5' : '#FEF2F2',
+            border: `1px solid ${authNotice.toLowerCase().includes('success') ? '#A7F3D0' : '#FECACA'}`,
+            color: authNotice.toLowerCase().includes('success') ? '#065F46' : '#991B1B',
             padding: '12px 18px',
             borderRadius: 12,
             marginBottom: 20,
             fontSize: '0.9rem',
             fontWeight: 600,
             textAlign: 'center',
-            boxShadow: '0 2px 4px rgba(220, 38, 38, 0.05)'
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
           }}>
             {authNotice}
           </div>
