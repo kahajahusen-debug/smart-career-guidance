@@ -14,7 +14,11 @@ import {
   ListOrdered,
   ArrowRight,
   Clock,
-  Sparkles
+  Sparkles,
+  Compass,
+  Award,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import {
   getActionPlan,
@@ -23,7 +27,8 @@ import {
   getSkillAssessmentResult,
   getRecommendedProjects,
   getInterviewHistory,
-  startProject
+  startProject,
+  getCareerResults
 } from '../services/api';
 import { calculateProfileCompletion } from '../utils/profileCompletion';
 
@@ -156,6 +161,7 @@ export default function DashboardPage({
   const [profile, setProfile] = useState(propProfile || null);
   const [discoveryResult, setDiscoveryResult] = useState(null);
   const [skillResult, setSkillResult] = useState(propSkillAssessment || null);
+  const [careerResults, setCareerResults] = useState(null);
   const [actionPlan, setActionPlan] = useState(null);
   const [projects, setProjects] = useState([]);
   const [projectSummary, setProjectSummary] = useState(null);
@@ -168,18 +174,20 @@ export default function DashboardPage({
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [profData, discData, skillData, planData, projData] = await Promise.all([
+      const [profData, discData, skillData, planData, projData, recsData] = await Promise.all([
         getProfile().catch(() => propProfile || null),
         getDiscoveryResult().catch(() => null),
         getSkillAssessmentResult().catch(() => propSkillAssessment || null),
         getActionPlan().catch(() => null),
-        getRecommendedProjects('all').catch(() => ({ projects: [], summary: {} }))
+        getRecommendedProjects('all').catch(() => ({ projects: [], summary: {} })),
+        getCareerResults('all').catch(() => null)
       ]);
 
       if (profData) setProfile(profData);
       if (discData?.success && discData?.result) setDiscoveryResult(discData.result);
       if (skillData && skillData.overall_accuracy !== undefined) setSkillResult(skillData);
       if (planData && !planData.detail) setActionPlan(planData);
+      if (recsData && recsData.recommendations) setCareerResults(recsData);
       if (projData?.projects) {
         setProjects(projData.projects);
         if (projData.summary) setProjectSummary(projData.summary);
@@ -230,6 +238,15 @@ export default function DashboardPage({
   const roadmapProgressPct = hasRoadmap && totalMilestones > 0
     ? Math.round((milestonesCompleted / totalMilestones) * 100)
     : 0;
+
+  // Real Career Matches and Skill Breakdown from actual MongoDB data
+  const topCareerMatches = (careerResults?.recommendations || assessmentResult?.career_recommendations || []).slice(0, 3);
+  const strongestSkills = (skillResult?.strong_skills && skillResult.strong_skills.length > 0)
+    ? skillResult.strong_skills
+    : (profile?.current_skills || []);
+  const skillsToImprove = (skillResult?.improve_skills && skillResult.improve_skills.length > 0)
+    ? skillResult.improve_skills
+    : (actionPlan?.skill_gaps?.map(g => typeof g === 'string' ? g : g.skill_name) || []).slice(0, 5);
 
   // Skill Gaps Count (Strictly Real)
   const hasSkillGapsData = isSkillAssessmentCompleted && Array.isArray(actionPlan?.skill_gaps);
@@ -375,7 +392,7 @@ export default function DashboardPage({
 
             <div style={{ marginTop: 6 }}>
               <button
-                onClick={() => onNavigate(hasUserSelectedTarget ? 'actionPlan' : 'recommendations')}
+                onClick={() => onNavigate('careerResults')}
                 className="btn btn-primary"
                 style={{
                   background: '#4F46E5',
@@ -389,7 +406,7 @@ export default function DashboardPage({
                   gap: 6
                 }}
               >
-                <span>{hasUserSelectedTarget ? 'Continue Journey' : 'Choose Target Career'}</span>
+                <span>Open Career Results</span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -465,41 +482,45 @@ export default function DashboardPage({
         gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
         gap: 16
       }} className="dashboard-kpi-row">
-        {/* Card 1: Profile */}
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: 14,
-          padding: '18px 20px',
-          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
-          border: '1px solid #F1F5F9',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12
-        }}>
+        {/* Card 1: Career Discovery */}
+        <div
+          onClick={() => onNavigate('careerDiscovery')}
+          style={{
+            background: '#FFFFFF',
+            borderRadius: 14,
+            padding: '18px 20px',
+            boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+            border: '1px solid #F1F5F9',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            cursor: 'pointer'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 34,
               height: 34,
               borderRadius: 10,
-              background: '#EEF2FF',
-              color: '#6366F1',
+              background: isDiscoveryCompleted ? '#ECFDF5' : '#EEF2FF',
+              color: isDiscoveryCompleted ? '#10B981' : '#6366F1',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <User size={18} />
+              <Compass size={18} />
             </div>
             <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
-              Profile
+              Career Discovery
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              {profilePct}%
+            <span style={{ fontSize: isDiscoveryCompleted ? '1.45rem' : '1.15rem', fontWeight: 800, color: isDiscoveryCompleted ? '#0F172A' : '#64748B', letterSpacing: '-0.02em' }}>
+              {isDiscoveryCompleted ? 'Completed' : 'Not Started'}
             </span>
             <DonutProgress
-              percentage={profilePct}
+              percentage={isDiscoveryCompleted ? 100 : 0}
               size={38}
               strokeWidth={5}
               strokeColor="#10B981"
@@ -511,29 +532,33 @@ export default function DashboardPage({
           <div>
             <span style={{
               display: 'inline-block',
-              background: profilePct >= 100 ? '#ECFDF5' : (profilePct > 0 ? '#FEF3C7' : '#F1F5F9'),
-              color: profilePct >= 100 ? '#065F46' : (profilePct > 0 ? '#D97706' : '#64748B'),
+              background: isDiscoveryCompleted ? '#ECFDF5' : '#FEF3C7',
+              color: isDiscoveryCompleted ? '#065F46' : '#D97706',
               fontSize: '0.72rem',
               fontWeight: 600,
               padding: '3px 10px',
               borderRadius: 999
             }}>
-              {profilePct >= 100 ? 'Completed' : (profilePct > 0 ? 'In Progress' : 'Not Started')}
+              {isDiscoveryCompleted ? '100% Verified' : 'Action Required'}
             </span>
           </div>
         </div>
 
-        {/* Card 2: Assessment */}
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: 14,
-          padding: '18px 20px',
-          boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
-          border: '1px solid #F1F5F9',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12
-        }}>
+        {/* Card 2: Skill Assessment */}
+        <div
+          onClick={() => onNavigate('assessment')}
+          style={{
+            background: '#FFFFFF',
+            borderRadius: 14,
+            padding: '18px 20px',
+            boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.04)',
+            border: '1px solid #F1F5F9',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            cursor: 'pointer'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 34,
@@ -548,16 +573,16 @@ export default function DashboardPage({
               <CheckSquare size={18} />
             </div>
             <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#475569' }}>
-              Assessment
+              Skill Assessment
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: isSkillAssessmentCompleted ? '1.75rem' : '1.25rem', fontWeight: 800, color: isSkillAssessmentCompleted ? '#0F172A' : '#64748B', letterSpacing: '-0.02em' }}>
+            <span style={{ fontSize: isSkillAssessmentCompleted ? '1.75rem' : '1.15rem', fontWeight: 800, color: isSkillAssessmentCompleted ? '#0F172A' : '#64748B', letterSpacing: '-0.02em' }}>
               {isSkillAssessmentCompleted ? `${assessmentAccuracy}%` : 'Not Assessed'}
             </span>
             <DonutProgress
-              percentage={isSkillAssessmentCompleted ? assessmentAccuracy : null}
+              percentage={isSkillAssessmentCompleted ? assessmentAccuracy : 0}
               size={38}
               strokeWidth={5}
               strokeColor="#10B981"
@@ -569,14 +594,14 @@ export default function DashboardPage({
           <div>
             <span style={{
               display: 'inline-block',
-              background: isSkillAssessmentCompleted ? '#EEF2FF' : '#F1F5F9',
-              color: isSkillAssessmentCompleted ? '#6366F1' : '#64748B',
+              background: isSkillAssessmentCompleted ? '#EEF2FF' : '#FEF3C7',
+              color: isSkillAssessmentCompleted ? '#6366F1' : '#D97706',
               fontSize: '0.72rem',
               fontWeight: 600,
               padding: '3px 10px',
               borderRadius: 999
             }}>
-              {isSkillAssessmentCompleted ? 'Completed' : 'Not Assessed'}
+              {isSkillAssessmentCompleted ? 'Completed' : 'Pending Action'}
             </span>
           </div>
         </div>
@@ -695,14 +720,14 @@ export default function DashboardPage({
       </div>
 
       {/* ========================================================
-          ROW 3: Your Career Progress (2fr) + Next Steps (1fr)
+          ROW 3: Top Career Matches (2fr) + Skill Breakdown (1fr)
       ======================================================== */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
         gap: 20
       }} className="dashboard-progress-row">
-        {/* Your Career Progress */}
+        {/* Top Career Matches Card */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: 16,
@@ -714,133 +739,127 @@ export default function DashboardPage({
           gap: 16
         }}>
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <TrendingUp size={18} color="#2563EB" />
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              Your Career Progress
-            </h3>
-          </div>
-
-          {/* Career Title & Tag */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: hasUserSelectedTarget ? '#4F46E5' : '#94A3B8',
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <BarChart3 size={20} />
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: hasUserSelectedTarget ? '#0F172A' : '#64748B' }}>
-                {targetCareerTitle}
-              </span>
-              <span style={{
-                background: hasUserSelectedTarget ? '#EEF2FF' : '#F1F5F9',
-                color: hasUserSelectedTarget ? '#4F46E5' : '#64748B',
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                padding: '2px 8px',
-                borderRadius: 4
-              }}>
-                {targetCareerCategory}
-              </span>
+              <Award size={20} color="#4F46E5" />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Top Career Matches
+              </h3>
             </div>
+
+            <button
+              onClick={() => onNavigate('careerResults')}
+              className="btn btn-primary"
+              style={{
+                padding: '6px 14px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                borderRadius: 8
+              }}
+            >
+              <span>Open Career Results</span>
+              <ArrowRight size={13} />
+            </button>
           </div>
 
-          {/* Metrics Row: Suitability Score + Job Readiness + Roadmap Progress */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'auto auto minmax(0, 1fr)',
-            gap: 24,
-            alignItems: 'center'
-          }} className="dashboard-metrics-grid">
-            {/* Suitability Score */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-                Suitability Score
-              </span>
-              <DonutProgress
-                percentage={suitabilityScore}
-                size={54}
-                strokeWidth={5}
-                strokeColor="#14B8A6"
-                trackColor="#F1F5F9"
-              />
-              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                {suitabilityScore !== null ? `${suitabilityScore}% match` : 'Not Assessed'}
-              </span>
-            </div>
-
-            {/* Job Readiness */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-                Job Readiness
-              </span>
-              <DonutProgress
-                percentage={jobReadinessScore}
-                size={54}
-                strokeWidth={5}
-                strokeColor="#3B82F6"
-                trackColor="#F1F5F9"
-              />
-              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                {jobReadinessScore !== null ? `${jobReadinessScore}% ready` : 'Not Assessed'}
-              </span>
-            </div>
-
-            {/* Roadmap Progress */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 160 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
-                  Roadmap Progress
-                </span>
-                <span style={{ fontSize: '0.78rem', color: hasRoadmap ? '#0F172A' : '#64748B', fontWeight: 700 }}>
-                  {hasRoadmap ? `${milestonesCompleted} / ${totalMilestones} milestones` : 'Not Created'}
-                </span>
-              </div>
-
-              <div style={{ height: 8, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
-                <div style={{
-                  width: `${roadmapProgressPct}%`,
-                  height: '100%',
-                  background: '#14B8A6',
-                  borderRadius: 999
-                }} />
-              </div>
-
-              <div style={{ marginTop: 6 }}>
-                <button
-                  onClick={() => onNavigate(hasRoadmap ? 'actionPlan' : 'recommendations')}
+          {/* List of Top Career Matches */}
+          {topCareerMatches.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {topCareerMatches.map((car, idx) => (
+                <div
+                  key={car.career_id || idx}
+                  onClick={() => onNavigate('careerResults')}
                   style={{
-                    width: '100%',
-                    background: '#F1F5F9',
-                    border: 'none',
-                    color: '#4F46E5',
-                    borderRadius: 8,
-                    padding: '7px 14px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
+                    border: '1px solid #F1F5F9',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    background: '#FAFAFF',
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    gap: 12
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#C7D2FE';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(79,70,229,0.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#F1F5F9';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  <span>{hasRoadmap ? 'View Roadmap' : 'Create Action Plan'}</span>
-                  <ArrowRight size={13} />
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className={`glass-badge ${car.category === 'IT' ? 'badge-it' : 'badge-nonit'}`} style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                        {car.category}
+                      </span>
+                      <h4 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                        {car.title}
+                      </h4>
+                    </div>
+                    <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '4px 0 0 0', maxWidth: 450, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {car.reason || car.description}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      background: (car.suitability_score || 75) >= 80 ? '#ECFDF5' : '#EEF2FF',
+                      color: (car.suitability_score || 75) >= 80 ? '#065F46' : '#4F46E5',
+                      border: `1px solid ${(car.suitability_score || 75) >= 80 ? '#A7F3D0' : '#C7D2FE'}`,
+                      borderRadius: 8,
+                      padding: '4px 10px',
+                      fontSize: '0.84rem',
+                      fontWeight: 800
+                    }}>
+                      {car.suitability_score || 75}%
+                    </div>
+                    <ChevronRight size={16} color="#94A3B8" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              background: '#F8FAFC',
+              border: '1px dashed #CBD5E1',
+              borderRadius: 12,
+              padding: '24px 20px',
+              textAlign: 'center'
+            }}>
+              <AlertCircle size={24} color="#94A3B8" style={{ marginBottom: 8 }} />
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A' }}>
+                No Career Matches Yet
+              </div>
+              <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '4px 0 14px 0' }}>
+                Complete Career Discovery and Skill Assessment to calculate your personalized career recommendations.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                <button
+                  onClick={() => onNavigate('careerDiscovery')}
+                  className="btn btn-outline"
+                  style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                >
+                  Start Discovery →
+                </button>
+                <button
+                  onClick={() => onNavigate('assessment')}
+                  className="btn btn-primary"
+                  style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                >
+                  Take Assessment →
                 </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Next Steps Card */}
+        {/* Skill Profile & Gap Analysis Card */}
         <div style={{
           background: '#FFFFFF',
           borderRadius: 16,
@@ -849,134 +868,66 @@ export default function DashboardPage({
           border: '1px solid #F1F5F9',
           display: 'flex',
           flexDirection: 'column',
+          justifyContent: 'space-between',
           gap: 14
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ListOrdered size={18} color="#4F46E5" />
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              Next Steps
-            </h3>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Sparkles size={18} color="#4F46E5" />
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Your Skill Profile
+              </h3>
+            </div>
+
+            {/* Strongest Skills */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#047857', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <CheckCircle2 size={13} /> Strongest Skills
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {strongestSkills.length > 0 ? (
+                  strongestSkills.slice(0, 5).map((sk, idx) => (
+                    <span key={idx} style={{ background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', padding: '3px 8px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600 }}>
+                      ✓ {sk}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: '#94A3B8', fontStyle: 'italic' }}>
+                    Complete assessment to identify strong skills
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Skills Requiring Improvement */}
+            <div>
+              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#B45309', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <AlertCircle size={13} /> Skills to Improve
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {skillsToImprove.length > 0 ? (
+                  skillsToImprove.slice(0, 5).map((sk, idx) => (
+                    <span key={idx} style={{ background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A', padding: '3px 8px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600 }}>
+                      ↑ {sk}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
+                    {isSkillAssessmentCompleted ? '✓ All required benchmarks satisfied' : 'Pending assessment analysis'}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Step 1 */}
-            <div
-              onClick={() => {
-                if (onOpenSettings) onOpenSettings('profile');
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                gap: 12
-              }}
+          <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 10 }}>
+            <button
+              onClick={() => onNavigate('careerResults')}
+              className="btn btn-outline"
+              style={{ width: '100%', padding: '8px', fontSize: '0.8rem', fontWeight: 700, color: '#4F46E5', borderColor: '#C7D2FE' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  background: isProfileComplete ? '#10B981' : '#3B82F6',
-                  color: '#FFFFFF',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  {isProfileComplete ? '✓' : '1'}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
-                    {isProfileComplete ? 'Profile completed' : 'Complete your profile'}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                    {isProfileComplete ? 'Qualifications verified' : 'Get tailored recommendations'}
-                  </div>
-                </div>
-              </div>
-              <ChevronRight size={16} color="#94A3B8" />
-            </div>
-
-            {/* Step 2 */}
-            <div
-              onClick={() => onNavigate('assessment')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                gap: 12
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  background: isSkillAssessmentCompleted ? '#10B981' : '#F59E0B',
-                  color: '#FFFFFF',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  {isSkillAssessmentCompleted ? '✓' : '2'}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
-                    {isSkillAssessmentCompleted ? 'Assessment completed' : 'Take skill assessment'}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                    {isSkillAssessmentCompleted ? `${assessmentAccuracy}% accuracy score` : 'Find your skill gaps'}
-                  </div>
-                </div>
-              </div>
-              <ChevronRight size={16} color="#94A3B8" />
-            </div>
-
-            {/* Step 3 */}
-            <div
-              onClick={() => onNavigate('recommendations')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                gap: 12
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  background: hasUserSelectedTarget ? '#10B981' : '#6366F1',
-                  color: '#FFFFFF',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  {hasUserSelectedTarget ? '✓' : '3'}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>
-                    {hasUserSelectedTarget ? 'Career selected' : 'Explore & choose career'}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                    {hasUserSelectedTarget ? targetCareerTitle : 'Discover matched roles'}
-                  </div>
-                </div>
-              </div>
-              <ChevronRight size={16} color="#94A3B8" />
-            </div>
+              View Full Skill Gap Analysis →
+            </button>
           </div>
         </div>
       </div>

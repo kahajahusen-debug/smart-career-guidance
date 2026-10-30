@@ -77,47 +77,26 @@ export const getAssessmentResult = async () => {
 };
 
 
-// --- PHASE 5 PERSONALIZED RECOMMENDATION APIS ---
-export const getRecommendations = async (category = 'all') => {
+// --- CAREER RESULTS & ACTION ROADMAP APIS ---
+export const getCareerResults = async (category = 'all') => {
   const params = {};
   if (category && category !== 'all') params.category = category;
-  const response = await apiClient.get('/recommendations', { params });
+  const response = await apiClient.get('/career-results', { params });
   return response.data;
 };
 
-export const getPersonalizedCareerDetail = async (careerId) => {
-  const response = await apiClient.get(`/recommendations/${careerId}`);
+export const getCareerResultDetail = async (careerId) => {
+  const response = await apiClient.get(`/career-results/${careerId}`);
   return response.data;
 };
 
-// --- PHASE 6 CAREER ACTION PLAN APIS ---
-export const getActionPlan = async () => {
-  const response = await apiClient.get('/action-plan');
+export const setTargetCareerResult = async (targetCareerId) => {
+  const response = await apiClient.post('/career-results/target', { target_career_id: targetCareerId });
   return response.data;
 };
 
-export const getSkillGaps = async () => {
-  const response = await apiClient.get('/action-plan/skill-gaps');
-  return response.data;
-};
-
-export const getRoadmap = async () => {
-  const response = await apiClient.get('/action-plan/roadmap');
-  return response.data;
-};
-
-export const getRoadmapProjects = async () => {
-  const response = await apiClient.get('/action-plan/projects');
-  return response.data;
-};
-
-export const getJobReadiness = async () => {
-  const response = await apiClient.get('/action-plan/readiness');
-  return response.data;
-};
-
-export const updateActionPlanProgress = async (itemId, itemType = 'skill', status = 'Completed') => {
-  const response = await apiClient.patch('/action-plan/progress', {
+export const updateCareerResultProgress = async (itemId, itemType = 'skill', status = 'Completed') => {
+  const response = await apiClient.patch('/career-results/progress', {
     item_id: itemId,
     item_type: itemType,
     status: status
@@ -125,10 +104,19 @@ export const updateActionPlanProgress = async (itemId, itemType = 'skill', statu
   return response.data;
 };
 
-export const regenerateActionPlan = async (targetCareerId = null) => {
-  const payload = targetCareerId ? { target_career_id: targetCareerId } : {};
-  const response = await apiClient.post('/action-plan/regenerate', payload);
+// Aliases for compatibility
+export const getRecommendations = getCareerResults;
+export const getPersonalizedCareerDetail = getCareerResultDetail;
+
+export const getActionPlan = async () => {
+  const response = await apiClient.get('/action-plan');
   return response.data;
+};
+
+export const updateActionPlanProgress = updateCareerResultProgress;
+
+export const regenerateActionPlan = async (targetCareerId = null) => {
+  return await setTargetCareerResult(targetCareerId);
 };
 
 // --- PHASE 4 ADVANCED SKILL ASSESSMENT APIS ---

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, List
 from pydantic import BaseModel, EmailStr, Field
 
 class UserSignup(BaseModel):
@@ -9,11 +9,12 @@ class UserSignup(BaseModel):
     education_level: Optional[str] = ""
     degree: Optional[str] = ""
     branch: Optional[str] = ""
+    year_of_study: Optional[str] = ""
+    graduation_year: Optional[Union[int, str]] = None
     experience_level: Optional[str] = "Student / Fresher"
     preferred_category: Optional[str] = "Undecided"
-    current_skills: Optional[list[str]] = Field(default_factory=list)
-    interests: Optional[list[str]] = Field(default_factory=list)
-    graduation_year: Optional[int] = None
+    current_skills: Optional[List[str]] = Field(default_factory=list)
+    interests: Optional[List[str]] = Field(default_factory=list)
 
 class UserLogin(BaseModel):
     email: EmailStr

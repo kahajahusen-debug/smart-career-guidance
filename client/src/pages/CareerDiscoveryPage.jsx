@@ -15,7 +15,7 @@ import {
   Briefcase
 } from 'lucide-react';
 
-export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer }) {
+export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer, onDiscoveryCompleted }) {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({}); // { cd_q01: option_index }
@@ -102,7 +102,15 @@ export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer }
       const response = await submitDiscoveryAnswers(answers);
       if (response && response.success && response.result) {
         setDiscoveryResult(response.result);
-        setViewingResult(true);
+        if (onDiscoveryCompleted) {
+          onDiscoveryCompleted(response.result);
+        }
+        // Requirement 3: Automatically navigate to Skill Assessment after completing discovery
+        if (onNavigate) {
+          onNavigate('assessment');
+        } else {
+          setViewingResult(true);
+        }
       } else {
         setErrorMsg('Failed to calculate discovery result. Please try again.');
       }
@@ -347,15 +355,12 @@ export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer }
             ))}
           </div>
 
-          <div style={{ marginTop: 24, textAlign: 'center' }}>
+          <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 12 }}>
             <button
               onClick={() => onNavigate('assessment')}
-              className="btn"
+              className="btn btn-primary"
               style={{
-                background: '#172554',
-                color: '#FFFFFF',
-                padding: '12px 28px',
-                borderRadius: 10,
+                padding: '12px 24px',
                 fontSize: '0.92rem',
                 fontWeight: 700,
                 display: 'inline-flex',
@@ -363,7 +368,22 @@ export default function CareerDiscoveryPage({ user, onNavigate, onSelectCareer }
                 gap: 8
               }}
             >
-              <span>Proceed to Skill Assessment</span>
+              <span>Continue to Skill Assessment</span>
+              <ArrowRight size={18} />
+            </button>
+            <button
+              onClick={() => onNavigate('careerResults')}
+              className="btn btn-outline"
+              style={{
+                padding: '12px 24px',
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8
+              }}
+            >
+              <span>View Career Results</span>
               <ArrowRight size={18} />
             </button>
           </div>

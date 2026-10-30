@@ -36,7 +36,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
         onTargetCareerUpdated(careerId);
       }
       setTimeout(() => {
-        onNavigate('actionPlan');
+        onNavigate('careerResults');
       }, 700);
     } catch (e) {
       console.error('Failed to set target career:', e);
@@ -87,7 +87,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
       <GlassCard style={{ textAlign: 'center', padding: '40px' }}>
         <div style={{ color: '#EF4444', fontWeight: 600, marginBottom: 16 }}>Career Profile Not Found</div>
         <button onClick={onBack} className="btn btn-outline" style={{ padding: '8px 16px' }}>
-          ← Back to Recommendations
+          ← Back to Career Results
         </button>
       </GlassCard>
     );
@@ -105,7 +105,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
           className="btn btn-outline"
           style={{ padding: '8px 16px', fontSize: '0.85rem', marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
-          <ArrowLeft size={16} /> Back to Recommendations
+          <ArrowLeft size={16} /> Back to Career Results
         </button>
       </div>
 
@@ -486,11 +486,9 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
         </div>
 
         <button
-          onClick={() => onNavigate('actionPlan')}
-          className="btn"
+          onClick={() => onNavigate('careerResults')}
+          className="btn btn-primary"
           style={{
-            background: 'linear-gradient(135deg, #172554 0%, #4F46E5 100%)',
-            color: '#FFFFFF',
             padding: '12px 24px',
             borderRadius: 10,
             fontWeight: 700,
@@ -499,7 +497,7 @@ export default function CareerDetailPage({ careerId, assessmentResult, onBack, o
             cursor: 'pointer'
           }}
         >
-          Build Career Action Plan →
+          View in Career Results →
         </button>
       </GlassCard>
     </div>

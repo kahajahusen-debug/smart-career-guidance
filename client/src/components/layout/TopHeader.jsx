@@ -55,10 +55,12 @@ export default function TopHeader({
         return { title: 'My Profile', section: 'Account & Qualifications' };
       case 'assessment':
         return { title: 'Skill Assessment', section: 'Technical Evaluation' };
+      case 'careerResults':
+        return { title: 'Career Results', section: 'Personalized Matching & Roadmap' };
       case 'recommendations':
-        return { title: 'Career Recommendations', section: 'AI Matching' };
+        return { title: 'Career Results', section: 'Personalized Matching' };
       case 'actionPlan':
-        return { title: 'Career Action Plan', section: 'Roadmap & Gaps' };
+        return { title: 'Career Results', section: 'Roadmap & Gaps' };
       case 'assistant':
         return { title: 'AI Career Assistant', section: 'Mentorship' };
       case 'interview':

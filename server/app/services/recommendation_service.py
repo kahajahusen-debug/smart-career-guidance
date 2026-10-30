@@ -396,6 +396,7 @@ async def calculate_personalized_recommendations(
             "description": car_desc,
             "matching_skills": car_matching_skills,
             "missing_skills": car_missing_skills,
+            "required_skills": [r.get("skill_name", "") if isinstance(r, dict) else str(r) for r in required_skills],
             "skill_gaps": skill_gap_items,
             "interest_match": disc_match_score,
             "skill_match": skill_match_score,

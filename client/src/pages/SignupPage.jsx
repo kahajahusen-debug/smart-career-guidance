@@ -31,6 +31,8 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
   const [educationLevel, setEducationLevel] = useState('');
   const [degree, setDegree] = useState('');
   const [branch, setBranch] = useState('');
+  const [yearOfStudy, setYearOfStudy] = useState('');
+  const [graduationYear, setGraduationYear] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('Student / Fresher');
   const [preferredCategory, setPreferredCategory] = useState('Undecided');
   const [currentSkills, setCurrentSkills] = useState([]);
@@ -123,6 +125,8 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
         education_level: educationLevel,
         degree: degree.trim(),
         branch: branch.trim() || degree.trim(),
+        year_of_study: yearOfStudy.trim(),
+        graduation_year: graduationYear ? (parseInt(graduationYear, 10) || graduationYear) : null,
         experience_level: experienceLevel,
         preferred_category: preferredCategory,
         current_skills: currentSkills,
@@ -131,11 +135,11 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
 
       const res = await signupUser(payload);
 
-      // On successful signup, direct user directly to their Dashboard
+      // On successful signup, redirect user to Career Discovery
       if (onSignupSuccess) {
         onSignupSuccess(res.access_token, res.user);
       } else {
-        onNavigate('dashboard');
+        onNavigate('careerDiscovery');
       }
     } catch (err) {
       console.error('Registration error:', err);
@@ -406,6 +410,42 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+              <div>
+                <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                  Year of Study (Optional)
+                </label>
+                <select
+                  className="form-select"
+                  value={yearOfStudy}
+                  onChange={(e) => setYearOfStudy(e.target.value)}
+                >
+                  <option value="">Select Year of Study</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="Final Year">4th / Final Year</option>
+                  <option value="Graduated">Graduated / Alumnus</option>
+                  <option value="Working Professional">Working Professional</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                  Graduation Year (Optional)
+                </label>
+                <input
+                  type="number"
+                  min="1990"
+                  max="2035"
+                  value={graduationYear}
+                  onChange={(e) => setGraduationYear(e.target.value)}
+                  placeholder="e.g. 2026 or 2027"
+                  className="form-input"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>
                 Preferred Career Domain <span style={{ color: '#EF4444' }}>*</span>
@@ -605,6 +645,14 @@ export default function SignupPage({ onSignupSuccess, onNavigate }) {
                   <span style={{ color: '#64748B' }}>Experience Level:</span>
                   <div style={{ fontWeight: 600, color: '#0F172A' }}>{experienceLevel}</div>
                 </div>
+                {(yearOfStudy || graduationYear) && (
+                  <div>
+                    <span style={{ color: '#64748B' }}>Year / Graduation:</span>
+                    <div style={{ fontWeight: 600, color: '#0F172A' }}>
+                      {[yearOfStudy, graduationYear].filter(Boolean).join(' • Class of ')}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <span style={{ color: '#64748B' }}>Preferred Domain:</span>
                   <div style={{ fontWeight: 600, color: '#0F172A' }}>{preferredCategory}</div>

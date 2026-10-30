@@ -399,23 +399,22 @@ export default function AssessmentPage({ user, onAssessmentSubmitted, onNavigate
           <div style={{ marginTop: 28, textAlign: 'center' }}>
             <button
               onClick={() => {
-                if (onNavigate) onNavigate('recommendations');
+                if (onNavigate) onNavigate('careerResults');
               }}
-              className="btn"
+              className="btn btn-primary"
               style={{
-                background: 'linear-gradient(135deg, #172554 0%, #4F46E5 100%)',
-                color: '#FFFFFF',
                 padding: '12px 28px',
                 borderRadius: 10,
-                fontSize: '0.92rem',
+                fontSize: '0.95rem',
                 fontWeight: 800,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                border: 'none'
+                border: 'none',
+                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
               }}
             >
-              <span>Proceed to Career Recommendations</span>
+              <span>View Career Results</span>
               <ArrowRight size={18} />
             </button>
           </div>

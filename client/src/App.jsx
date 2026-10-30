@@ -1,24 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from './components/layout/AppLayout';
 import GuestNavbar from './components/common/GuestNavbar';
+import PublicFooter from './components/public/PublicFooter';
+import PublicHomePage from './pages/PublicHomePage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import CareerDiscoveryPage from './pages/CareerDiscoveryPage';
 import AssessmentPage from './pages/AssessmentPage';
-import RecommendationsPage from './pages/RecommendationsPage';
+import CareerResultsPage from './pages/CareerResultsPage';
 import CareerDetailPage from './pages/CareerDetailPage';
 import JobsPage from './pages/JobsPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
-import ActionPlanPage from './pages/ActionPlanPage';
 import CareerAssistantPage from './pages/CareerAssistantPage';
 import InterviewPreparationPage from './pages/InterviewPreparationPage';
-import { fetchCurrentUser, getProfile, getAssessmentResult, getSkillAssessmentResult, getActionPlan } from './services/api';
+import {
+  fetchCurrentUser,
+  getProfile,
+  getDiscoveryResult,
+  getAssessmentResult,
+  getSkillAssessmentResult,
+  getActionPlan
+} from './services/api';
+
+const getPageFromPath = (path) => {
+  if (path === '/login') return 'login';
+  if (path === '/signup') return 'signup';
+  if (path === '/dashboard') return 'dashboard';
+  if (path === '/discovery') return 'careerDiscovery';
+  if (path === '/assessment') return 'assessment';
+  if (path === '/career-results' || path === '/recommendations' || path === '/action-plan') return 'careerResults';
+  return 'home';
+};
+
+const getPathFromPage = (page) => {
+  switch (page) {
+    case 'login': return '/login';
+    case 'signup': return '/signup';
+    case 'dashboard': return '/dashboard';
+    case 'careerDiscovery': return '/discovery';
+    case 'assessment': return '/assessment';
+    case 'careerResults':
+    case 'recommendations':
+    case 'actionPlan':
+      return '/career-results';
+    case 'home': return '/';
+    default: return '/';
+  }
+};
 
 export default function App() {
-  const [activePage, setActivePage] = useState('home');
+  const [activePage, setActivePage] = useState(() => getPageFromPath(window.location.pathname));
   const [activeCategory, setActiveCategory] = useState('all');
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -32,14 +66,27 @@ export default function App() {
   const [authChecking, setAuthChecking] = useState(true);
   const [authNotice, setAuthNotice] = useState(null);
 
-  // Check authentication status on startup
+  // Check authentication status on startup & listen to popstate
   useEffect(() => {
     checkInitialAuth();
+
+    const handlePopState = () => {
+      const page = getPageFromPath(window.location.pathname);
+      setActivePage(page);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const checkInitialAuth = async () => {
+    const initialPath = window.location.pathname;
     const token = localStorage.getItem('auth_token');
     if (!token) {
+      if (initialPath === '/dashboard') {
+        setAuthNotice('Please log in to access your personalized dashboard and career guidance features.');
+        setActivePage('login');
+        window.history.replaceState({ page: 'login' }, '', '/login');
+      }
       setAuthChecking(false);
       return;
     }
@@ -48,9 +95,10 @@ export default function App() {
       const userData = await fetchCurrentUser();
       setUser(userData);
 
-      // Load user profile, skill assessment results, and action plan in background
-      const [profData, skillData, planData] = await Promise.all([
+      // Load user profile, discovery, skill assessment results, and action plan in background
+      const [profData, discData, skillData, planData] = await Promise.all([
         getProfile().catch(() => null),
+        getDiscoveryResult().catch(() => null),
         getSkillAssessmentResult().catch(() => null),
         getActionPlan().catch(() => null)
       ]);
@@ -59,12 +107,38 @@ export default function App() {
       if (skillData && skillData.success !== false) setSkillAssessmentResult(skillData);
       if (planData && !planData.detail) setActionPlan(planData);
 
-      // If user was on home or guest pages, redirect to dashboard
-      setActivePage((prev) => (prev === 'home' || prev === 'login' || prev === 'signup' ? 'dashboard' : prev));
+      const hasCompletedDiscovery = Boolean(discData?.result || discData?.has_completed);
+      const hasCompletedSkill = Boolean(
+        skillData &&
+        skillData.success !== false &&
+        (skillData.completed || skillData.overall_accuracy !== undefined || (skillData.results && Object.keys(skillData.results).length > 0))
+      );
+
+      // Workflow routing rule for returning users / initial load:
+      setActivePage((prev) => {
+        if (prev === 'home' || prev === 'login' || prev === 'signup' || (prev === 'dashboard' && initialPath === '/dashboard')) {
+          if (!hasCompletedDiscovery) {
+            window.history.replaceState({ page: 'careerDiscovery' }, '', '/discovery');
+            return 'careerDiscovery';
+          }
+          if (!hasCompletedSkill) {
+            window.history.replaceState({ page: 'assessment' }, '', '/assessment');
+            return 'assessment';
+          }
+          window.history.replaceState({ page: 'dashboard' }, '', '/dashboard');
+          return 'dashboard';
+        }
+        return prev;
+      });
     } catch (err) {
       console.log('Session token expired or invalid:', err);
       localStorage.removeItem('auth_token');
       setUser(null);
+      if (initialPath === '/dashboard') {
+        setAuthNotice('Your session expired. Please log in again.');
+        setActivePage('login');
+        window.history.replaceState({ page: 'login' }, '', '/login');
+      }
     } finally {
       setAuthChecking(false);
     }
@@ -72,37 +146,47 @@ export default function App() {
 
   const handleNavigate = (targetPage, options = {}) => {
     setAuthNotice(null);
+    let effectiveTarget = targetPage;
+    if (effectiveTarget === 'recommendations' || effectiveTarget === 'actionPlan') {
+      effectiveTarget = 'careerResults';
+    }
+
     const protectedPages = [
       'dashboard',
       'profile',
       'careerDiscovery',
       'assessment',
-      'recommendations',
+      'careerResults',
       'jobs',
       'projects',
       'projectDetail',
       'careerDetail',
-      'actionPlan',
       'assistant',
       'interview'
     ];
 
     // Auth Guard
-    if (protectedPages.includes(targetPage) && !user) {
+    if (protectedPages.includes(effectiveTarget) && !user) {
       setAuthNotice('Please log in to access your personalized dashboard and career guidance features.');
       setActivePage('login');
+      window.history.pushState({ page: 'login' }, '', '/login');
       return;
     }
 
     if (options.prompt) setAssistantPrompt(options.prompt);
     if (options.career) setInterviewPreselectedCareer(options.career);
 
-    if (targetPage === 'profile') {
+    if (effectiveTarget === 'profile') {
       setActivePage('dashboard');
+      window.history.pushState({ page: 'dashboard' }, '', '/dashboard');
       return;
     }
 
-    setActivePage(targetPage);
+    setActivePage(effectiveTarget);
+    const targetPath = getPathFromPage(effectiveTarget);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ page: effectiveTarget }, '', targetPath);
+    }
   };
 
   const handleLoginSuccess = async (token, userData) => {
@@ -110,22 +194,64 @@ export default function App() {
     setUser(userData);
     setAuthNotice(null);
 
-    // Fetch user profile, skill assessment, and action plan
+    // Fetch user profile, discovery result, skill assessment, and action plan
     try {
-      const [profData, skillData, planData] = await Promise.all([
+      const [profData, discData, skillData, planData] = await Promise.all([
         getProfile().catch(() => null),
+        getDiscoveryResult().catch(() => null),
         getSkillAssessmentResult().catch(() => null),
         getActionPlan().catch(() => null)
       ]);
       if (profData) setProfile(profData);
       if (skillData && skillData.success !== false) setSkillAssessmentResult(skillData);
       if (planData && !planData.detail) setActionPlan(planData);
+
+      const hasCompletedDiscovery = Boolean(discData?.result || discData?.has_completed);
+      const hasCompletedSkill = Boolean(
+        skillData &&
+        skillData.success !== false &&
+        (skillData.completed || skillData.overall_accuracy !== undefined || (skillData.results && Object.keys(skillData.results).length > 0))
+      );
+
+      // Requirement 3: Subsequent login routing
+      if (!hasCompletedDiscovery) {
+        setActivePage('careerDiscovery');
+        window.history.pushState({ page: 'careerDiscovery' }, '', '/discovery');
+      } else if (!hasCompletedSkill) {
+        setActivePage('assessment');
+        window.history.pushState({ page: 'assessment' }, '', '/assessment');
+      } else {
+        setActivePage('dashboard');
+        window.history.pushState({ page: 'dashboard' }, '', '/dashboard');
+      }
     } catch (e) {
       console.log('Error loading post-login data:', e);
+      setActivePage('dashboard');
+      window.history.pushState({ page: 'dashboard' }, '', '/dashboard');
+    }
+  };
+
+  const handleSignupSuccess = async (token, userData) => {
+    localStorage.setItem('auth_token', token);
+    setUser(userData);
+    setAuthNotice(null);
+
+    try {
+      const profData = await getProfile().catch(() => null);
+      if (profData) setProfile(profData);
+    } catch {
+      // ignore
     }
 
-    // Direct redirect to personalized dashboard after login (Requirement 4 & 15)
-    setActivePage('dashboard');
+    // Requirement 1 & 2: Redirect to Career Discovery after signup
+    setActivePage('careerDiscovery');
+    window.history.pushState({ page: 'careerDiscovery' }, '', '/discovery');
+  };
+
+  const handleDiscoveryCompleted = () => {
+    // Requirement 3: Automatically navigate to Skill Assessment after completing discovery
+    setActivePage('assessment');
+    window.history.pushState({ page: 'assessment' }, '', '/assessment');
   };
 
   const handleLogout = () => {
@@ -136,6 +262,7 @@ export default function App() {
     setSkillAssessmentResult(null);
     setActionPlan(null);
     setActivePage('home');
+    window.history.pushState({ page: 'home' }, '', '/');
   };
 
   const handleSelectCareerDetail = (careerId) => {
@@ -164,7 +291,9 @@ export default function App() {
       ]);
       if (assData) setAssessmentResult(assData);
       if (skillData) setSkillAssessmentResult(skillData);
-    } catch (e) {}
+    } catch {
+      // background sync
+    }
   };
 
   const handleTargetCareerUpdated = async (careerId) => {
@@ -271,6 +400,7 @@ export default function App() {
             user={user}
             onNavigate={handleNavigate}
             onSelectCareer={handleSelectCareerDetail}
+            onDiscoveryCompleted={handleDiscoveryCompleted}
           />
         )}
 
@@ -282,13 +412,14 @@ export default function App() {
           />
         )}
 
-        {activePage === 'recommendations' && (
-          <RecommendationsPage
+        {(activePage === 'careerResults' || activePage === 'recommendations' || activePage === 'actionPlan') && (
+          <CareerResultsPage
+            user={user}
             assessmentResult={assessmentResult}
-            activeCategory={activeCategory}
             onSelectCareer={handleSelectCareerDetail}
             onNavigate={handleNavigate}
             onTargetCareerUpdated={handleTargetCareerUpdated}
+            initialTab={activePage === 'actionPlan' ? 'roadmap' : 'matches'}
           />
         )}
 
@@ -296,15 +427,9 @@ export default function App() {
           <CareerDetailPage
             careerId={selectedCareerId}
             assessmentResult={assessmentResult}
-            onBack={() => setActivePage('recommendations')}
+            onBack={() => setActivePage('careerResults')}
             onNavigate={handleNavigate}
             onTargetCareerUpdated={handleTargetCareerUpdated}
-          />
-        )}
-
-        {activePage === 'actionPlan' && (
-          <ActionPlanPage
-            onNavigate={handleNavigate}
           />
         )}
 
@@ -363,7 +488,15 @@ export default function App() {
     );
   }
 
-  // --- Render for Unauthenticated Visitors: Clean SaaS Guest Shell ---
+  // --- Render for Unauthenticated Visitors ---
+  if (activePage === 'home') {
+    return (
+      <PublicHomePage
+        onNavigate={handleNavigate}
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#F8FAFC' }}>
       <GuestNavbar
@@ -371,13 +504,13 @@ export default function App() {
         onNavigate={handleNavigate}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area for Login / Signup */}
       <main style={{
         flex: 1,
-        maxWidth: 1200,
+        maxWidth: 600,
         width: '100%',
         margin: '0 auto',
-        padding: '24px 20px 48px'
+        padding: '36px 20px 64px'
       }}>
         {authNotice && (
           <div style={{
@@ -385,31 +518,15 @@ export default function App() {
             border: '1px solid #FECACA',
             color: '#991B1B',
             padding: '12px 18px',
-            borderRadius: 10,
+            borderRadius: 12,
             marginBottom: 20,
-            fontSize: '0.88rem',
+            fontSize: '0.9rem',
             fontWeight: 600,
-            textAlign: 'center'
+            textAlign: 'center',
+            boxShadow: '0 2px 4px rgba(220, 38, 38, 0.05)'
           }}>
             {authNotice}
           </div>
-        )}
-
-        {activePage === 'home' && (
-          <HomePage
-            activeCategory={activeCategory}
-            onNavigate={handleNavigate}
-            user={user}
-          />
-        )}
-
-        {activePage === 'careers' && (
-          <HomePage
-            activeCategory={activeCategory}
-            initialTab="careers"
-            onNavigate={handleNavigate}
-            user={user}
-          />
         )}
 
         {activePage === 'login' && (
@@ -421,23 +538,23 @@ export default function App() {
 
         {activePage === 'signup' && (
           <SignupPage
-            onSignupSuccess={handleLoginSuccess}
+            onSignupSuccess={handleSignupSuccess}
             onNavigate={handleNavigate}
+          />
+        )}
+
+        {activePage === 'careers' && (
+          <HomePage
+            activeCategory={activeCategory}
+            initialTab="careers"
+            onNavigate={handleNavigate}
+            user={user}
           />
         )}
       </main>
 
-      {/* Public Footer */}
-      <footer style={{
-        padding: '20px 24px',
-        borderTop: '1px solid #E2E8F0',
-        textAlign: 'center',
-        fontSize: '0.82rem',
-        color: '#94A3B8',
-        background: '#FFFFFF'
-      }}>
-        Smart Career Guidance System &copy; 2026. Built with React (Vite), Python FastAPI, and MongoDB.
-      </footer>
+      {/* Public Dark Navy Footer */}
+      <PublicFooter onNavigate={handleNavigate} />
     </div>
   );
 }

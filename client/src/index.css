@@ -73,6 +73,10 @@ svg {
   max-width: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html, body {
   min-height: 100%;
   overflow-x: hidden;
@@ -418,4 +422,117 @@ body {
   .saas-content-area {
     padding: 20px 16px 36px;
   }
+}
+
+/* --- Public Landing Page Reference Design Styles --- */
+.font-handwriting {
+  font-family: 'Caveat', cursive, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+.animate-float {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
+}
+
+/* Feature Card Hover Effects */
+.public-feature-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+}
+
+.public-feature-card:hover {
+  transform: translateY(-4px);
+  border-color: #C7D2FE;
+  box-shadow: 0 12px 28px -6px rgba(79, 70, 229, 0.1);
+}
+
+.public-feature-card:hover .feature-arrow-btn {
+  background: #4F46E5 !important;
+  color: #FFFFFF !important;
+  transform: translateX(3px);
+}
+
+.feature-arrow-btn {
+  transition: all 0.2s ease;
+}
+
+/* Step Node Styling */
+.step-item {
+  transition: transform 0.2s ease;
+}
+
+.step-item:hover {
+  transform: translateY(-3px);
+}
+
+/* Navigation Links Indicator */
+.nav-link-item {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.nav-link-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2.5px;
+  background: #4F46E5;
+  border-radius: 999px;
+}
+
+/* Hero Badge */
+.hero-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #EEF2FF;
+  border: 1px solid #C7D2FE;
+  color: #4F46E5;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Video Modal Backdrop */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
 }
