@@ -184,11 +184,12 @@ export default function CareerAssistantPage({ onNavigate, initialPrompt }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [dynamicQuestions, setDynamicQuestions] = useState([
-    "Which skill should I learn first?",
-    "Give me a 30-day learning plan",
-    "Which project should I build next?",
-    "How can I prepare for an interview?",
-    "What should I learn this week?"
+    "What is def in Python?",
+    "Explain inheritance in Java",
+    "What is MongoDB?",
+    "Explain supervised learning",
+    "What is probability?",
+    "How can I become a Data Scientist?"
   ]);
   const messagesEndRef = useRef(null);
 
@@ -222,7 +223,7 @@ export default function CareerAssistantPage({ onNavigate, initialPrompt }) {
         setMessages([{
           message_id: 'welcome',
           role: 'assistant',
-          message: "Hi! I'm your AI Career Assistant. How can I help you with your career today?",
+          message: "Hi! I'm your AI Assistant. Ask me anything about programming languages, technical concepts, algorithms, databases, mathematics, career guidance, interview prep, or project development!",
           created_at: new Date().toISOString()
         }]);
       }
@@ -291,15 +292,16 @@ export default function CareerAssistantPage({ onNavigate, initialPrompt }) {
       setMessages([{
         message_id: 'welcome_reset',
         role: 'assistant',
-        message: "Chat history cleared. How else can I assist with your career goals today?",
+        message: "Chat history cleared. What topic or career goal would you like to explore?",
         created_at: new Date().toISOString()
       }]);
       setDynamicQuestions([
-        "Which skill should I learn first?",
-        "Give me a 30-day learning plan",
-        "Which project should I build next?",
-        "How can I prepare for an interview?",
-        "What should I learn this week?"
+        "What is def in Python?",
+        "Explain inheritance in Java",
+        "What is MongoDB?",
+        "Explain supervised learning",
+        "What is probability?",
+        "How can I become a Data Scientist?"
       ]);
     } catch (err) {
       console.error('Error clearing history:', err);
@@ -345,7 +347,7 @@ export default function CareerAssistantPage({ onNavigate, initialPrompt }) {
               AI Career Assistant
             </h1>
             <p style={{ fontSize: '0.92rem', color: '#E2E8F0', marginTop: 6, maxWidth: 650 }}>
-              Get personalized career guidance based on your skills, goals, action plan and portfolio.
+              Get expert answers on programming, technologies, computer science, mathematics, and personalized career roadmaps.
             </p>
           </div>
 
@@ -564,7 +566,7 @@ export default function CareerAssistantPage({ onNavigate, initialPrompt }) {
                 color: '#64748B',
                 fontSize: '0.88rem'
               }}>
-                <Loader2 className="animate-spin" size={16} /> Thinking and analyzing your career profile...
+                <Loader2 className="animate-spin" size={16} /> Thinking and generating response...
               </div>
             </div>
           )}
@@ -595,8 +597,8 @@ export default function CareerAssistantPage({ onNavigate, initialPrompt }) {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Ask me anything about your career, skills, projects or interview prep..."
-            aria-label="Ask AI Career Assistant"
+            placeholder="Ask anything about programming, concepts, databases, math, career, or interview prep..."
+            aria-label="Ask AI Assistant"
             autoComplete="off"
             disabled={sending}
             style={{

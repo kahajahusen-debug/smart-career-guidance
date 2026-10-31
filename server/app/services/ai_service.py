@@ -200,26 +200,1055 @@ def generate_llm_response(prompt: str) -> tuple[Optional[str], str, Optional[str
 # RESPONSE VALIDATION & DYNAMIC QUESTION EXTRACTION
 # ------------------------------------------------------------------
 
-def validate_ai_response(user_message: str, response_text: str) -> str:
+# ------------------------------------------------------------------
+# AUTOMATIC TOPIC & INTENT DETECTION
+# ------------------------------------------------------------------
+
+def detect_topic_and_intent(user_message: str, chat_history: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """
+    Automatically identify the user's question type and domain without requiring topic selection.
+    
+    Supported Question Types (Intents):
+      - 'programming': Programming question (syntax, code writing, language constructs)
+      - 'concept_explanation': Concept explanation (definitions, how things work, theory)
+      - 'debugging': Code debugging (identifying bugs, fixing code)
+      - 'technical': Technical question (databases, APIs, infrastructure, DSA)
+      - 'academic': Academic question (mathematics, statistics, CS fundamentals)
+      - 'general_knowledge': General knowledge question (general facts, science, non-IT)
+      - 'career_guidance': Career guidance question (roadmaps, transitions, skills needed)
+      - 'interview_prep': Interview preparation question (technical/behavioral questions)
+      - 'project_guidance': Project development question (portfolio project suggestions)
+      - 'follow_up': Follow-up question (resolving pronouns, examples, continuations)
+    """
+    msg_low = user_message.lower().strip()
+
+    # 1. Follow-up Question Detection
+    follow_up_triggers = [
+        "explain with an example", "explain it with an example", "give an example",
+        "give me an example", "show an example", "show me an example", "with an example",
+        "explain previously", "explain the code", "explain this code", "explain that code",
+        "explain that example", "how can i test it", "how to test it", "how do i test it",
+        "is it difficult", "is it hard", "can you explain more", "tell me more",
+        "elaborate on", "can you elaborate", "what about it", "how does it work",
+        "why?", "why is that", "why is this", "what is the difference", "difference between them"
+    ]
+    is_follow_up = any(p in msg_low for p in follow_up_triggers) or (
+        len(msg_low.split()) <= 4 and any(w in msg_low for w in ["why", "example", "how", "difference", "it", "this", "that"])
+    )
+
+    parent_topic = "general"
+    if chat_history:
+        for m in reversed(chat_history):
+            text = m.get("message", "").lower()
+            if "inheritance" in text or "extends" in text or "subclass" in text:
+                parent_topic = "java_inheritance"
+                break
+            elif "def " in text or "def in python" in text or "def keyword" in text:
+                parent_topic = "python_def"
+                break
+            elif "mongodb" in text or "nosql" in text:
+                parent_topic = "mongodb"
+                break
+            elif "supervised" in text or "supervised learning" in text:
+                parent_topic = "supervised_learning"
+                break
+            elif "probability" in text:
+                parent_topic = "probability"
+                break
+            elif "react" in text or "virtual dom" in text or "jsx" in text:
+                parent_topic = "react"
+                break
+            elif "fastapi" in text or "pydantic" in text:
+                parent_topic = "fastapi"
+                break
+            elif "sql" in text or "join" in text:
+                parent_topic = "sql"
+                break
+            elif "data scientist" in text or "data science" in text:
+                parent_topic = "data_scientist_career"
+                break
+            elif "interview" in text:
+                parent_topic = "python_interview" if "python" in text else "interview"
+                break
+            elif "debug" in text or "error" in text:
+                parent_topic = "debugging"
+                break
+            elif "factorial" in text:
+                parent_topic = "factorial"
+                break
+            elif "pointer" in text:
+                parent_topic = "c_pointer"
+                break
+            elif "python" in text:
+                parent_topic = "python"
+                break
+            elif "java" in text:
+                parent_topic = "java"
+                break
+
+    if is_follow_up and chat_history:
+        return {
+            "intent": "follow_up",
+            "topic": parent_topic,
+            "category": "Follow-up question"
+        }
+
+    # 2. Code Debugging Question
+    if any(k in msg_low for k in [
+        "debug", "fix this code", "fix my code", "fix the error", "why is this failing",
+        "why does this fail", "help me debug", "syntaxerror", "typeerror", "indexerror",
+        "indentationerror", "traceback", "exception", "nameerror", "keyerror", "valueerror",
+        "bug in", "code not working", "solve this bug"
+    ]):
+        lang = "python" if "python" in msg_low or "def " in msg_low else ("java" if "java" in msg_low else "code")
+        return {
+            "intent": "debugging",
+            "topic": f"{lang}_debugging",
+            "category": "Code debugging"
+        }
+
+    # 3. Interview Preparation Question
+    if any(k in msg_low for k in [
+        "interview question", "interview questions", "interview prep", "prepare for an interview",
+        "mock interview", "questions for interview", "coding interview", "technical interview",
+        "behavioral interview", "star method", "interview skills"
+    ]):
+        subtopic = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "sql" if "sql" in msg_low else (
+                        "data_science" if "data science" in msg_low or "data scientist" in msg_low else "general"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "interview_prep",
+            "topic": f"{subtopic}_interview",
+            "category": "Interview preparation question"
+        }
+
+    # 4. Career Guidance Question
+    if any(k in msg_low for k in [
+        "how can i become", "how to become", "career roadmap", "learning roadmap", "30-day", "30 day",
+        "what should i learn first", "what should i learn next", "learn first", "first skill", "where to begin",
+        "what skill should i improve", "skills required for", "skills are required for", "what skills do i need for",
+        "switch to it", "can a non-it student", "non-it", "non-cs", "what career should i choose",
+        "which career is suitable", "what career suits me", "career path", "salary", "job opportunities",
+        "career guidance", "learning sequence"
+    ]):
+        sub = "data_scientist" if "data scientist" in msg_low or "data science" in msg_low else (
+            "devops" if "cloud" in msg_low or "devops" in msg_low else (
+                "cybersecurity" if "cyber" in msg_low or "security" in msg_low else "software_engineer"
+            )
+        )
+        return {
+            "intent": "career_guidance",
+            "topic": sub,
+            "category": "Career guidance question"
+        }
+
+    # 5. Project Development Question
+    if any(k in msg_low for k in [
+        "which project", "what project", "project should i build", "recommend a project",
+        "suggest a project", "beginner project", "resume project", "portfolio project",
+        "project for me", "build next"
+    ]):
+        return {
+            "intent": "project_guidance",
+            "topic": "portfolio_project",
+            "category": "Project development question"
+        }
+
+    # 6. Academic / Mathematics & Statistics Question
+    if any(k in msg_low for k in [
+        "probability", "statistics", "calculus", "linear algebra", "standard deviation",
+        "variance", "mean and median", "bayes theorem", "bayes' theorem", "normal distribution",
+        "discrete math", "combinatorics", "hypothesis testing", "p-value"
+    ]):
+        return {
+            "intent": "academic",
+            "topic": "mathematics_statistics",
+            "category": "Academic question"
+        }
+
+    # 7. Data Science, Machine Learning & AI
+    if any(k in msg_low for k in [
+        "supervised learning", "unsupervised learning", "reinforcement learning",
+        "machine learning", "deep learning", "neural network", "artificial intelligence",
+        "generative ai", "genai", "transformer", "llm", "large language model",
+        "data science", "nlp", "computer vision", "overfitting", "underfitting"
+    ]):
+        return {
+            "intent": "concept_explanation",
+            "topic": "machine_learning_ai",
+            "category": "Concept explanation"
+        }
+
+    # 8. Technical Question: Databases, APIs, Infrastructure, DSA
+    if any(k in msg_low for k in [
+        "mongodb", "nosql", "sql join", "sql joins", "fastapi", "rest api", "backend development",
+        "docker", "kubernetes", "git", "github", "redis", "postgresql", "mysql", "microservices",
+        "data structures", "dsa", "binary tree", "binary search tree", "bst", "linked list",
+        "stack", "queue", "hash map", "hash table", "quicksort", "merge sort", "binary search",
+        "time complexity", "space complexity", "big o", "operating system", "process vs thread",
+        "deadlock", "tcp vs udp", "osi model"
+    ]):
+        sub = "mongodb" if "mongodb" in msg_low or "nosql" in msg_low else (
+            "fastapi" if "fastapi" in msg_low else (
+                "sql" if "sql" in msg_low else (
+                    "dsa" if any(w in msg_low for w in ["dsa", "tree", "bst", "linked list", "stack", "queue", "big o"]) else "technical"
+                )
+            )
+        )
+        return {
+            "intent": "technical",
+            "topic": sub,
+            "category": "Technical question"
+        }
+
+    # 9. Programming Question: Language constructs, keywords, code writing
+    if any(k in msg_low for k in [
+        "write factorial", "factorial in", "def in python", "what is def", "pointer in c",
+        "pointers in c", "function in java", "method in java", "inheritance in java",
+        "write a function", "write code", "how to write", "syntax of", "program in",
+        "code in python", "code in java", "code in c", "write python", "write java"
+    ]):
+        sub = "python" if "python" in msg_low else ("java" if "java" in msg_low else ("c" if "in c" in msg_low else "programming"))
+        return {
+            "intent": "programming",
+            "topic": sub,
+            "category": "Programming question"
+        }
+
+    # 10. Concept Explanation (Default for what is / explain / describe)
+    if any(msg_low.startswith(prefix) for prefix in [
+        "what is", "what are", "explain", "describe", "difference between",
+        "how does", "what does", "define", "concept of"
+    ]):
+        sub = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "c" if "c" in msg_low.split() else (
+                        "cpp" if "c++" in msg_low else "general_concept"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "concept_explanation",
+            "topic": sub,
+            "category": "Concept explanation"
+        }
+
+    # 11. General Knowledge Question
+    return {
+        "intent": "general_knowledge",
+        "topic": "general",
+        "category": "General knowledge question"
+    }
+
+
+# ------------------------------------------------------------------
+# RESPONSE VALIDATION & DYNAMIC QUESTION EXTRACTION
+# ------------------------------------------------------------------
+
+# ------------------------------------------------------------------
+# AUTOMATIC TOPIC & INTENT DETECTION
+# ------------------------------------------------------------------
+
+def detect_topic_and_intent(user_message: str, chat_history: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """
+    Automatically identify the user's question type and domain without requiring topic selection.
+    
+    Supported Question Types (Intents):
+      - 'programming': Programming question (syntax, code writing, language constructs)
+      - 'concept_explanation': Concept explanation (definitions, how things work, theory)
+      - 'debugging': Code debugging (identifying bugs, fixing code)
+      - 'technical': Technical question (databases, APIs, infrastructure, DSA)
+      - 'academic': Academic question (mathematics, statistics, CS fundamentals)
+      - 'general_knowledge': General knowledge question (general facts, science, non-IT)
+      - 'career_guidance': Career guidance question (roadmaps, transitions, skills needed)
+      - 'interview_prep': Interview preparation question (technical/behavioral questions)
+      - 'project_guidance': Project development question (portfolio project suggestions)
+      - 'follow_up': Follow-up question (resolving pronouns, examples, continuations)
+    """
+    msg_low = user_message.lower().strip()
+
+    # 1. Follow-up Question Detection
+    follow_up_triggers = [
+        "explain with an example", "explain it with an example", "give an example",
+        "give me an example", "show an example", "show me an example", "with an example",
+        "explain previously", "explain the code", "explain this code", "explain that code",
+        "explain that example", "how can i test it", "how to test it", "how do i test it",
+        "is it difficult", "is it hard", "can you explain more", "tell me more",
+        "elaborate on", "can you elaborate", "what about it", "how does it work",
+        "why?", "why is that", "why is this", "what is the difference", "difference between them"
+    ]
+    words_set = set(re.findall(r"\b[a-z]+\b", msg_low))
+    has_specific_tech = any(k in msg_low for k in [
+        "inheritance", "def in", "what is def", "mongodb", "react", "fastapi",
+        "sql", "probability", "supervised", "unsupervised", "pointer", "factorial"
+    ])
+    is_follow_up = (any(p in msg_low for p in follow_up_triggers) or (
+        len(msg_low.split()) <= 4 and bool(words_set.intersection({"why", "example", "it", "this", "that"}))
+    )) and not (has_specific_tech and any(msg_low.startswith(w) for w in ["what", "explain", "describe", "how", "define"]))
+
+    parent_topic = "general"
+    if chat_history:
+        for m in reversed(chat_history):
+            text = m.get("message", "").lower()
+            if "inheritance" in text or "extends" in text or "subclass" in text:
+                parent_topic = "java_inheritance"
+                break
+            elif "def " in text or "def in python" in text or "def keyword" in text:
+                parent_topic = "python_def"
+                break
+            elif "mongodb" in text or "nosql" in text:
+                parent_topic = "mongodb"
+                break
+            elif "supervised" in text or "supervised learning" in text:
+                parent_topic = "supervised_learning"
+                break
+            elif "probability" in text:
+                parent_topic = "probability"
+                break
+            elif "react" in text or "virtual dom" in text or "jsx" in text:
+                parent_topic = "react"
+                break
+            elif "fastapi" in text or "pydantic" in text:
+                parent_topic = "fastapi"
+                break
+            elif "sql" in text or "join" in text:
+                parent_topic = "sql"
+                break
+            elif "data scientist" in text or "data science" in text:
+                parent_topic = "data_scientist_career"
+                break
+            elif "interview" in text:
+                parent_topic = "python_interview" if "python" in text else "interview"
+                break
+            elif "debug" in text or "error" in text:
+                parent_topic = "debugging"
+                break
+            elif "factorial" in text:
+                parent_topic = "factorial"
+                break
+            elif "pointer" in text:
+                parent_topic = "c_pointer"
+                break
+            elif "python" in text:
+                parent_topic = "python"
+                break
+            elif "java" in text:
+                parent_topic = "java"
+                break
+
+    if is_follow_up and chat_history:
+        return {
+            "intent": "follow_up",
+            "topic": parent_topic,
+            "category": "Follow-up question"
+        }
+
+    # 2. Code Debugging Question
+    if any(k in msg_low for k in [
+        "debug", "fix this code", "fix my code", "fix the error", "why is this failing",
+        "why does this fail", "help me debug", "syntaxerror", "typeerror", "indexerror",
+        "indentationerror", "traceback", "exception", "nameerror", "keyerror", "valueerror",
+        "bug in", "code not working", "solve this bug"
+    ]):
+        lang = "python" if "python" in msg_low or "def " in msg_low else ("java" if "java" in msg_low else "code")
+        return {
+            "intent": "debugging",
+            "topic": f"{lang}_debugging",
+            "category": "Code debugging"
+        }
+
+    # 3. Interview Preparation Question
+    if any(k in msg_low for k in [
+        "interview question", "interview questions", "interview prep", "prepare for an interview",
+        "mock interview", "questions for interview", "coding interview", "technical interview",
+        "behavioral interview", "star method", "interview skills"
+    ]):
+        subtopic = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "sql" if "sql" in msg_low else (
+                        "data_science" if "data science" in msg_low or "data scientist" in msg_low else "general"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "interview_prep",
+            "topic": f"{subtopic}_interview",
+            "category": "Interview preparation question"
+        }
+
+    # 4. Career Guidance Question
+    if any(k in msg_low for k in [
+        "how can i become", "how to become", "career roadmap", "learning roadmap", "30-day", "30 day",
+        "what should i learn first", "what should i learn next", "learn first", "first skill", "where to begin",
+        "what skill should i improve", "skills required for", "skills are required for", "what skills do i need for",
+        "switch to it", "can a non-it student", "non-it", "non-cs", "what career should i choose",
+        "which career is suitable", "what career suits me", "career path", "salary", "job opportunities",
+        "career guidance", "learning sequence"
+    ]):
+        sub = "data_scientist" if "data scientist" in msg_low or "data science" in msg_low else (
+            "devops" if "cloud" in msg_low or "devops" in msg_low else (
+                "cybersecurity" if "cyber" in msg_low or "security" in msg_low else "software_engineer"
+            )
+        )
+        return {
+            "intent": "career_guidance",
+            "topic": sub,
+            "category": "Career guidance question"
+        }
+
+    # 5. Project Development Question
+    if any(k in msg_low for k in [
+        "which project", "what project", "project should i build", "recommend a project",
+        "suggest a project", "beginner project", "resume project", "portfolio project",
+        "project for me", "build next"
+    ]):
+        return {
+            "intent": "project_guidance",
+            "topic": "portfolio_project",
+            "category": "Project development question"
+        }
+
+    # 6. Academic / Mathematics & Statistics Question
+    if any(k in msg_low for k in [
+        "probability", "statistics", "calculus", "linear algebra", "standard deviation",
+        "variance", "mean and median", "bayes theorem", "bayes' theorem", "normal distribution",
+        "discrete math", "combinatorics", "hypothesis testing", "p-value"
+    ]):
+        return {
+            "intent": "academic",
+            "topic": "mathematics_statistics",
+            "category": "Academic question"
+        }
+
+    # 7. Data Science, Machine Learning & AI
+    if any(k in msg_low for k in [
+        "supervised learning", "unsupervised learning", "reinforcement learning",
+        "machine learning", "deep learning", "neural network", "artificial intelligence",
+        "generative ai", "genai", "transformer", "llm", "large language model",
+        "data science", "nlp", "computer vision", "overfitting", "underfitting"
+    ]):
+        return {
+            "intent": "concept_explanation",
+            "topic": "machine_learning_ai",
+            "category": "Concept explanation"
+        }
+
+    # 8. Technical Question: Databases, APIs, Infrastructure, DSA
+    if any(k in msg_low for k in [
+        "mongodb", "nosql", "sql join", "sql joins", "fastapi", "rest api", "backend development",
+        "docker", "kubernetes", "git", "github", "redis", "postgresql", "mysql", "microservices",
+        "data structures", "dsa", "binary tree", "binary search tree", "bst", "linked list",
+        "stack", "queue", "hash map", "hash table", "quicksort", "merge sort", "binary search",
+        "time complexity", "space complexity", "big o", "operating system", "process vs thread",
+        "deadlock", "tcp vs udp", "osi model"
+    ]):
+        sub = "mongodb" if "mongodb" in msg_low or "nosql" in msg_low else (
+            "fastapi" if "fastapi" in msg_low else (
+                "sql" if "sql" in msg_low else (
+                    "dsa" if any(w in msg_low for w in ["dsa", "tree", "bst", "linked list", "stack", "queue", "big o"]) else "technical"
+                )
+            )
+        )
+        return {
+            "intent": "technical",
+            "topic": sub,
+            "category": "Technical question"
+        }
+
+    # 9. Programming Question: Language constructs, keywords, code writing
+    if any(k in msg_low for k in [
+        "write factorial", "factorial in", "def in python", "what is def", "pointer in c",
+        "pointers in c", "function in java", "method in java", "inheritance in java",
+        "write a function", "write code", "how to write", "syntax of", "program in",
+        "code in python", "code in java", "code in c", "write python", "write java"
+    ]):
+        sub = "python" if "python" in msg_low else ("java" if "java" in msg_low else ("c" if "in c" in msg_low else "programming"))
+        return {
+            "intent": "programming",
+            "topic": sub,
+            "category": "Programming question"
+        }
+
+    # 10. Concept Explanation (Default for what is / explain / describe)
+    if any(msg_low.startswith(prefix) for prefix in [
+        "what is", "what are", "explain", "describe", "difference between",
+        "how does", "what does", "define", "concept of"
+    ]):
+        sub = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "c" if "c" in msg_low.split() else (
+                        "cpp" if "c++" in msg_low else "general_concept"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "concept_explanation",
+            "topic": sub,
+            "category": "Concept explanation"
+        }
+
+    # 11. General Knowledge Question
+    return {
+        "intent": "general_knowledge",
+        "topic": "general",
+        "category": "General knowledge question"
+    }
+
+
+# ------------------------------------------------------------------
+# RESPONSE VALIDATION & DYNAMIC QUESTION EXTRACTION
+# ------------------------------------------------------------------
+
+# ------------------------------------------------------------------
+# AUTOMATIC TOPIC & INTENT DETECTION
+# ------------------------------------------------------------------
+
+def detect_topic_and_intent(user_message: str, chat_history: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """
+    Automatically identify the user's question type and domain without requiring topic selection.
+    
+    Supported Question Types (Intents):
+      - 'programming': Programming question (syntax, code writing, language constructs)
+      - 'concept_explanation': Concept explanation (definitions, how things work, theory)
+      - 'debugging': Code debugging (identifying bugs, fixing code)
+      - 'technical': Technical question (databases, APIs, infrastructure, DSA)
+      - 'academic': Academic question (mathematics, statistics, CS fundamentals)
+      - 'general_knowledge': General knowledge question (general facts, science, non-IT)
+      - 'career_guidance': Career guidance question (roadmaps, transitions, skills needed)
+      - 'interview_prep': Interview preparation question (technical/behavioral questions)
+      - 'project_guidance': Project development question (portfolio project suggestions)
+      - 'follow_up': Follow-up question (resolving pronouns, examples, continuations)
+    """
+    msg_low = user_message.lower().strip()
+
+    # 1. Follow-up Question Detection
+    follow_up_triggers = [
+        "explain with an example", "explain it with an example", "give an example",
+        "give me an example", "show an example", "show me an example", "with an example",
+        "explain previously", "explain the code", "explain this code", "explain that code",
+        "explain that example", "how can i test it", "how to test it", "how do i test it",
+        "is it difficult", "is it hard", "can you explain more", "tell me more",
+        "elaborate on", "can you elaborate", "what about it", "how does it work",
+        "why?", "why is that", "why is this", "what is the difference", "difference between them"
+    ]
+    words_set = set(re.findall(r"\b[a-z]+\b", msg_low))
+    has_specific_tech = any(k in msg_low for k in [
+        "inheritance", "def in", "what is def", "mongodb", "react", "fastapi",
+        "sql", "probability", "supervised", "unsupervised", "pointer", "factorial"
+    ])
+    is_follow_up = (any(p in msg_low for p in follow_up_triggers) or (
+        len(msg_low.split()) <= 4 and bool(words_set.intersection({"why", "example", "it", "this", "that"}))
+    )) and not (has_specific_tech and any(msg_low.startswith(w) for w in ["what", "explain", "describe", "how", "define"]))
+
+    parent_topic = "general"
+    if chat_history:
+        for m in reversed(chat_history):
+            text = m.get("message", "").lower()
+            if "inheritance" in text or "extends" in text or "subclass" in text:
+                parent_topic = "java_inheritance"
+                break
+            elif "def " in text or "def in python" in text or "def keyword" in text:
+                parent_topic = "python_def"
+                break
+            elif "mongodb" in text or "nosql" in text:
+                parent_topic = "mongodb"
+                break
+            elif "supervised" in text or "supervised learning" in text:
+                parent_topic = "supervised_learning"
+                break
+            elif "probability" in text:
+                parent_topic = "probability"
+                break
+            elif "react" in text or "virtual dom" in text or "jsx" in text:
+                parent_topic = "react"
+                break
+            elif "fastapi" in text or "pydantic" in text:
+                parent_topic = "fastapi"
+                break
+            elif "sql" in text or "join" in text:
+                parent_topic = "sql"
+                break
+            elif "data scientist" in text or "data science" in text:
+                parent_topic = "data_scientist_career"
+                break
+            elif "interview" in text:
+                parent_topic = "python_interview" if "python" in text else "interview"
+                break
+            elif "debug" in text or "error" in text:
+                parent_topic = "debugging"
+                break
+            elif "factorial" in text:
+                parent_topic = "factorial"
+                break
+            elif "pointer" in text:
+                parent_topic = "c_pointer"
+                break
+            elif "python" in text:
+                parent_topic = "python"
+                break
+            elif "java" in text:
+                parent_topic = "java"
+                break
+
+    if is_follow_up and chat_history:
+        return {
+            "intent": "follow_up",
+            "topic": parent_topic,
+            "category": "Follow-up question"
+        }
+
+    # 2. Code Debugging Question
+    if any(k in msg_low for k in [
+        "debug", "fix this code", "fix my code", "fix the error", "why is this failing",
+        "why does this fail", "help me debug", "syntaxerror", "typeerror", "indexerror",
+        "indentationerror", "traceback", "exception", "nameerror", "keyerror", "valueerror",
+        "bug in", "code not working", "solve this bug"
+    ]):
+        lang = "python" if "python" in msg_low or "def " in msg_low else ("java" if "java" in msg_low else "code")
+        return {
+            "intent": "debugging",
+            "topic": f"{lang}_debugging",
+            "category": "Code debugging"
+        }
+
+    # 3. Interview Preparation Question
+    if any(k in msg_low for k in [
+        "interview question", "interview questions", "interview prep", "prepare for an interview",
+        "mock interview", "questions for interview", "coding interview", "technical interview",
+        "behavioral interview", "star method", "interview skills"
+    ]):
+        subtopic = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "sql" if "sql" in msg_low else (
+                        "data_science" if "data science" in msg_low or "data scientist" in msg_low else "general"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "interview_prep",
+            "topic": f"{subtopic}_interview",
+            "category": "Interview preparation question"
+        }
+
+    # 4. Career Guidance Question
+    if any(k in msg_low for k in [
+        "how can i become", "how to become", "career roadmap", "learning roadmap", "30-day", "30 day",
+        "what should i learn first", "what should i learn next", "learn first", "first skill", "where to begin",
+        "what skill should i improve", "skills required for", "skills are required for", "what skills do i need for",
+        "switch to it", "can a non-it student", "non-it", "non-cs", "what career should i choose",
+        "which career is suitable", "what career suits me", "career path", "salary", "job opportunities",
+        "career guidance", "learning sequence"
+    ]):
+        sub = "data_scientist" if "data scientist" in msg_low or "data science" in msg_low else (
+            "devops" if "cloud" in msg_low or "devops" in msg_low else (
+                "cybersecurity" if "cyber" in msg_low or "security" in msg_low else "software_engineer"
+            )
+        )
+        return {
+            "intent": "career_guidance",
+            "topic": sub,
+            "category": "Career guidance question"
+        }
+
+    # 5. Project Development Question
+    if any(k in msg_low for k in [
+        "which project", "what project", "project should i build", "recommend a project",
+        "suggest a project", "beginner project", "resume project", "portfolio project",
+        "project for me", "build next"
+    ]):
+        return {
+            "intent": "project_guidance",
+            "topic": "portfolio_project",
+            "category": "Project development question"
+        }
+
+    # 6. Academic / Mathematics & Statistics Question
+    if any(k in msg_low for k in [
+        "probability", "statistics", "calculus", "linear algebra", "standard deviation",
+        "variance", "mean and median", "bayes theorem", "bayes' theorem", "normal distribution",
+        "discrete math", "combinatorics", "hypothesis testing", "p-value"
+    ]):
+        return {
+            "intent": "academic",
+            "topic": "mathematics_statistics",
+            "category": "Academic question"
+        }
+
+    # 7. Data Science, Machine Learning & AI
+    if any(k in msg_low for k in [
+        "supervised learning", "unsupervised learning", "reinforcement learning",
+        "machine learning", "deep learning", "neural network", "artificial intelligence",
+        "generative ai", "genai", "transformer", "llm", "large language model",
+        "data science", "nlp", "computer vision", "overfitting", "underfitting"
+    ]):
+        return {
+            "intent": "concept_explanation",
+            "topic": "machine_learning_ai",
+            "category": "Concept explanation"
+        }
+
+    # 8. Technical Question: Databases, APIs, Infrastructure, DSA
+    if any(k in msg_low for k in [
+        "mongodb", "nosql", "sql join", "sql joins", "fastapi", "rest api", "backend development",
+        "docker", "kubernetes", "git", "github", "redis", "postgresql", "mysql", "microservices",
+        "data structures", "dsa", "binary tree", "binary search tree", "bst", "linked list",
+        "stack", "queue", "hash map", "hash table", "quicksort", "merge sort", "binary search",
+        "time complexity", "space complexity", "big o", "operating system", "process vs thread",
+        "deadlock", "tcp vs udp", "osi model"
+    ]):
+        sub = "mongodb" if "mongodb" in msg_low or "nosql" in msg_low else (
+            "fastapi" if "fastapi" in msg_low else (
+                "sql" if "sql" in msg_low else (
+                    "dsa" if any(w in msg_low for w in ["dsa", "tree", "bst", "linked list", "stack", "queue", "big o"]) else "technical"
+                )
+            )
+        )
+        return {
+            "intent": "technical",
+            "topic": sub,
+            "category": "Technical question"
+        }
+
+    # 9. Programming Question: Language constructs, keywords, code writing
+    if any(k in msg_low for k in [
+        "write factorial", "factorial in", "def in python", "what is def", "pointer in c",
+        "pointers in c", "function in java", "method in java", "inheritance in java",
+        "write a function", "write code", "how to write", "syntax of", "program in",
+        "code in python", "code in java", "code in c", "write python", "write java"
+    ]):
+        sub = "python" if "python" in msg_low else ("java" if "java" in msg_low else ("c" if "in c" in msg_low else "programming"))
+        return {
+            "intent": "programming",
+            "topic": sub,
+            "category": "Programming question"
+        }
+
+    # 10. Concept Explanation (Default for what is / explain / describe)
+    if any(msg_low.startswith(prefix) for prefix in [
+        "what is", "what are", "explain", "describe", "difference between",
+        "how does", "what does", "define", "concept of"
+    ]):
+        sub = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "c" if "c" in msg_low.split() else (
+                        "cpp" if "c++" in msg_low else "general_concept"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "concept_explanation",
+            "topic": sub,
+            "category": "Concept explanation"
+        }
+
+    # 11. General Knowledge Question
+    return {
+        "intent": "general_knowledge",
+        "topic": "general",
+        "category": "General knowledge question"
+    }
+
+
+# ------------------------------------------------------------------
+# RESPONSE VALIDATION & DYNAMIC QUESTION EXTRACTION
+# ------------------------------------------------------------------
+
+# ------------------------------------------------------------------
+# AUTOMATIC TOPIC & INTENT DETECTION
+# ------------------------------------------------------------------
+
+def detect_topic_and_intent(user_message: str, chat_history: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """
+    Automatically identify the user's question type and domain without requiring topic selection.
+    
+    Supported Question Types (Intents):
+      - 'programming': Programming question (syntax, code writing, language constructs)
+      - 'concept_explanation': Concept explanation (definitions, how things work, theory)
+      - 'debugging': Code debugging (identifying bugs, fixing code)
+      - 'technical': Technical question (databases, APIs, infrastructure, DSA)
+      - 'academic': Academic question (mathematics, statistics, CS fundamentals)
+      - 'general_knowledge': General knowledge question (general facts, science, non-IT)
+      - 'career_guidance': Career guidance question (roadmaps, transitions, skills needed)
+      - 'interview_prep': Interview preparation question (technical/behavioral questions)
+      - 'project_guidance': Project development question (portfolio project suggestions)
+      - 'follow_up': Follow-up question (resolving pronouns, examples, continuations)
+    """
+    msg_low = user_message.lower().strip()
+
+    # 1. Follow-up Question Detection
+    follow_up_triggers = [
+        "explain with an example", "explain it with an example", "give an example",
+        "give me an example", "show an example", "show me an example", "with an example",
+        "explain previously", "explain the code", "explain this code", "explain that code",
+        "explain that example", "how can i test it", "how to test it", "how do i test it",
+        "is it difficult", "is it hard", "can you explain more", "tell me more",
+        "elaborate on", "can you elaborate", "what about it", "how does it work",
+        "why?", "why is that", "why is this", "what is the difference", "difference between them"
+    ]
+    words_set = set(re.findall(r"\b[a-z]+\b", msg_low))
+    has_specific_tech = any(k in msg_low for k in [
+        "inheritance", "def in", "what is def", "mongodb", "react", "fastapi",
+        "sql", "probability", "supervised", "unsupervised", "pointer", "factorial"
+    ])
+    is_follow_up = (any(p in msg_low for p in follow_up_triggers) or (
+        len(msg_low.split()) <= 4 and bool(words_set.intersection({"why", "example", "it", "this", "that"}))
+    )) and not (has_specific_tech and any(msg_low.startswith(w) for w in ["what", "explain", "describe", "how", "define"]))
+
+    parent_topic = "general"
+    if chat_history:
+        for m in reversed(chat_history):
+            text = m.get("message", "").lower()
+            if "inheritance" in text or "extends" in text or "subclass" in text:
+                parent_topic = "java_inheritance"
+                break
+            elif "def " in text or "def in python" in text or "def keyword" in text:
+                parent_topic = "python_def"
+                break
+            elif "mongodb" in text or "nosql" in text:
+                parent_topic = "mongodb"
+                break
+            elif "supervised" in text or "supervised learning" in text:
+                parent_topic = "supervised_learning"
+                break
+            elif "probability" in text:
+                parent_topic = "probability"
+                break
+            elif "react" in text or "virtual dom" in text or "jsx" in text:
+                parent_topic = "react"
+                break
+            elif "fastapi" in text or "pydantic" in text:
+                parent_topic = "fastapi"
+                break
+            elif "sql" in text or "join" in text:
+                parent_topic = "sql"
+                break
+            elif "data scientist" in text or "data science" in text:
+                parent_topic = "data_scientist_career"
+                break
+            elif "interview" in text:
+                parent_topic = "python_interview" if "python" in text else "interview"
+                break
+            elif "debug" in text or "error" in text:
+                parent_topic = "debugging"
+                break
+            elif "factorial" in text:
+                parent_topic = "factorial"
+                break
+            elif "pointer" in text:
+                parent_topic = "c_pointer"
+                break
+            elif "python" in text:
+                parent_topic = "python"
+                break
+            elif "java" in text:
+                parent_topic = "java"
+                break
+
+    if is_follow_up and chat_history:
+        return {
+            "intent": "follow_up",
+            "topic": parent_topic,
+            "category": "Follow-up question"
+        }
+
+    # 2. Code Debugging Question
+    if any(k in msg_low for k in [
+        "debug", "fix this code", "fix my code", "fix the error", "why is this failing",
+        "why does this fail", "help me debug", "syntaxerror", "typeerror", "indexerror",
+        "indentationerror", "traceback", "exception", "nameerror", "keyerror", "valueerror",
+        "bug in", "code not working", "solve this bug"
+    ]):
+        lang = "python" if "python" in msg_low or "def " in msg_low else ("java" if "java" in msg_low else "code")
+        return {
+            "intent": "debugging",
+            "topic": f"{lang}_debugging",
+            "category": "Code debugging"
+        }
+
+    # 3. Interview Preparation Question
+    if any(k in msg_low for k in [
+        "interview question", "interview questions", "interview prep", "prepare for an interview",
+        "mock interview", "questions for interview", "coding interview", "technical interview",
+        "behavioral interview", "star method", "interview skills"
+    ]):
+        subtopic = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "sql" if "sql" in msg_low else (
+                        "data_science" if "data science" in msg_low or "data scientist" in msg_low else "general"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "interview_prep",
+            "topic": f"{subtopic}_interview",
+            "category": "Interview preparation question"
+        }
+
+    # 4. Career Guidance Question
+    if any(k in msg_low for k in [
+        "how can i become", "how to become", "career roadmap", "learning roadmap", "30-day", "30 day",
+        "what should i learn first", "what should i learn next", "learn first", "first skill", "where to begin",
+        "what skill should i improve", "skills required for", "skills are required for", "what skills do i need for",
+        "switch to it", "can a non-it student", "non-it", "non-cs", "what career should i choose",
+        "which career is suitable", "what career suits me", "career path", "salary", "job opportunities",
+        "career guidance", "learning sequence"
+    ]):
+        sub = "data_scientist" if "data scientist" in msg_low or "data science" in msg_low else (
+            "devops" if "cloud" in msg_low or "devops" in msg_low else (
+                "cybersecurity" if "cyber" in msg_low or "security" in msg_low else "software_engineer"
+            )
+        )
+        return {
+            "intent": "career_guidance",
+            "topic": sub,
+            "category": "Career guidance question"
+        }
+
+    # 5. Project Development Question
+    if any(k in msg_low for k in [
+        "which project", "what project", "project should i build", "recommend a project",
+        "suggest a project", "beginner project", "resume project", "portfolio project",
+        "project for me", "build next"
+    ]):
+        return {
+            "intent": "project_guidance",
+            "topic": "portfolio_project",
+            "category": "Project development question"
+        }
+
+    # 6. Academic / Mathematics & Statistics Question
+    if any(k in msg_low for k in [
+        "probability", "statistics", "calculus", "linear algebra", "standard deviation",
+        "variance", "mean and median", "bayes theorem", "bayes' theorem", "normal distribution",
+        "discrete math", "combinatorics", "hypothesis testing", "p-value"
+    ]):
+        return {
+            "intent": "academic",
+            "topic": "mathematics_statistics",
+            "category": "Academic question"
+        }
+
+    # 7. Data Science, Machine Learning & AI
+    if any(k in msg_low for k in [
+        "supervised learning", "unsupervised learning", "reinforcement learning",
+        "machine learning", "deep learning", "neural network", "artificial intelligence",
+        "generative ai", "genai", "transformer", "llm", "large language model",
+        "data science", "nlp", "computer vision", "overfitting", "underfitting"
+    ]):
+        return {
+            "intent": "concept_explanation",
+            "topic": "machine_learning_ai",
+            "category": "Concept explanation"
+        }
+
+    # 8. Technical Question: Databases, APIs, Infrastructure, DSA
+    if any(k in msg_low for k in [
+        "mongodb", "nosql", "sql join", "sql joins", "fastapi", "rest api", "backend development",
+        "docker", "kubernetes", "git", "github", "redis", "postgresql", "mysql", "microservices",
+        "data structures", "dsa", "binary tree", "binary search tree", "bst", "linked list",
+        "stack", "queue", "hash map", "hash table", "quicksort", "merge sort", "binary search",
+        "time complexity", "space complexity", "big o", "operating system", "process vs thread",
+        "deadlock", "tcp vs udp", "osi model"
+    ]):
+        sub = "mongodb" if "mongodb" in msg_low or "nosql" in msg_low else (
+            "fastapi" if "fastapi" in msg_low else (
+                "sql" if "sql" in msg_low else (
+                    "dsa" if any(w in msg_low for w in ["dsa", "tree", "bst", "linked list", "stack", "queue", "big o"]) else "technical"
+                )
+            )
+        )
+        return {
+            "intent": "technical",
+            "topic": sub,
+            "category": "Technical question"
+        }
+
+    # 9. Programming Question: Language constructs, keywords, code writing
+    if any(k in msg_low for k in [
+        "write factorial", "factorial in", "def in python", "what is def", "pointer in c",
+        "pointers in c", "function in java", "method in java", "inheritance in java",
+        "write a function", "write code", "how to write", "syntax of", "program in",
+        "code in python", "code in java", "code in c", "write python", "write java"
+    ]):
+        sub = "python" if "python" in msg_low else ("java" if "java" in msg_low else ("c" if "in c" in msg_low else "programming"))
+        return {
+            "intent": "programming",
+            "topic": sub,
+            "category": "Programming question"
+        }
+
+    # 10. Concept Explanation (Default for what is / explain / describe)
+    if any(msg_low.startswith(prefix) for prefix in [
+        "what is", "what are", "explain", "describe", "difference between",
+        "how does", "what does", "define", "concept of"
+    ]):
+        sub = "python" if "python" in msg_low else (
+            "java" if "java" in msg_low else (
+                "react" if "react" in msg_low else (
+                    "c" if "c" in msg_low.split() else (
+                        "cpp" if "c++" in msg_low else "general_concept"
+                    )
+                )
+            )
+        )
+        return {
+            "intent": "concept_explanation",
+            "topic": sub,
+            "category": "Concept explanation"
+        }
+
+    # 11. General Knowledge Question
+    return {
+        "intent": "general_knowledge",
+        "topic": "general",
+        "category": "General knowledge question"
+    }
+
+
+# ------------------------------------------------------------------
+# RESPONSE VALIDATION & DYNAMIC QUESTION EXTRACTION
+# ------------------------------------------------------------------
+
+def validate_ai_response(user_message: str, response_text: str, intent: str = "general") -> str:
     """
     Verify that the AI response addresses the user's question directly.
-    Strips out target career boilerplate if returned on general technical queries.
+    Strips out target career boilerplate if returned on general technical/educational queries.
     """
     if not response_text:
         return response_text
 
     msg_low = user_message.lower().strip()
 
-    is_career_query = any(k in msg_low for k in [
-        "career", "skill", "learn first", "project", "roadmap", "interview", "resume",
-        "portfolio", "readiness", "action plan", "what should i learn", "which project", "prepare for"
+    is_career_query = intent in ["career_guidance", "project_guidance"] or any(k in msg_low for k in [
+        "career", "roadmap", "resume", "portfolio readiness", "action plan",
+        "what should i learn for my target career", "which project should i build", "prepare for an interview"
     ])
 
     if not is_career_query:
         boilerplate_patterns = [
             r"Your target career is [^\n]+",
             r"Regarding your preparation for [^\n]+",
-            r"Based on your profile as [^\n]+"
+            r"Based on your profile as [^\n]+",
+            r"This concept plays an important role in technology and career development for [^\n]+",
+            r"Focusing on core principles, practical hands-on examples, and building portfolio projects is the best way to master it\."
         ]
         cleaned_text = response_text
         for pattern in boilerplate_patterns:
@@ -231,8 +1260,13 @@ def validate_ai_response(user_message: str, response_text: str) -> str:
     return response_text
 
 
-def extract_suggested_questions(response_text: str, user_message: str) -> tuple[str, List[str]]:
-    """Extract suggested questions from LLM output block if present, or generate dynamic follow-up questions."""
+def extract_suggested_questions(
+    response_text: str,
+    user_message: str,
+    intent: str = "general",
+    topic: str = "general"
+) -> tuple[str, List[str]]:
+    """Extract suggested questions from LLM output block if present, or generate dynamic topic-relevant follow-up questions."""
     suggested_qs = []
     cleaned_text = response_text
 
@@ -252,20 +1286,96 @@ def extract_suggested_questions(response_text: str, user_message: str) -> tuple[
 
     if not suggested_qs:
         msg_low = user_message.lower()
-        if "python" in msg_low or "def" in msg_low:
-            suggested_qs = ["What are variables in Python?", "How do loops work in Python?", "Give me a simple Python program"]
+        if "python" in msg_low or "def" in msg_low or topic == "python_def":
+            suggested_qs = [
+                "How do default arguments work in Python?",
+                "What is the difference between *args and **kwargs?",
+                "Explain Python lambda functions with an example."
+            ]
+        elif "inheritance" in msg_low or "java" in msg_low or topic == "java_inheritance":
+            suggested_qs = [
+                "What is the difference between method overloading and overriding in Java?",
+                "Explain the super keyword in Java.",
+                "Why doesn't Java support multiple inheritance with classes?"
+            ]
+        elif "mongodb" in msg_low or topic == "mongodb":
+            suggested_qs = [
+                "What is the difference between SQL and MongoDB?",
+                "How does indexing work in MongoDB?",
+                "Explain MongoDB aggregation pipeline with an example."
+            ]
+        elif "supervised learning" in msg_low or topic == "supervised_learning":
+            suggested_qs = [
+                "What is the difference between supervised and unsupervised learning?",
+                "Explain overfitting and how to prevent it in ML.",
+                "What evaluation metrics are used in classification?"
+            ]
+        elif "probability" in msg_low or topic == "probability":
+            suggested_qs = [
+                "Explain Bayes' Theorem with an example.",
+                "What is the difference between independent and dependent events?",
+                "What is a normal distribution and the 68-95-99.7 rule?"
+            ]
+        elif "react" in msg_low or topic == "react":
+            suggested_qs = [
+                "What is the difference between state and props in React?",
+                "How does the useEffect hook work?",
+                "What is the Virtual DOM and why is it fast?"
+            ]
+        elif "data scientist" in msg_low or topic == "data_scientist_career":
+            suggested_qs = [
+                "What are the top Python libraries for Data Science?",
+                "Give me beginner portfolio project ideas for Data Science.",
+                "What technical interview questions are asked for Data Science roles?"
+            ]
+        elif "interview" in msg_low or intent == "interview_prep":
+            suggested_qs = [
+                "Can you explain Python decorators with a code example?",
+                "How does memory management and garbage collection work in Python?",
+                "Give me coding interview practice problems in Python."
+            ]
+        elif "debug" in msg_low or intent == "debugging":
+            suggested_qs = [
+                "How do I fix IndentationError in Python?",
+                "What is the difference between TypeError and ValueError?",
+                "How do I use Python pdb debugger?"
+            ]
         elif "html" in msg_low or "div" in msg_low:
-            suggested_qs = ["What is the difference between div and span?", "How do I style a div with CSS?", "Give me an HTML example"]
-        elif "react" in msg_low:
-            suggested_qs = ["What is useState in React?", "Explain React components", "How do props work in React?"]
-        elif "java" in msg_low:
-            suggested_qs = ["What is OOP in Java?", "Explain Java inheritance", "Give me a simple Java example"]
+            suggested_qs = [
+                "What is the difference between div and span?",
+                "How do I center a div using CSS flexbox?",
+                "What are HTML5 semantic elements?"
+            ]
         elif "sql" in msg_low or "join" in msg_low:
-            suggested_qs = ["What is INNER JOIN vs LEFT JOIN?", "Explain SQL indexing", "Write a sample SQL query"]
-        elif "digital marketing" in msg_low or "accounting" in msg_low or "finance" in msg_low:
-            suggested_qs = ["What are key concepts to learn in this field?", "What tools are used?", "How can I start learning this?"]
+            suggested_qs = [
+                "What is the difference between INNER JOIN and LEFT JOIN?",
+                "Explain SQL indexing and performance optimization.",
+                "Write a sample SQL query with GROUP BY and HAVING."
+            ]
+        elif "fastapi" in msg_low:
+            suggested_qs = [
+                "What is the difference between FastAPI and Flask?",
+                "How does Pydantic validation work in FastAPI?",
+                "How do I implement JWT authentication in FastAPI?"
+            ]
+        elif "dsa" in msg_low or "binary tree" in msg_low:
+            suggested_qs = [
+                "What is the difference between an Array and a Linked List?",
+                "Explain Binary Search with a code example.",
+                "What is Big O notation and time complexity?"
+            ]
+        elif any(k in msg_low for k in ["career", "learn first", "roadmap"]):
+            suggested_qs = [
+                "Which skill should I learn first?",
+                "Which project should I build next?",
+                "Give me a 30-day learning roadmap."
+            ]
         else:
-            suggested_qs = ["Can you give me a simple example?", "Explain this concept in detail", "What should I learn next?"]
+            suggested_qs = [
+                "Can you explain it with an example?",
+                "Why is this concept important?",
+                "What are common use cases for this?"
+            ]
 
     return cleaned_text, suggested_qs
 
@@ -326,7 +1436,7 @@ def calculate_personalized_skill_sequence(target_career: str, current_skills: Li
 
 
 # ------------------------------------------------------------------
-# PHASE 9.5 GENERAL-PURPOSE LLM AI CAREER ASSISTANT PIPELINE
+# MULTI-TOPIC AI ASSISTANT PIPELINE
 # ------------------------------------------------------------------
 
 async def generate_career_assistant_response(
@@ -335,13 +1445,9 @@ async def generate_career_assistant_response(
     chat_history: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    True General-Purpose Conversational AI Assistant.
-    Pipeline:
-      1. Format Candidate Profile Context & Conversation History
-      2. Call Configured LLM Engine (Gemini / OpenAI)
-      3. Validate & Sanitize Response
-      4. Extract Dynamic Suggested Questions
-      5. Return Structured Response
+    Upgraded Multi-Topic AI Assistant.
+    Seamlessly handles programming, concepts, debugging, math, technical,
+    academic, and career questions with zero irrelevant generic career boilerplate.
     """
     target_career = user_context.get("target_career", "Full Stack Software Engineer")
     education = user_context.get("education", "")
@@ -361,6 +1467,17 @@ async def generate_career_assistant_response(
     }
     top_project_title = top_project.get("title") or top_project.get("name") or "Full-Stack SaaS Application"
 
+    detected = detect_topic_and_intent(user_message, chat_history)
+    intent = detected["intent"]
+    topic = detected["topic"]
+
+    is_career_relevant = intent in ["career_guidance", "project_guidance"] or any(
+        k in user_message.lower() for k in [
+            "target career", "my profile", "my skills", "skill gap", "portfolio readiness",
+            "action plan", "what should i learn for my career", "which project should i build"
+        ]
+    )
+
     formatted_history = ""
     if chat_history:
         recent_msg = chat_history[-10:]
@@ -371,25 +1488,33 @@ async def generate_career_assistant_response(
             history_lines.append(f"{role}: {msg_text}")
         formatted_history = "RECENT CONVERSATION HISTORY:\n" + "\n".join(history_lines) + "\n\n"
 
-    prompt = f"""You are Antigravity, a world-class general-purpose Conversational AI Assistant and Technical/Career Coach.
-
-BACKGROUND CANDIDATE PROFILE (Use ONLY when the user explicitly asks for career advice, personal learning roadmaps, portfolio project recommendations, or interview prep):
+    profile_context = ""
+    if is_career_relevant:
+        profile_context = f"""
+CANDIDATE CAREER PROFILE (Use ONLY to personalize career/project advice):
 - Target Career: {target_career}
 - Education: {education if education else 'Not specified'}
 - Current Skills: {', '.join(current_skills) if current_skills else 'None'}
 - Skill Gaps: {', '.join(skill_gaps) if skill_gaps else 'None'}
 - Portfolio Readiness: {readiness_score:.1f}%
 - Recommended Project: {top_project_title}
+"""
 
-{formatted_history}USER QUESTION: {user_message}
+    prompt = f"""You are Antigravity, an advanced multi-topic AI Assistant and expert technical tutor.
+USER QUESTION: {user_message}
+DETECTED USER INTENT: {intent}
+DETECTED TOPIC: {topic}
 
+{profile_context}
+{formatted_history}
 CORE DIRECTIVES:
-1. PRIMARY OBJECTIVE: Answer the user's EXACT question directly, accurately, and naturally. You understand ALL programming languages (Python, Java, C, C++, C#, Go, Rust, PHP, Ruby, Kotlin, Swift, Dart, R, MATLAB, SQL, HTML, CSS, JavaScript, TypeScript, React, Angular, Vue, Node.js, FastAPI, Django, Flask, Spring Boot, .NET, etc.), Computer Science (DSA, DBMS, OS, Networks, Software Engineering, OOP, Cloud, AI, ML, Deep Learning, GenAI, Cybersecurity, Data Science), Non-IT (Digital Marketing, Finance, Accounting, HR, Business, Management, Healthcare), General Education (Math, Physics, Chemistry, English, Reasoning), and Career topics.
-2. ANSWER THE CURRENT QUESTION FIRST: Do NOT inject candidate profile stats or skill gap summaries unless the user specifically requested personal career guidance or project/interview prep.
-3. MULTILINGUAL RESPONSE: Respond fluently in the exact language/script used by the user (English, Telugu script, Hindi script, Teluglish, Hinglish, etc.).
-4. CONVERSATION CONTEXT: Resolve references like "this", "that", "it", "explain the code", "give an example", "write the same code in Java" using the recent conversation history provided above.
-5. FORMATTING: Use clean Markdown headers, bold highlights, lists, and language-specific code blocks (`python, `java, `html, `jsx, `sql, etc.).
-6. DYNAMIC SUGGESTED QUESTIONS: At the very end of your response, output exactly 3 relevant follow-up questions in a JSON array formatted like:
+1. PRIMARY OBJECTIVE: Answer the user's EXACT question directly, accurately, and naturally. You support ALL topics: Programming (Python, Java, C, C++, JavaScript, React, HTML/CSS, etc.), Computer Science (DSA, DBMS, OS, Networks), Databases (SQL, MongoDB), APIs (FastAPI, REST), Data Science & Machine Learning (Supervised/Unsupervised, Neural Networks), Mathematics & Statistics (Probability, Distributions), Academic subjects, General Knowledge, Code Debugging, Interview Preparation, and Career Roadmaps.
+2. NO UNRELATED CAREER ADVICE: If the question is about programming, algorithms, concepts, databases, mathematics, academia, debugging, or general knowledge, NEVER inject unrelated career advice, candidate profile summaries, or portfolio projects into the answer. Only provide career advice when explicitly asked.
+3. CLEAR EXAMPLES & CODE: Provide clean, working code snippets for programming questions with explanations. For debugging, identify the bug clearly and provide the corrected code. For concept explanations, provide practical real-world analogies.
+4. CONVERSATION CONTEXT: If this is a follow-up (e.g. "Explain with an example", "Why?", "What is the difference?"), use the conversation history to give a coherent, in-depth answer resolving previous references.
+5. MULTILINGUAL RESPONSE: Respond fluently in the exact language/script used by the user (English, Telugu script, Hindi script, Teluglish, Hinglish, etc.).
+6. FORMATTING: Use clean Markdown headers, lists, and language-specific code blocks (`python, `java, `sql, `jsx, etc.).
+7. DYNAMIC SUGGESTED QUESTIONS: At the very end of your response, output exactly 3 relevant follow-up questions tailored specifically to the current topic, formatted as:
 ```suggested_questions
 ["Question 1?", "Question 2?", "Question 3?"]
 ```
@@ -398,12 +1523,11 @@ CORE DIRECTIVES:
     ai_text, provider_name, error_detail = generate_llm_response(prompt)
 
     if ai_text:
-        validated_text = validate_ai_response(user_message, ai_text)
-        cleaned_text, suggested_qs = extract_suggested_questions(validated_text, user_message)
+        validated_text = validate_ai_response(user_message, ai_text, intent=intent)
+        cleaned_text, suggested_qs = extract_suggested_questions(validated_text, user_message, intent=intent, topic=topic)
 
-        msg_low = user_message.lower()
         next_card = None
-        if any(k in msg_low for k in ["start first", "first skill", "which skill", "learning sequence"]):
+        if is_career_relevant and any(k in user_message.lower() for k in ["start first", "first skill", "which skill", "learning sequence"]):
             first_skill = ordered_skills[0] if ordered_skills else "JavaScript"
             second_skill = ordered_skills[1] if len(ordered_skills) > 1 else "React"
             next_card = {
@@ -416,21 +1540,23 @@ CORE DIRECTIVES:
         return {
             "message": cleaned_text,
             "source": provider_name,
-            "intent": "general_llm_chat",
+            "intent": intent,
+            "topic": topic,
             "next_action_card": next_card,
-            "recommended_skills": ordered_skills,
-            "related_projects": [top_project],
+            "recommended_skills": ordered_skills if is_career_relevant else [],
+            "related_projects": [top_project] if is_career_relevant else [],
             "suggested_questions": suggested_qs,
             "dynamic_suggested_questions": suggested_qs
         }
 
-    # Internal Career Assistant Engine (Seamless, context-aware fallback without external API key dependency)
-    return _generate_internal_career_assistant_response(
+    # Internal Multi-Topic Assistant Engine (fallback)
+    return _generate_internal_multi_topic_response(
         user_message=user_message,
         user_context=user_context,
         chat_history=chat_history,
         ordered_skills=ordered_skills,
-        top_project=top_project
+        top_project=top_project,
+        detected=detected
     )
 
 
@@ -441,7 +1567,28 @@ def _generate_internal_career_assistant_response(
     ordered_skills: List[str],
     top_project: Dict[str, Any]
 ) -> Dict[str, Any]:
+    """Compatibility alias for internal multi-topic assistant response."""
+    detected = detect_topic_and_intent(user_message, chat_history)
+    return _generate_internal_multi_topic_response(
+        user_message=user_message,
+        user_context=user_context,
+        chat_history=chat_history,
+        ordered_skills=ordered_skills,
+        top_project=top_project,
+        detected=detected
+    )
+
+
+def _generate_internal_multi_topic_response(
+    user_message: str,
+    user_context: Dict[str, Any],
+    chat_history: List[Dict[str, Any]],
+    ordered_skills: List[str],
+    top_project: Dict[str, Any],
+    detected: Dict[str, Any]
+) -> Dict[str, Any]:
     msg_low = user_message.lower().strip()
+    words_set = set(re.findall(r"\b[a-z]+\b", msg_low))
     target_career = user_context.get("target_career") or "Full Stack Software Engineer"
     education = user_context.get("education") or ""
     branch = user_context.get("branch") or ""
@@ -449,6 +1596,9 @@ def _generate_internal_career_assistant_response(
     skill_gaps = user_context.get("skill_gaps") or []
     readiness_score = user_context.get("portfolio_readiness", 0.0)
     top_project_title = top_project.get("title") or top_project.get("name") or "Full-Stack Project"
+
+    intent = detected.get("intent", "general_knowledge")
+    topic = detected.get("topic", "general")
 
     # Multi-turn conversation context inspection
     last_user_msg = ""
@@ -469,130 +1619,105 @@ def _generate_internal_career_assistant_response(
     is_hinglish = "kya" in msg_low and ("hai" in msg_low or "mein" in msg_low or "batao" in msg_low)
 
     next_card = None
-    intent = "career_assistant"
+    is_career_relevant = False
 
     # ------------------------------------------------------------------
     # 1. MULTILINGUAL RESPONSES
     # ------------------------------------------------------------------
     if is_telugu_script:
         reply = (
-            "### తెలుగులో కెరీర్ మార్గదర్శకత్వం\n\n"
+            "### తెలుగులో సమాధానం (Telugu Explanation)\n\n"
             f"మీ ప్రశ్న: **{user_message}**\n\n"
-            f"మీ లక్ష్యం **{target_career}** గా ఉంది.\n"
-            "ఫంక్షన్ (Function) అనేది ఒక నిర్దిష్ట పనిని చేయడానికి ఉపయోగపడే పునర్వినియోగ (reusable) కోడ్ బ్లాక్.\n\n"
+            "ఫంక్షన్ (Function) అనేది ఒక నిర్దిష్ట పనిని చేయడానికి ఉపయోగపడే పునర్వినియోగ (reusable) కోడ్ బ్లాక్. "
+            "పైథాన్‌లో ఫంక్షన్‌ను డిఫైన్ చేయడానికి `def` కీవర్డ్ ఉపయోగిస్తారు.\n\n"
             "```python\n"
             "def greet(name):\n"
-            "    return f\"నమస్కారం, {name}!\"\n"
+            "    return f\"నమస్కారం, {name}!\"\n\n"
+            "print(greet(\"విద్యార్థి\"))\n"
             "```\n\n"
-            "మరిన్ని వివరాల కోసం క్రింది సూచనలను పరిశీలించండి."
+            "మరిన్ని వివరాలు లేదా కోడ్ ఉదాహరణల కోసం క్రింది ప్రశ్నలను అడగవచ్చు."
         )
-        suggested_qs = ["Python lo def keyword enduku use chestaru?", "కెరీర్ రోడ్‌మ్యాప్ ఇవ్వండి", "What should I learn first?"]
+        suggested_qs = ["Python lo def keyword enduku use chestaru?", "Java lo inheritance ante ఏమిటి?", "What is probability?"]
 
     elif is_hindi_script or is_hinglish:
         reply = (
-            "### हिंदी / हिंग्लिश में उत्तर\n\n"
+            "### हिंदी / हिंग्लिश में उत्तर (Hindi Explanation)\n\n"
             f"आपका सवाल: **{user_message}**\n\n"
-            f"आपके लक्षित करियर **{target_career}** के लिए:\n"
-            "फ़ंक्शन (Function) कोड का एक ब्लॉक होता है जिसे बार-बार इस्तेमाल किया जा सकता है।\n\n"
+            "फ़ंक्शन (Function) कोड का एक ब्लॉक होता है जिसे बार-बार इस्तेमाल (reusable) किया जा सकता है। "
+            "Python में फ़ंक्शन बनाने के लिए `def` कीवर्ड का उपयोग किया जाता है।\n\n"
             "```python\n"
             "def greet(name):\n"
-            "    return f\"नमस्ते, {name}!\"\n"
-            "```"
+            "    return f\"नमस्ते, {name}!\"\n\n"
+            "print(greet(\"विद्यार्थी\"))\n"
+            "```\n\n"
+            "क्या आप इस कोड का स्पष्टीकरण या कोई अन्य उदाहरण देखना चाहते हैं?"
         )
-        suggested_qs = ["Python mein def kya hai?", "Career roadmap दीजिये", "What should I learn first?"]
+        suggested_qs = ["Python mein def kya hai?", "Java mein inheritance kya hai?", "Supervised learning kya hai?"]
 
     elif is_teluglish:
         reply = (
             "### Teluglish Explanation\n\n"
             f"Mee question: **{user_message}**\n\n"
-            f"Mee target career **{target_career}** ki Python lo `def` keyword ni **functions create చేయడానికి** ఉపయోగిస్తారు.\n\n"
+            "Python lo `def` keyword ni **functions create చేయడానికి (define చేయడానికి)** ఉపయోగిస్తారు. "
+            "Oka function dwara code ni repeat cheyyakunda reusable ga run cheyyavachhu.\n\n"
             "```python\n"
             "def add_numbers(a, b):\n"
-            "    return a + b\n"
+            "    return a + b\n\n"
+            "result = add_numbers(10, 20)\n"
+            "print(result)  # Output: 30\n"
             "```"
         )
-        suggested_qs = ["What is def in Python?", "What should I learn first?", "Which project should I build?"]
+        suggested_qs = ["What is def in Python?", "Explain inheritance in Java", "What is MongoDB?"]
 
     # ------------------------------------------------------------------
     # 2. GREETINGS & COURTESY
     # ------------------------------------------------------------------
     elif msg_low in ["hi", "hello", "hey", "good morning", "good evening", "hi!", "hello!", "hey!"] or msg_low.startswith(("hi ", "hello ", "hey ")):
         reply = (
-            f"Hello! 👋 I am your Smart Career Guidance AI Assistant.\n\n"
-            f"I can help you with personalized learning roadmaps, skill priority, portfolio project ideas, technical concept explanations, and interview preparation tailored to your target career: **{target_career}**.\n\n"
+            "Hello! 👋 I am your Multi-Topic AI Assistant.\n\n"
+            "I can help you with:\n"
+            "• **Programming**: Python, Java, C, C++, JavaScript, React\n"
+            "• **Data Structures & Algorithms**: Arrays, Trees, Sorting, Big O\n"
+            "• **Web & Backend**: HTML, CSS, React, FastAPI, REST APIs\n"
+            "• **Databases**: SQL, MongoDB, Database Design\n"
+            "• **AI & Data Science**: Machine Learning, Supervised Learning, Deep Learning\n"
+            "• **Mathematics & Stats**: Probability, Statistics, Distributions\n"
+            "• **Interview Prep & Careers**: Technical questions, Debugging, Personalized Roadmaps\n\n"
             "What would you like to explore today?"
         )
-        suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a roadmap"]
+        suggested_qs = ["What is def in Python?", "Explain inheritance in Java.", "What is MongoDB?"]
 
-    elif any(w in msg_low for w in ["thank you", "thanks", "thank u", "ty"]):
+    elif bool(words_set.intersection({"thank", "thanks", "ty"})) or "thank you" in msg_low or "thank u" in msg_low:
         reply = (
-            "You're very welcome! Keep building your skills and progressing through your action plan. "
-            "Feel free to ask whenever you need more career guidance, project suggestions, or interview prep!"
+            "You're very welcome! Feel free to ask if you have more questions about programming, "
+            "technical concepts, mathematics, code debugging, or interview prep. Happy learning!"
         )
-        suggested_qs = ["What should I learn next?", "Which project should I build?", "How should I prepare for an interview?"]
+        suggested_qs = ["What is supervised learning?", "What is probability?", "Give me Python interview questions."]
 
     # ------------------------------------------------------------------
-    # 3. SPECIFIC TECHNICAL DEFINITIONS & EXPLANATIONS (LANGUAGE FIDELITY)
+    # 3. PYTHON TOPICS
     # ------------------------------------------------------------------
-    elif "div tag" in msg_low or msg_low == "what is div" or msg_low == "what is a div tag?" or msg_low == "what is div tag":
-        reply = (
-            "### What is a `<div>` tag in HTML?\n\n"
-            "The **`<div>`** tag (short for division) is a generic block-level container element in HTML. It is used to group related HTML elements together for styling (using CSS) or structural layout placement.\n\n"
-            "```html\n"
-            "<div class=\"card-container\">\n"
-            "  <h2>Project Title</h2>\n"
-            "  <p>This paragraph is grouped inside the container div.</p>\n"
-            "</div>\n"
-            "```"
-        )
-        suggested_qs = ["What is HTML?", "What is CSS?", "Give me a simple example."]
-
     elif "def in python" in msg_low or (msg_low.startswith("what is def") and "python" in msg_low) or msg_low == "what is def":
         reply = (
             "### What is `def` in Python?\n\n"
-            "In Python, **`def`** is the keyword used to **define a function**. A function is a block of reusable code that runs when called.\n\n"
+            "In Python, **`def`** (short for *define*) is the keyword used to **define a function**. "
+            "A function is a reusable block of organized code that performs a specific task and only runs when it is called.\n\n"
+            "**Key Characteristics:**\n"
+            "1. **Syntax**: Begins with `def`, followed by the function name, parentheses `()`, and a colon `:`. \n"
+            "2. **Parameters**: You can pass input arguments inside the parentheses.\n"
+            "3. **Return Value**: The `return` statement sends a result back to the caller.\n"
+            "4. **Indentation**: The function body must be indented (standard is 4 spaces).\n\n"
             "```python\n"
-            "def calculate_sum(a, b):\n"
-            "    return a + b\n\n"
+            "# Function definition\n"
+            "def calculate_area(length, width):\n"
+            "    \"\"\"Calculate and return the area of a rectangle.\"\"\"\n"
+            "    return length * width\n\n"
             "# Calling the function\n"
-            "result = calculate_sum(10, 20)\n"
-            "print(result)  # Output: 30\n"
+            "area = calculate_area(8, 5)\n"
+            "print(f\"The area is: {area}\")  # Output: The area is: 40\n"
             "```"
         )
-        suggested_qs = ["Write factorial in Python.", "What are variables?", "What is Python?"]
-
-    elif "function in java" in msg_low or ("function" in msg_low and "java" in msg_low):
-        reply = (
-            "### What is a Function (Method) in Java?\n\n"
-            "In Java, functions are defined as **methods** inside classes. Java methods specify access modifiers (`public`/`private`), return types, and parameters.\n\n"
-            "```java\n"
-            "public class Calculator {\n"
-            "    public static int add(int a, int b) {\n"
-            "        return a + b;\n"
-            "    }\n\n"
-            "    public static void main(String[] args) {\n"
-            "        System.out.println(add(5, 10)); // Output: 15\n"
-            "    }\n"
-            "}\n"
-            "```"
-        )
-        suggested_qs = ["Write factorial in Java.", "What is Java?", "What is OOP in Java?"]
-
-    elif "pointer in c" in msg_low or ("pointer" in msg_low and "c" in msg_low):
-        reply = (
-            "### What is a Pointer in C?\n\n"
-            "A **pointer** in C is a variable that stores the **memory address** of another variable. Pointers enable direct memory manipulation and dynamic allocation.\n\n"
-            "```c\n"
-            "#include <stdio.h>\n\n"
-            "int main() {\n"
-            "    int num = 42;\n"
-            "    int *ptr = &num;\n"
-            "    printf(\"Value: %d, Address: %p\\n\", *ptr, (void*)ptr);\n"
-            "    return 0;\n"
-            "}\n"
-            "```"
-        )
-        suggested_qs = ["What is C?", "What is C++?", "Give me a simple example."]
+        suggested_qs = ["Explain it with an example.", "What are *args and **kwargs in Python?", "Give me Python interview questions."]
 
     elif "factorial in python" in msg_low or ("factorial" in msg_low and "python" in msg_low):
         reply = (
@@ -604,14 +1729,92 @@ def _generate_internal_career_assistant_response(
             "        return 1\n"
             "    return n * factorial(n - 1)\n\n"
             "print(factorial(5))  # Output: 120\n"
+            "```\n\n"
+            "**Explanation**: The function calls itself with `n - 1` until it hits the base case (`n <= 1`), returning `1`."
+        )
+        suggested_qs = ["Explain previously generated code.", "Write factorial in Java.", "What is def in Python?"]
+
+    elif msg_low in ["what is python?", "what is python", "python"]:
+        reply = (
+            "### What is Python?\n\n"
+            "**Python** is a high-level, interpreted, general-purpose programming language created by Guido van Rossum. "
+            "It emphasizes code readability with clean, English-like syntax and significant indentation.\n\n"
+            "**Core Applications:**\n"
+            "• **Web & API Development**: FastAPI, Django, Flask\n"
+            "• **Data Science & ML**: Pandas, NumPy, Scikit-Learn, PyTorch, TensorFlow\n"
+            "• **Automation & Scripting**: Task automation, web scraping (BeautifulSoup, Selenium)\n"
+            "• **Cloud & DevOps**: Infrastructure scripting, AWS Lambda, Docker automation"
+        )
+        suggested_qs = ["What is def in Python?", "Give me Python interview questions.", "Can a non-IT student learn Python?"]
+
+    # ------------------------------------------------------------------
+    # 4. JAVA TOPICS
+    # ------------------------------------------------------------------
+    elif "inheritance in java" in msg_low or ("inheritance" in msg_low and "java" in msg_low):
+        reply = (
+            "### Inheritance in Java\n\n"
+            "In Java, **Inheritance** is an Object-Oriented Programming (OOP) mechanism where one class (called the **child class** or **subclass**) "
+            "inherits fields (attributes) and methods from another class (called the **parent class** or **superclass**).\n\n"
+            "**Key Concepts:**\n"
+            "1. **`extends` keyword**: Used to inherit from a class.\n"
+            "2. **Code Reusability**: Common logic is written in the superclass and reused by all subclasses.\n"
+            "3. **Method Overriding (`@Override`)**: Subclasses can provide their own specific implementation of an inherited method.\n"
+            "4. **`super` keyword**: Refers directly to the immediate parent class constructor or methods.\n"
+            "5. **Types supported**: Java supports Single, Multilevel, and Hierarchical inheritance (Multiple inheritance is supported through Interfaces to avoid ambiguity).\n\n"
+            "```java\n"
+            "// Superclass (Parent)\n"
+            "class Vehicle {\n"
+            "    protected String brand = \"Toyota\";\n\n"
+            "    public void honk() {\n"
+            "        System.out.println(\"Beep, beep!\");\n"
+            "    }\n"
+            "}\n\n"
+            "// Subclass (Child)\n"
+            "class Car extends Vehicle {\n"
+            "    private String modelName = \"Corolla\";\n\n"
+            "    @Override\n"
+            "    public void honk() {\n"
+            "        System.out.println(\"Car horn: Honk! Honk!\");\n"
+            "    }\n\n"
+            "    public void display() {\n"
+            "        System.out.println(brand + \" \" + modelName);\n"
+            "    }\n"
+            "}\n\n"
+            "public class Main {\n"
+            "    public static void main(String[] args) {\n"
+            "        Car myCar = new Car();\n"
+            "        myCar.honk();     // Calls overridden method\n"
+            "        myCar.display();  // Accesses inherited brand\n"
+            "    }\n"
+            "}\n"
             "```"
         )
-        suggested_qs = ["Explain the code.", "Write factorial in Java.", "What is def in Python?"]
+        suggested_qs = ["Explain it with an example.", "What is polymorphism in Java?", "Why doesn't Java support multiple inheritance?"]
+
+    elif "function in java" in msg_low or ("function" in msg_low and "java" in msg_low):
+        reply = (
+            "### What is a Function (Method) in Java?\n\n"
+            "In Java, functions are defined as **methods** inside classes. Java methods specify access modifiers (`public`/`private`), "
+            "return types, method names, and parameters.\n\n"
+            "```java\n"
+            "public class Calculator {\n"
+            "    // Static method returning integer sum\n"
+            "    public static int add(int a, int b) {\n"
+            "        return a + b;\n"
+            "    }\n\n"
+            "    public static void main(String[] args) {\n"
+            "        int total = add(15, 25);\n"
+            "        System.out.println(\"Sum: \" + total); // Output: Sum: 40\n"
+            "    }\n"
+            "}\n"
+            "```"
+        )
+        suggested_qs = ["Explain inheritance in Java.", "Write factorial in Java.", "What is OOP in Java?"]
 
     elif "factorial in java" in msg_low or ("factorial" in msg_low and "java" in msg_low):
         reply = (
             "### Java Factorial Program\n\n"
-            "Here is a complete Java class calculating factorial:\n\n"
+            "Here is a complete Java class calculating factorial using recursion:\n\n"
             "```java\n"
             "public class Factorial {\n"
             "    public static int factorial(int n) {\n"
@@ -619,203 +1822,416 @@ def _generate_internal_career_assistant_response(
             "        return n * factorial(n - 1);\n"
             "    }\n\n"
             "    public static void main(String[] args) {\n"
-            "        System.out.println(factorial(5));\n"
+            "        System.out.println(factorial(5)); // Output: 120\n"
             "    }\n"
             "}\n"
             "```"
         )
         suggested_qs = ["Explain previously generated code.", "What is a function in Java?", "Write factorial in Python."]
 
+    elif msg_low in ["what is java?", "what is java", "java"]:
+        reply = (
+            "### What is Java?\n\n"
+            "**Java** is a robust, high-level, class-based, object-oriented programming language designed for platform independence. "
+            "Java follows the **'Write Once, Run Anywhere' (WORA)** philosophy because source code is compiled into bytecode that runs on any Java Virtual Machine (JVM).\n\n"
+            "**Key Strengths:**\n"
+            "• Enterprise Backend Services (Spring Boot, Jakarta EE)\n"
+            "• Android Mobile Development\n"
+            "• Strong Type Safety, Automatic Garbage Collection, and Multithreading"
+        )
+        suggested_qs = ["Explain inheritance in Java.", "What is a function in Java?", "What is C++?"]
+
+    # ------------------------------------------------------------------
+    # 5. DATABASES & MONGODB
+    # ------------------------------------------------------------------
+    elif "mongodb" in msg_low or "what is mongodb" in msg_low:
+        reply = (
+            "### What is MongoDB?\n\n"
+            "**MongoDB** is a leading open-source, non-relational (**NoSQL**) document-oriented database designed for high availability, "
+            "scalability, and flexibility.\n\n"
+            "**Core Features:**\n"
+            "1. **Document-Based**: Instead of rows and columns, MongoDB stores data in **BSON documents** (Binary JSON format).\n"
+            "2. **Dynamic Schema**: Documents in the same collection do not need to share the exact same fields, allowing schemas to evolve naturally.\n"
+            "3. **Collections**: A group of MongoDB documents (equivalent to a table in relational databases).\n"
+            "4. **High Scalability & Performance**: Native support for horizontal scaling using **sharding** and automated failover via **replica sets**.\n\n"
+            "**Sample BSON Document:**\n"
+            "```json\n"
+            "{\n"
+            "  \"_id\": \"651a2b3c4d5e6f7a8b9c0d1e\",\n"
+            "  \"name\": \"Alex Johnson\",\n"
+            "  \"email\": \"alex@example.com\",\n"
+            "  \"skills\": [\"Python\", \"FastAPI\", \"MongoDB\"],\n"
+            "  \"isActive\": true\n"
+            "}\n"
+            "```\n\n"
+            "**PyMongo Query Example:**\n"
+            "```python\n"
+            "from pymongo import MongoClient\n\n"
+            "client = MongoClient(\"mongodb://localhost:27017\")\n"
+            "db = client.test_db\n"
+            "users = db.users.find({\"isActive\": True})\n"
+            "for u in users:\n"
+            "    print(u[\"name\"])\n"
+            "```"
+        )
+        suggested_qs = ["What is the difference between SQL and MongoDB?", "Explain it with an example.", "How does indexing work in MongoDB?"]
+
     elif "sql join" in msg_low or "explain sql join" in msg_low or ("join" in msg_low and "sql" in msg_low):
         reply = (
             "### What are SQL Joins?\n\n"
             "An **SQL Join** is used to combine rows from two or more tables based on a related column between them.\n\n"
-            "• **INNER JOIN**: Returns records with matching values in both tables.\n"
-            "• **LEFT JOIN**: Returns all records from the left table and matched records from the right table.\n\n"
+            "• **INNER JOIN**: Returns rows with matching values in both tables.\n"
+            "• **LEFT JOIN**: Returns all rows from the left table and matched rows from the right table.\n"
+            "• **RIGHT JOIN**: Returns all rows from the right table and matched rows from the left table.\n"
+            "• **FULL OUTER JOIN**: Returns all rows when there is a match in either table.\n\n"
             "```sql\n"
             "SELECT users.name, orders.amount\n"
             "FROM users\n"
             "INNER JOIN orders ON users.user_id = orders.user_id;\n"
             "```"
         )
-        suggested_qs = ["What is SQL?", "What is DBMS?", "Give me a simple example."]
+        suggested_qs = ["What is SQL?", "What is MongoDB?", "Give me a simple SQL example."]
 
-    elif msg_low in ["what is python?", "what is python", "python"]:
+    elif msg_low in ["what is sql?", "what is sql", "sql"]:
         reply = (
-            "### What is Python?\n\n"
-            "**Python** is a high-level, interpreted, general-purpose programming language known for clean, English-like syntax. "
-            "It is widely used in Web Development (FastAPI, Django), Data Science, Machine Learning, Automation, and Scripting."
+            "### What is SQL?\n\n"
+            "**SQL** (Structured Query Language) is the standard domain-specific language used for managing, querying, "
+            "and manipulating relational databases (RDBMS) such as PostgreSQL, MySQL, SQLite, and Oracle.\n\n"
+            "**Key Command Types:**\n"
+            "• **DQL (Querying)**: `SELECT`\n"
+            "• **DML (Manipulation)**: `INSERT`, `UPDATE`, `DELETE`\n"
+            "• **DDL (Definition)**: `CREATE TABLE`, `ALTER TABLE`, `DROP TABLE`\n"
+            "• **TCL (Transactions)**: `COMMIT`, `ROLLBACK`"
         )
-        suggested_qs = ["What is def in Python?", "Write factorial in Python.", "Can a non-IT student learn Python?"]
+        suggested_qs = ["Explain SQL joins.", "What is MongoDB?", "What is a primary key?"]
 
-    elif msg_low in ["what is java?", "what is java", "java"]:
+    elif "fastapi" in msg_low:
         reply = (
-            "### What is Java?\n\n"
-            "**Java** is a high-level, class-based, object-oriented programming language designed for platform independence ('Write Once, Run Anywhere' via the JVM). "
-            "It is heavily used in Enterprise Backend Applications, Android Development, and Large-Scale Systems."
+            "### What is FastAPI?\n\n"
+            "**FastAPI** is a modern, high-performance web framework for building APIs with Python 3.8+ based on standard Python type hints.\n\n"
+            "**Key Advantages:**\n"
+            "1. **High Speed**: Built on Starlette and Pydantic, offering performance comparable to Node.js and Go.\n"
+            "2. **Automatic Interactive Documentation**: Generates Swagger UI (`/docs`) and ReDoc (`/redoc`) automatically.\n"
+            "3. **Data Validation**: Strict data parsing and validation using Pydantic schemas.\n"
+            "4. **Async Native**: Built-in support for `async` and `await` concurrency.\n\n"
+            "```python\n"
+            "from fastapi import FastAPI\n\n"
+            "app = FastAPI()\n\n"
+            "@app.get(\"/\")\n"
+            "async def root():\n"
+            "    return {\"message\": \"Hello from FastAPI!\"}\n"
+            "```"
         )
-        suggested_qs = ["What is a function in Java?", "Write factorial in Java.", "What is C++?"]
+        suggested_qs = ["What is the difference between FastAPI and Flask?", "How do Pydantic models work?", "What is a REST API?"]
 
-    elif msg_low in ["what is javascript?", "what is javascript", "javascript"]:
+    # ------------------------------------------------------------------
+    # 6. DATA SCIENCE, MACHINE LEARNING & AI
+    # ------------------------------------------------------------------
+    elif "supervised learning" in msg_low or "explain supervised learning" in msg_low:
         reply = (
-            "### What is JavaScript?\n\n"
-            "**JavaScript** (JS) is a high-level dynamic programming language that powers interactive user interfaces on web browsers "
-            "and server-side applications via Node.js."
+            "### Supervised Learning Explained\n\n"
+            "**Supervised Learning** is the primary category of Machine Learning where an algorithm learns to map input data ($X$) "
+            "to correct output labels ($y$) using **labeled training data**.\n\n"
+            "**How It Works:**\n"
+            "The model is fed features along with ground truth answers. It iteratively makes predictions, measures errors using a loss function, "
+            "and adjusts its internal parameters until it accurately predicts labels for new, unseen data.\n\n"
+            "**Two Main Types:**\n"
+            "1. **Classification** (Predicting discrete category/class):\n"
+            "   • Examples: Email Spam vs. Not Spam, Fraud Detection, Disease Diagnosis.\n"
+            "   • Common Algorithms: Logistic Regression, Decision Trees, Random Forest, Support Vector Machines (SVM).\n\n"
+            "2. **Regression** (Predicting continuous numerical value):\n"
+            "   • Examples: Predicting house prices, temperature forecasts, revenue projections.\n"
+            "   • Common Algorithms: Linear Regression, Ridge/Lasso, Gradient Boosting (XGBoost).\n\n"
+            "```python\n"
+            "from sklearn.linear_model import LogisticRegression\n\n"
+            "# 1. Features (e.g. word count) and Labels (0 = Not Spam, 1 = Spam)\n"
+            "X_train = [[1.2], [3.5], [0.8], [4.1]]\n"
+            "y_train = [0, 1, 0, 1]\n\n"
+            "# 2. Train supervised model\n"
+            "model = LogisticRegression()\n"
+            "model.fit(X_train, y_train)\n\n"
+            "# 3. Predict on unseen email\n"
+            "prediction = model.predict([[3.8]])\n"
+            "print(\"Spam\" if prediction[0] == 1 else \"Not Spam\")\n"
+            "```"
         )
-        suggested_qs = ["Why should I learn React?", "What is HTML?", "What is CSS?"]
+        suggested_qs = ["Explain it with an example.", "What is the difference between supervised and unsupervised learning?", "Explain overfitting in machine learning."]
+
+    elif "unsupervised learning" in msg_low:
+        reply = (
+            "### Unsupervised Learning Explained\n\n"
+            "**Unsupervised Learning** is a branch of Machine Learning where algorithms discover hidden patterns, groupings, "
+            "or structures in data **without human supervision or pre-existing labels**.\n\n"
+            "**Main Approaches:**\n"
+            "1. **Clustering**: Grouping similar data points together (e.g., Customer Segmentation with K-Means or DBSCAN).\n"
+            "2. **Dimensionality Reduction**: Compressing high-dimensional datasets while preserving variance (e.g., PCA, t-SNE).\n"
+            "3. **Anomaly Detection**: Identifying unusual data points (e.g., bank fraud, manufacturing defects)."
+        )
+        suggested_qs = ["What is supervised learning?", "Explain K-Means clustering.", "What is PCA?"]
+
+    elif "machine learning" in msg_low or "what is ml" in msg_low:
+        reply = (
+            "### What is Machine Learning?\n\n"
+            "**Machine Learning (ML)** is a subset of Artificial Intelligence where computer systems learn from data, identify patterns, "
+            "and make decisions with minimal human intervention, improving performance over time without being explicitly programmed.\n\n"
+            "**Major Branches:**\n"
+            "• **Supervised Learning**: Learning from labeled inputs and outputs.\n"
+            "• **Unsupervised Learning**: Finding hidden structures in unlabeled data.\n"
+            "• **Reinforcement Learning**: Learning through trial, error, rewards, and penalties."
+        )
+        suggested_qs = ["Explain supervised learning.", "How can I become a Data Scientist?", "What is deep learning?"]
+
+    # ------------------------------------------------------------------
+    # 7. MATHEMATICS & BASIC STATISTICS
+    # ------------------------------------------------------------------
+    elif "probability" in msg_low or "what is probability" in msg_low:
+        reply = (
+            "### What is Probability?\n\n"
+            "**Probability** is the mathematical branch that measures the **likelihood or chance** of an event occurring. "
+            "It is quantified as a number between **0 and 1** (or 0% to 100%):\n"
+            "• $P(E) = 0$: Impossible event\n"
+            "• $P(E) = 1$: Certain event\n\n"
+            "**Fundamental Formula:**\n"
+            "$$\\text{Probability } P(E) = \\frac{\\text{Number of favorable outcomes}}{\\text{Total number of possible outcomes in sample space } S}$$\n\n"
+            "**Classic Examples:**\n"
+            "1. **Coin Toss**: Flipping a fair coin has 2 possible outcomes: {Heads, Tails}.\n"
+            "   $$P(\\text{Heads}) = \\frac{1}{2} = 0.5 \\text{ (50%)}$$\n\n"
+            "2. **Rolling a 6-Sided Die**: Total possible outcomes: {1, 2, 3, 4, 5, 6}.\n"
+            "   • Probability of rolling a 4: $P(4) = \\frac{1}{6} \\approx 16.7%$\n"
+            "   • Probability of rolling an even number {2, 4, 6}: $P(\\text{Even}) = \\frac{3}{6} = 0.5$\n\n"
+            "**Essential Rules:**\n"
+            "• **Complement Rule**: $P(\\text{not } A) = 1 - P(A)$\n"
+            "• **Independent Events**: $P(A \\text{ and } B) = P(A) \\times P(B)$\n"
+            "• **Conditional Probability**: Probability of $A$ given $B$ has occurred: $P(A|B) = \\frac{P(A \\cap B)}{P(B)}$"
+        )
+        suggested_qs = ["Explain it with an example.", "What is Bayes' Theorem?", "What is standard deviation?"]
+
+    elif any(k in msg_low for k in ["statistics", "standard deviation", "mean", "median", "variance"]):
+        reply = (
+            "### Basic Statistics Concepts\n\n"
+            "Statistics is the science of collecting, analyzing, interpreting, and presenting data.\n\n"
+            "**1. Measures of Central Tendency:**\n"
+            "• **Mean**: The arithmetic average (sum of all values divided by count).\n"
+            "• **Median**: The middle value when data is sorted in ascending order (resistant to extreme outliers).\n"
+            "• **Mode**: The most frequently occurring value in the dataset.\n\n"
+            "**2. Measures of Dispersion (Spread):**\n"
+            "• **Variance (\\sigma^2)**: Average of squared differences from the Mean.\n"
+            "• **Standard Deviation (\\sigma)**: Square root of variance, measuring how spread out numbers are around the mean."
+        )
+        suggested_qs = ["What is probability?", "What is a normal distribution?", "What is hypothesis testing?"]
+
+    # ------------------------------------------------------------------
+    # 8. WEB DEVELOPMENT & REACT
+    # ------------------------------------------------------------------
+    elif "div tag" in msg_low or msg_low == "what is div" or msg_low == "what is a div tag?" or msg_low == "what is div tag":
+        reply = (
+            "### What is a `<div>` tag in HTML?\n\n"
+            "The **`<div>`** tag (short for division) is a generic block-level container element in HTML. "
+            "It is used to group related HTML elements together for layout structuring or styling with CSS.\n\n"
+            "```html\n"
+            "<div class=\"card-container\">\n"
+            "  <h2>Project Title</h2>\n"
+            "  <p>This paragraph is grouped inside the container div.</p>\n"
+            "</div>\n"
+            "```"
+        )
+        suggested_qs = ["What is HTML?", "What is CSS?", "Give me a simple example."]
 
     elif msg_low in ["what is react?", "what is react", "react"] or "why should i learn react" in msg_low:
         reply = (
             "### What is React & Why Learn It?\n\n"
-            "**React** is an open-source JavaScript UI library created by Meta. It uses a **component-based architecture** and a **Virtual DOM** to build fast, interactive single-page web applications.\n\n"
-            "**Why Learn React?**\n"
-            "1. **High Job Demand**: Essential skill for Modern Frontend & Full Stack Developers.\n"
-            "2. **Reusability**: Build UI components once and reuse them across your app.\n"
-            "3. **Ecosystem**: Huge community support, rich libraries, and easy integration with REST APIs."
+            "**React** is an open-source JavaScript front-end library created by Meta for building interactive user interfaces, "
+            "primarily for Single Page Applications (SPAs).\n\n"
+            "**Core Features:**\n"
+            "1. **Component-Based Architecture**: Build modular, encapsulated UI elements that manage their own state.\n"
+            "2. **Virtual DOM**: Re-renders only changed elements in memory before updating the real DOM, ensuring high performance.\n"
+            "3. **JSX**: Combines HTML syntax directly inside JavaScript code.\n"
+            "4. **Hooks**: Functional state and side-effect management via `useState`, `useEffect`, etc.\n\n"
+            "```jsx\n"
+            "import React, { useState } from 'react';\n\n"
+            "function Counter() {\n"
+            "  const [count, setCount] = useState(0);\n"
+            "  return (\n"
+            "    <button onClick={() => setCount(count + 1)}>\n"
+            "      Clicked {count} times\n"
+            "    </button>\n"
+            "  );\n"
+            "}\n\n"
+            "export default Counter;\n"
+            "```"
         )
-        suggested_qs = ["What is JavaScript?", "Which project should I build?", "What should I learn first?"]
+        suggested_qs = ["What is the difference between state and props?", "Explain it with an example.", "What is JavaScript?"]
+
+    elif msg_low in ["what is javascript?", "what is javascript", "javascript"]:
+        reply = (
+            "### What is JavaScript?\n\n"
+            "**JavaScript** (JS) is a high-level, dynamic, interpreted programming language that powers interactivity on the web. "
+            "Along with HTML and CSS, it is one of the three core technologies of the World Wide Web, and also runs servers via Node.js."
+        )
+        suggested_qs = ["What is React?", "What is HTML?", "What is CSS?"]
 
     elif msg_low in ["what is html?", "what is html", "html"]:
         reply = (
             "### What is HTML?\n\n"
-            "**HTML** (HyperText Markup Language) is the standard markup language used to structure web pages on the Internet using elements like headings, paragraphs, divs, links, and forms."
+            "**HTML** (HyperText Markup Language) is the standard markup language used to structure web pages on the Internet "
+            "using elements like headings, paragraphs, divs, links, forms, and media elements."
         )
         suggested_qs = ["What is a div tag?", "What is CSS?", "What is JavaScript?"]
 
     elif msg_low in ["what is css?", "what is css", "css"]:
         reply = (
             "### What is CSS?\n\n"
-            "**CSS** (Cascading Style Sheets) is the stylesheet language used to specify presentation, styling, colors, typography, flexbox/grid layouts, and responsive design for HTML elements."
+            "**CSS** (Cascading Style Sheets) is the stylesheet language used to specify presentation, colors, typography, "
+            "flexbox/grid layouts, animations, and responsive design for HTML elements."
         )
         suggested_qs = ["What is HTML?", "What is a div tag?", "What is React?"]
 
-    elif msg_low in ["what is git?", "what is git", "git"]:
+    # ------------------------------------------------------------------
+    # 9. C & C++
+    # ------------------------------------------------------------------
+    elif "pointer in c" in msg_low or ("pointer" in msg_low and "c" in msg_low):
         reply = (
-            "### What is Git?\n\n"
-            "**Git** is a distributed version control system used to track changes in source code during software development, enable collaboration, manage branches, and push code repositories to GitHub."
+            "### What is a Pointer in C?\n\n"
+            "A **pointer** in C is a variable that stores the **memory address** of another variable. "
+            "Pointers enable direct memory manipulation, efficient array indexing, and dynamic memory allocation (`malloc`, `free`).\n\n"
+            "```c\n"
+            "#include <stdio.h>\n\n"
+            "int main() {\n"
+            "    int num = 42;\n"
+            "    int *ptr = &num; // ptr stores address of num\n\n"
+            "    printf(\"Value of num: %d\\n\", num);\n"
+            "    printf(\"Address of num: %p\\n\", (void*)ptr);\n"
+            "    printf(\"Value via pointer dereference: %d\\n\", *ptr);\n"
+            "    return 0;\n"
+            "}\n"
+            "```"
         )
-        suggested_qs = ["What should I learn first?", "Which project should I build?", "How should I prepare for an interview?"]
-
-    elif msg_low in ["what is sql?", "what is sql", "sql"]:
-        reply = (
-            "### What is SQL?\n\n"
-            "**SQL** (Structured Query Language) is the standard language for querying, managing, and manipulating data stored in relational databases (PostgreSQL, MySQL, SQLite)."
-        )
-        suggested_qs = ["Explain SQL joins.", "What is Python?", "Which skill should I learn first?"]
+        suggested_qs = ["What is C?", "What is C++?", "Give me a simple example."]
 
     elif msg_low in ["what is c?", "what is c", "c"]:
         reply = (
             "### What is C?\n\n"
-            "**C** is a foundational procedural programming language developed in 1972. It offers low-level memory control and is used for OS kernels, embedded systems, and compilers."
+            "**C** is a foundational procedural programming language developed in 1972 by Dennis Ritchie. "
+            "It provides low-level memory access, a compact set of keywords, and high execution speed, making it the choice for operating systems, embedded systems, and compilers."
         )
         suggested_qs = ["What is a pointer in C?", "What is C++?", "What is Java?"]
 
     elif msg_low in ["what is c++?", "what is c++", "c++"]:
         reply = (
             "### What is C++?\n\n"
-            "**C++** is a high-performance extension of C that adds Object-Oriented Programming (OOP), templates (STL), and modern memory management."
+            "**C++** is a powerful general-purpose programming language created by Bjarne Stroustrup as an extension of C. "
+            "It supports Object-Oriented Programming (classes, inheritance, polymorphism), generic programming (Standard Template Library - STL), and manual memory control."
         )
         suggested_qs = ["What is a pointer in C?", "What is Java?", "What is Python?"]
 
     # ------------------------------------------------------------------
-    # 4. MULTI-TURN CONTEXT RESOLUTION & PRONOUN RESOLUTION
+    # 10. CODE DEBUGGING
     # ------------------------------------------------------------------
-    elif any(phrase in msg_low for phrase in ["explain previously", "explain the code", "explain this code", "explain that example", "explain the second line", "explain that code"]):
-        if "factorial" in last_assistant_msg or "return n *" in last_assistant_msg or "class factorial" in last_assistant_msg:
+    elif intent == "debugging" or any(k in msg_low for k in ["debug", "fix this code", "fix my code", "help me debug"]):
+        if any(c in user_message for c in [":", "def ", "class ", "import ", "{", "}"]) and len(user_message.split()) > 6:
+            # Code snippet provided with message
             reply = (
-                "### Detailed Breakdown of the Factorial Code\n\n"
-                "1. **Function Signature**: Takes an integer parameter `n`.\n"
-                "2. **Base Case (`if n <= 1`)**: Stops recursion when `n` reaches 1 or 0, returning `1` to prevent infinite loops.\n"
-                "3. **Recursive Execution (`n * factorial(n - 1)`)**: Multiplies current number `n` by the factorial of `n - 1`.\n"
-                "4. **Output Result**: Computes `5 * 4 * 3 * 2 * 1 = 120`."
-            )
-        else:
-            reply = (
-                "### Code Explanation Breakdown\n\n"
-                "1. **Declaration & Input**: Defines variables, parameters, or HTML container elements.\n"
-                "2. **Execution Logic**: Performs the operation, condition check, or layout grouping.\n"
-                "3. **Return Output**: Passes the computed result or rendered UI back to the application."
-            )
-        suggested_qs = ["Give another example.", "What should I learn first?", "Which project should I build?"]
-
-    elif msg_low in ["is it difficult?", "is it hard?", "is python difficult?", "is programming hard?"] or (msg_low.startswith("is it") and len(msg_low.split()) <= 4):
-        topic = "Python" if "python" in last_assistant_msg or "python" in last_user_msg else ("JavaScript" if "javascript" in last_assistant_msg else "Programming")
-        reply = (
-            f"### Is {topic} Difficult to Learn?\n\n"
-            f"**No!** {topic} is considered very approachable, especially for beginners. "
-            f"It uses clean syntax that mirrors natural English logic. With regular hands-on coding practice for 30–45 minutes a day, most students master core concepts within a few weeks."
-        )
-        suggested_qs = ["Give me a simple example.", "What should I learn first?", "Give me a 30-day roadmap."]
-
-    elif msg_low in ["give me a simple example", "give me a simple example.", "give an example", "give me an example."]:
-        if "python" in last_assistant_msg or "def" in last_user_msg:
-            reply = (
-                "### Simple Python Code Example\n\n"
+                "### Code Debugging & Correction\n\n"
+                "I analyzed your code snippet for common syntax and logical issues:\n\n"
+                "**Identified Issues & Resolution:**\n"
+                "1. **Syntax Check**: Ensure proper punctuation (such as colons `:` after `def`, `if`, `for`, `while` statements in Python or semicolons `;` in Java/C).\n"
+                "2. **Indentation Check**: Maintain consistent 4-space indentation across all code blocks.\n"
+                "3. **Variable Scope**: Ensure all variables are defined before being accessed.\n\n"
                 "```python\n"
-                "# Function to greet a student\n"
-                "def welcome_student(name, career_target):\n"
-                "    return f\"Hello {name}, welcome to your {career_target} learning path!\"\n\n"
-                "message = welcome_student(\"Alex\", \"Full Stack Developer\")\n"
-                "print(message)\n"
-                "```"
-            )
-        elif "java" in last_assistant_msg:
-            reply = (
-                "### Simple Java Code Example\n\n"
-                "```java\n"
-                "public class Welcome {\n"
-                "    public static void main(String[] args) {\n"
-                "        String name = \"Alex\";\n"
-                "        System.out.println(\"Hello \" + name + \", welcome to Java programming!\");\n"
-                "    }\n"
-                "}\n"
-                "```"
-            )
-        elif "html" in last_assistant_msg or "div" in last_assistant_msg:
-            reply = (
-                "### Simple HTML Code Example\n\n"
-                "```html\n"
-                "<div class=\"user-profile\">\n"
-                "  <h2>Welcome Student</h2>\n"
-                "  <p>Track your target career progress here.</p>\n"
-                "</div>\n"
+                "# Corrected & Verified Code\n"
+                "def process_data(items):\n"
+                "    results = []\n"
+                "    for item in items:\n"
+                "        if item is not None:\n"
+                "            results.append(item * 2)\n"
+                "    return results\n\n"
+                "print(process_data([1, 2, 3]))  # Output: [2, 4, 6]\n"
                 "```"
             )
         else:
             reply = (
-                "### Simple Code Example\n\n"
-                "```javascript\n"
-                "const student = { name: 'Alex', targetCareer: 'Full Stack Software Engineer' };\n"
-                "console.log(`Welcome ${student.name}! Target: ${student.targetCareer}`);\n"
-                "```"
+                "### Code Debugging Assistance (Troubleshooting)\n\n"
+                "I'd be glad to help you debug your code! Please provide:\n"
+                "1. **Your code snippet**\n"
+                "2. **The error message / traceback** (or describe what unexpected behavior is occurring)\n\n"
+                "**Top 4 Most Common Python Errors & Fixes:**\n"
+                "• **`IndentationError`**: Mixing tabs and spaces, or inconsistent block indentation.\n"
+                "• **`IndexError: list index out of range`**: Accessing an index >= `len(list)`. Use `for item in my_list:` instead.\n"
+                "• **`TypeError: unsupported operand type(s)`**: Operating on incompatible types (e.g. adding string + int). Use type casting `str(x)`.\n"
+                "• **`NameError: name 'x' is not defined`**: Misspelled variable name or accessing a variable outside its defined scope."
             )
-        suggested_qs = ["Explain that example.", "What should I learn after it?", "Which project should I build?"]
-
-    elif any(phrase in msg_low for phrase in ["what should i learn after it", "what to learn after", "what after javascript", "what after python"]):
-        first_sk = ordered_skills[0] if ordered_skills else "JavaScript"
-        second_sk = ordered_skills[1] if len(ordered_skills) > 1 else "React"
-        third_sk = ordered_skills[2] if len(ordered_skills) > 2 else "FastAPI"
-        reply = (
-            f"### Next Skill Recommendation\n\n"
-            f"After building confidence in **{first_sk}**, your next priority skill for **{target_career}** is **{second_sk}**, followed by **{third_sk}**.\n\n"
-            f"**Why {second_sk}?**\n"
-            f"It builds directly on top of {first_sk} to enable real-world application development and web component building."
-        )
-        suggested_qs = ["Which project should I build?", "Give me a 30-day roadmap", "How should I prepare for an interview?"]
-
-    elif any(k in msg_low for k in ["how can i test it", "test it", "how to test"]):
-        reply = (
-            "### How to Test the Code\n\n"
-            "1. Save your code into a local file with the proper extension (`.py`, `.java`, `.html`, `.js`, etc.).\n"
-            "2. Execute the file using your terminal interpreter or browser console.\n"
-            "3. Verify output messages or console logs to confirm expected logic."
-        )
-        suggested_qs = ["Give another example.", "What should I learn first?", "Which project should I build?"]
+        suggested_qs = ["How do I fix IndentationError?", "What is the difference between TypeError and ValueError?", "Give me Python interview questions."]
 
     # ------------------------------------------------------------------
-    # 5. SKILL PRIORITY & LEARNING SEQUENCE
+    # 11. INTERVIEW PREPARATION
+    # ------------------------------------------------------------------
+    elif "python interview questions" in msg_low or ("interview" in msg_low and "python" in msg_low):
+        reply = (
+            "### Top Python Technical Interview Questions\n\n"
+            "Here are the top technical questions frequently asked in Python engineering interviews:\n\n"
+            "1. **What is the difference between a List and a Tuple?**\n"
+            "   • *Lists* are mutable (can modify elements in-place), use `[]`, and have higher memory overhead.\n"
+            "   • *Tuples* are immutable (cannot be changed after creation), use `()`, are faster, and can be used as dictionary keys.\n\n"
+            "2. **How does Python memory management work?**\n"
+            "   • Python uses a private heap for object storage. Memory is managed via **reference counting** and a cyclic **garbage collector**.\n\n"
+            "3. **What is the Global Interpreter Lock (GIL)?**\n"
+            "   • A mutex in CPython that allows only one thread to execute Python bytecode at a time, ensuring thread-safe memory management. For CPU-bound parallel execution, `multiprocessing` is preferred over `threading`.\n\n"
+            "4. **What are Decorators and how are they used?**\n"
+            "   • A decorator is a function that takes another function as an argument, extends its behavior without modifying its source code, and returns the modified function (using `@decorator_name`).\n\n"
+            "5. **What is the difference between `==` and `is`?**\n"
+            "   • `==` checks for value equality (whether values are equal).\n"
+            "   • `is` checks for reference equality (whether both point to the exact same object in memory).\n\n"
+            "6. **What are `*args` and `**kwargs`?**\n"
+            "   • `*args` allows passing variable positional arguments as a tuple.\n"
+            "   • `**kwargs` allows passing variable keyword arguments as a dictionary."
+        )
+        suggested_qs = ["Can you explain Python decorators with a code example?", "How do generators and yield work in Python?", "What is def in Python?"]
+
+    elif any(k in msg_low for k in ["interview", "prepare for an interview", "mock interview", "interview skills"]):
+        is_career_relevant = True
+        reply = (
+            f"### Interview Preparation Strategy for **{target_career}**\n\n"
+            f"1. **Core Technical Mastery**: Review fundamental concepts in **{ordered_skills[0] if ordered_skills else 'core skills'}** and **{ordered_skills[1] if len(ordered_skills) > 1 else 'frameworks'}**.\n"
+            f"2. **Portfolio Walkthrough**: Be ready to present **{top_project_title}** using the **STAR framework** (Situation, Task, Action, Result).\n"
+            f"3. **Mock Practice**: Practice explaining architectural trade-offs, time complexity, and debugging steps aloud."
+        )
+        suggested_qs = ["Give me Python interview questions.", "What should I learn first?", "Which project should I build?"]
+
+    # ------------------------------------------------------------------
+    # 12. CAREER GUIDANCE: DATA SCIENTIST & OTHERS
+    # ------------------------------------------------------------------
+    elif "how can i become a data scientist" in msg_low or "become a data scientist" in msg_low or "data scientist" in msg_low and "how to" in msg_low:
+        is_career_relevant = True
+        reply = (
+            "### How to Become a Data Scientist: Step-by-Step Roadmap\n\n"
+            "**Phase 1: Mathematics & Statistics (Weeks 1-4)**\n"
+            "• Linear Algebra (matrices, vectors, eigenvalues)\n"
+            "• Probability & Distributions (Bayes theorem, normal distribution)\n"
+            "• Descriptive and Inferential Statistics (hypothesis testing, p-values)\n\n"
+            "**Phase 2: Programming & Data Wrangling (Weeks 5-8)**\n"
+            "• Python mastery (data structures, functions, OOP)\n"
+            "• Data manipulation with **Pandas** and **NumPy**\n"
+            "• Relational database querying with **SQL** (joins, aggregations, window functions)\n\n"
+            "**Phase 3: Data Visualization & EDA (Weeks 9-10)**\n"
+            "• Exploratory Data Analysis (EDA) and data storytelling\n"
+            "• Visualizations using **Matplotlib**, **Seaborn**, and Tableau/Power BI\n\n"
+            "**Phase 4: Machine Learning Fundamentals (Weeks 11-16)**\n"
+            "• Supervised Learning (Regression, Random Forests, XGBoost)\n"
+            "• Unsupervised Learning (K-Means, PCA)\n"
+            "• Model evaluation metrics (Precision, Recall, F1, ROC-AUC, RMSE)\n\n"
+            "**Phase 5: Portfolio Projects & Deployment (Weeks 17-20)**\n"
+            "• Build end-to-end projects: e.g. Customer Churn Prediction or Credit Risk Scoring\n"
+            "• Deploy ML models via FastAPI or Streamlit and publish code to GitHub\n\n"
+            "**Phase 6: Interview Preparation**\n"
+            "• Practice coding challenges (LeetCode Python) and ML system design questions"
+        )
+        suggested_qs = ["Explain supervised learning.", "What is probability?", "Give me Python interview questions."]
+
+    # ------------------------------------------------------------------
+    # 13. CAREER GUIDANCE: PROFILE PERSONALIZATION & ROADMAPS
     # ------------------------------------------------------------------
     elif any(k in msg_low for k in ["start first", "learn first", "first skill", "where to begin", "what should i learn", "what skill should i improve", "what to learn", "learn next"]):
+        is_career_relevant = True
         first_skill = ordered_skills[0] if ordered_skills else "JavaScript"
         second_skill = ordered_skills[1] if len(ordered_skills) > 1 else "React"
         seq_md = "\n".join([f"{i+1}. **{sk}**" for i, sk in enumerate(ordered_skills)])
@@ -843,10 +2259,8 @@ def _generate_internal_career_assistant_response(
         }
         suggested_qs = ["Which project should I build?", "Give me a 30-day roadmap", "How should I prepare for an interview?"]
 
-    # ------------------------------------------------------------------
-    # 6. SKILL REQUIREMENTS BY CAREER ROLE
-    # ------------------------------------------------------------------
     elif any(k in msg_low for k in ["skills are required for", "skills required for", "what skills do i need for"]):
+        is_career_relevant = True
         if "data scientist" in msg_low or "data science" in msg_low:
             role = "Data Scientist"
             req_skills = ["Python", "Statistics", "SQL", "Pandas", "NumPy", "Scikit-Learn", "Data Visualization", "Machine Learning"]
@@ -869,10 +2283,8 @@ def _generate_internal_career_assistant_response(
         )
         suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a roadmap."]
 
-    # ------------------------------------------------------------------
-    # 7. ROADMAP GENERATION
-    # ------------------------------------------------------------------
     elif any(k in msg_low for k in ["roadmap", "30-day", "30 day", "learning plan", "what should i learn this week"]):
+        is_career_relevant = True
         first_skill = ordered_skills[0] if ordered_skills else "JavaScript"
         second_skill = ordered_skills[1] if len(ordered_skills) > 1 else "React"
         third_skill = ordered_skills[2] if len(ordered_skills) > 2 else "FastAPI"
@@ -900,10 +2312,8 @@ def _generate_internal_career_assistant_response(
         }
         suggested_qs = ["What should I learn first?", "Which project should I build?", "How should I prepare for an interview?"]
 
-    # ------------------------------------------------------------------
-    # 8. PORTFOLIO PROJECT RECOMMENDATIONS
-    # ------------------------------------------------------------------
     elif any(k in msg_low for k in ["which project", "what project", "build next", "recommend a project", "suggest a project", "beginner project", "resume project", "project for me", "project should i build"]):
+        is_career_relevant = True
         p_match = top_project.get("match_score", 98.0)
         p_skills = ", ".join(top_project.get("skills_covered", [ordered_skills[0] if ordered_skills else "React"]))
         p_desc = top_project.get("description", "Build a high-impact application with user authentication and database persistence.")
@@ -926,21 +2336,10 @@ def _generate_internal_career_assistant_response(
         suggested_qs = ["What should I learn first?", "How should I prepare for an interview?", "Give me a 30-day roadmap."]
 
     # ------------------------------------------------------------------
-    # 9. INTERVIEW PREPARATION GUIDANCE
-    # ------------------------------------------------------------------
-    elif any(k in msg_low for k in ["interview", "prepare for an interview", "mock interview", "questions for", "interview skills"]):
-        reply = (
-            f"### Interview Preparation Strategy for **{target_career}**\n\n"
-            f"1. **Core Technical Mastery**: Review fundamental concepts in **{ordered_skills[0] if ordered_skills else 'JavaScript'}** and **{ordered_skills[1] if len(ordered_skills) > 1 else 'React'}**.\n"
-            f"2. **Portfolio Walkthrough**: Be ready to present **{top_project_title}** using the **STAR framework** (Situation, Task, Action, Result).\n"
-            f"3. **Mock Interview Module**: Use our platform's automated Interview Preparation tool to answer practice questions and get AI score feedback."
-        )
-        suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a 30-day roadmap."]
-
-    # ------------------------------------------------------------------
-    # 10. NON-IT & CAREER TRANSITION GUIDANCE
+    # 14. NON-IT CAREER TRANSITIONS
     # ------------------------------------------------------------------
     elif "non-it" in msg_low or "non-cs" in msg_low or "non cs" in msg_low or "switch to it" in msg_low or "can a non-it student learn" in msg_low:
+        is_career_relevant = True
         reply = (
             "### Transitioning from Non-IT to Programming & Technology\n\n"
             "**Yes, absolutely!** Students and professionals from commerce, arts, mechanical engineering, finance, and marketing transition into tech roles every day.\n\n"
@@ -966,6 +2365,7 @@ def _generate_internal_career_assistant_response(
         suggested_qs = ["What is digital marketing?", "Can a non-IT student learn Python?", "What should I learn first?"]
 
     elif any(k in msg_low for k in ["what career should i choose", "which career is suitable", "what career suits me"]):
+        is_career_relevant = True
         reply = (
             f"### Personal Career Assessment for Your Profile\n\n"
             f"Based on your education (**{education if education else 'Degree'}**), branch (**{branch if branch else 'General'}**), and interests, "
@@ -976,34 +2376,239 @@ def _generate_internal_career_assistant_response(
         suggested_qs = ["What should I learn first?", "Which project should I build?", "Give me a 30-day roadmap."]
 
     # ------------------------------------------------------------------
-    # 11. GENERAL FALLBACK
+    # 15. FOLLOW-UP QUESTIONS & MULTI-TURN MEMORY
+    # ------------------------------------------------------------------
+    elif any(phrase in msg_low for phrase in ["explain with an example", "explain it with an example", "give an example", "give me a simple example", "give me an example", "show an example", "show me an example"]):
+        # Check topic or recent context
+        if topic == "java_inheritance" or "inheritance" in last_user_msg or "inheritance" in last_assistant_msg:
+            reply = (
+                "### Java Inheritance Example: Real-World Analogy\n\n"
+                "Here is a complete, runnable Java example demonstrating inheritance with an `Animal` parent class and `Dog` child class:\n\n"
+                "```java\n"
+                "// Superclass (Parent)\n"
+                "class Animal {\n"
+                "    String name;\n\n"
+                "    Animal(String name) {\n"
+                "        this.name = name;\n"
+                "    }\n\n"
+                "    void makeSound() {\n"
+                "        System.out.println(name + \" makes a generic animal sound.\");\n"
+                "    }\n"
+                "}\n\n"
+                "// Subclass (Child) inherits from Animal using 'extends'\n"
+                "class Dog extends Animal {\n"
+                "    Dog(String name) {\n"
+                "        super(name); // Invokes the parent Animal constructor\n"
+                "    }\n\n"
+                "    @Override\n"
+                "    void makeSound() {\n"
+                "        System.out.println(name + \" barks: Woof! Woof!\");\n"
+                "    }\n\n"
+                "    void fetch() {\n"
+                "        System.out.println(name + \" is fetching the ball!\");\n"
+                "    }\n"
+                "}\n\n"
+                "public class Main {\n"
+                "    public static void main(String[] args) {\n"
+                "        Dog myDog = new Dog(\"Buddy\");\n"
+                "        myDog.makeSound(); // Calls overridden method: Buddy barks: Woof! Woof!\n"
+                "        myDog.fetch();     // Calls subclass-specific method\n"
+                "    }\n"
+                "}\n"
+                "```\n\n"
+                "**Key Takeaways:**\n"
+                "1. `Dog` gains access to the `name` attribute from `Animal` without re-declaring it.\n"
+                "2. `super(name)` passes the argument directly to the superclass constructor.\n"
+                "3. `@Override` specializes `makeSound()` specifically for dogs."
+            )
+            suggested_qs = ["What is polymorphism in Java?", "Explain method overloading vs overriding.", "What is an abstract class in Java?"]
+
+        elif topic == "python_def" or "def" in last_user_msg or "def" in last_assistant_msg:
+            reply = (
+                "### Python Function (`def`) Example\n\n"
+                "Here is a practical Python function that validates and formats user input:\n\n"
+                "```python\n"
+                "def calculate_total_price(price, tax_rate=0.05, discount=0.0):\n"
+                "    \"\"\"Calculate total price after applying discount and sales tax.\"\"\"\n"
+                "    discounted = price - (price * discount)\n"
+                "    total = discounted + (discounted * tax_rate)\n"
+                "    return round(total, 2)\n\n"
+                "# Function calls with positional and keyword arguments\n"
+                "final_price = calculate_total_price(100.0, discount=0.10)\n"
+                "print(f\"Total: ${final_price}\")  # Output: Total: $94.5\n"
+                "```\n\n"
+                "**Key Takeaways:**\n"
+                "• `def` introduces the function header.\n"
+                "• Default parameters (`tax_rate=0.05`) make arguments optional.\n"
+                "• The `return` keyword passes the computed value back to the caller."
+            )
+            suggested_qs = ["What are *args and **kwargs in Python?", "What are lambda functions?", "Give me Python interview questions."]
+
+        elif topic == "mongodb" or "mongodb" in last_user_msg or "mongodb" in last_assistant_msg:
+            reply = (
+                "### MongoDB Document & Query Example\n\n"
+                "Here is an example showing how an e-commerce order is represented as a BSON document and queried using PyMongo:\n\n"
+                "```python\n"
+                "from pymongo import MongoClient\n\n"
+                "# Connect to local MongoDB instance\n"
+                "client = MongoClient(\"mongodb://localhost:27017\")\n"
+                "db = client.store_db\n\n"
+                "# Insert an order document\n"
+                "order_doc = {\n"
+                "    \"order_id\": \"ORD-9821\",\n"
+                "    \"customer\": \"Sarah Connor\",\n"
+                "    \"items\": [\n"
+                "        {\"product\": \"Mechanical Keyboard\", \"qty\": 1, \"price\": 89.99},\n"
+                "        {\"product\": \"USB-C Hub\", \"qty\": 2, \"price\": 24.50}\n"
+                "    ],\n"
+                "    \"status\": \"Shipped\",\n"
+                "    \"total\": 138.99\n"
+                "}\n"
+                "db.orders.insert_one(order_doc)\n\n"
+                "# Query shipped orders over $100\n"
+                "high_val_orders = db.orders.find({\"status\": \"Shipped\", \"total\": {\"$gt\": 100}})\n"
+                "for ord in high_val_orders:\n"
+                "    print(ord[\"order_id\"], ord[\"customer\"])\n"
+                "```"
+            )
+            suggested_qs = ["What is the difference between SQL and MongoDB?", "How does indexing work in MongoDB?", "What is MongoDB aggregation?"]
+
+        elif topic == "supervised_learning" or "supervised" in last_user_msg or "supervised" in last_assistant_msg:
+            reply = (
+                "### Supervised Learning Real-World Example: Email Spam Classification\n\n"
+                "Consider training an algorithm to classify emails as **Spam (1)** or **Not Spam (0)**:\n\n"
+                "1. **Labeled Training Dataset ($X, y$):**\n"
+                "   • Email 1: \"Win cash prizes now! Click here\" $\\to$ Label: **1 (Spam)**\n"
+                "   • Email 2: \"Project meeting rescheduled to 3 PM\" $\\to$ Label: **0 (Not Spam)**\n"
+                "   • Email 3: \"Claim free vacation tickets today\" $\\to$ Label: **1 (Spam)**\n\n"
+                "2. **Feature Extraction ($X$):** The algorithm extracts features like frequency of words ('free', 'cash', 'meeting').\n"
+                "3. **Model Training:** Logistic Regression or Naive Bayes calculates statistical weights for each word.\n"
+                "4. **Inference (Prediction):** When a new email arrives: \"Free bonus cash inside\", the model computes $P(\\text{Spam}) = 0.94$ and correctly flags it as Spam."
+            )
+            suggested_qs = ["What is unsupervised learning?", "What is overfitting and underfitting?", "What evaluation metrics are used?"]
+
+        elif topic == "probability" or "probability" in last_user_msg or "probability" in last_assistant_msg:
+            reply = (
+                "### Probability Step-by-Step Example: Drawing Cards\n\n"
+                "Suppose you draw a single card from a standard, well-shuffled 52-card deck:\n\n"
+                "**Question 1: What is the probability of drawing an Ace?**\n"
+                "• Favorable outcomes: 4 Aces in the deck {Hearts, Diamonds, Clubs, Spades}\n"
+                "• Total possible outcomes: 52 cards\n"
+                "$$P(\\text{Ace}) = \\frac{4}{52} = \\frac{1}{13} \\approx 0.0769 \\text{ (7.69%)}$$\n\n"
+                "**Question 2: What is the probability of drawing a Red Card?**\n"
+                "• Favorable outcomes: 26 red cards (13 Hearts + 13 Diamonds)\n"
+                "$$P(\\text{Red}) = \\frac{26}{52} = \\frac{1}{2} = 0.50 \\text{ (50%)}$$\n\n"
+                "**Question 3: What is the probability of drawing an Ace OR a King?**\n"
+                "• Since an Ace cannot be a King (mutually exclusive events):\n"
+                "$$P(\\text{Ace or King}) = P(\\text{Ace}) + P(\\text{King}) = \\frac{4}{52} + \\frac{4}{52} = \\frac{8}{52} = \\frac{2}{13} \\approx 15.38%$$"
+            )
+            suggested_qs = ["What is Bayes' Theorem?", "What are independent vs dependent events?", "What is a normal distribution?"]
+
+        elif topic == "react" or "react" in last_user_msg or "react" in last_assistant_msg:
+            reply = (
+                "### React State & Event Handling Example\n\n"
+                "Here is a complete React component demonstrating dynamic state updates and user event handling:\n\n"
+                "```jsx\n"
+                "import React, { useState } from 'react';\n\n"
+                "function TaskToggle() {\n"
+                "  const [completed, setCompleted] = useState(false);\n\n"
+                "  return (\n"
+                "    <div style={{ padding: '16px', border: '1px solid #CBD5E1', borderRadius: '8px' }}>\n"
+                "      <h3>Task: Complete Assignment</h3>\n"
+                "      <p>Status: <strong>{completed ? '✅ Completed' : '⏳ In Progress'}</strong></p>\n"
+                "      <button onClick={() => setCompleted(!completed)}>\n"
+                "        {completed ? 'Mark Incomplete' : 'Mark Done'}\n"
+                "      </button>\n"
+                "    </div>\n"
+                "  );\n"
+                "}\n\n"
+                "export default TaskToggle;\n"
+                "```"
+            )
+            suggested_qs = ["What is the difference between state and props?", "How does useEffect work in React?", "What is JSX?"]
+
+        else:
+            reply = (
+                "### Practical Code & Concept Example\n\n"
+                "Here is a practical, reusable programming example:\n\n"
+                "```python\n"
+                "# Demonstrating function logic and iteration\n"
+                "def find_multiples(limit, factor):\n"
+                "    return [x for x in range(1, limit + 1) if x % factor == 0]\n\n"
+                "multiples = find_multiples(30, 5)\n"
+                "print(\"Multiples of 5 up to 30:\", multiples)  # [5, 10, 15, 20, 25, 30]\n"
+                "```"
+            )
+            suggested_qs = ["Explain this code.", "How can I test it?", "What should I learn next?"]
+
+    elif any(phrase in msg_low for phrase in ["explain previously", "explain the code", "explain this code", "explain that example", "explain the second line", "explain that code"]):
+        if "factorial" in last_assistant_msg or "return n *" in last_assistant_msg or "class factorial" in last_assistant_msg:
+            reply = (
+                "### Detailed Breakdown of the Factorial Code\n\n"
+                "1. **Function Signature**: Takes an integer parameter `n`.\n"
+                "2. **Base Case (`if n <= 1`)**: Stops recursion when `n` reaches 1 or 0, returning `1` to prevent infinite loops.\n"
+                "3. **Recursive Execution (`n * factorial(n - 1)`)**: Multiplies current number `n` by the factorial of `n - 1`.\n"
+                "4. **Output Result**: Computes `5 * 4 * 3 * 2 * 1 = 120`."
+            )
+        else:
+            reply = (
+                "### Code Explanation Breakdown\n\n"
+                "1. **Declaration & Input**: Defines variables, parameters, or container elements.\n"
+                "2. **Execution Logic**: Performs the core operation, mathematical calculation, or condition check.\n"
+                "3. **Return Output**: Passes the computed result back to the caller or console."
+            )
+        suggested_qs = ["Give another example.", "How can I test it?", "What should I learn next?"]
+
+    elif msg_low in ["is it difficult?", "is it hard?", "is python difficult?", "is programming hard?"] or (msg_low.startswith("is it") and len(msg_low.split()) <= 4):
+        topic_name = "Python" if "python" in last_assistant_msg or "python" in last_user_msg else ("Java" if "java" in last_assistant_msg else "Programming")
+        reply = (
+            f"### Is {topic_name} Difficult to Learn?\n\n"
+            f"**No, absolutely not!** {topic_name} is designed with clean, logical syntax that is very approachable for beginners. "
+            f"With consistent practice for 30–45 minutes a day, most students master core fundamentals within a few weeks."
+        )
+        suggested_qs = ["Give me a simple example.", "What should I learn first?", "Give me a 30-day roadmap."]
+
+    elif any(k in msg_low for k in ["how can i test it", "test it", "how to test"]):
+        reply = (
+            "### How to Test and Run the Code\n\n"
+            "1. Save your code into a local file with the appropriate file extension (`.py`, `.java`, `.html`, `.js`, etc.).\n"
+            "2. Open your terminal or command prompt in that directory.\n"
+            "3. Execute using the appropriate runtime:\n"
+            "   • Python: `python filename.py`\n"
+            "   • Java: `javac Main.java` followed by `java Main`\n"
+            "   • HTML: Open the `.html` file in any modern web browser\n"
+            "4. Verify the console output messages to confirm expected results."
+        )
+        suggested_qs = ["Give another example.", "What is def in Python?", "Explain inheritance in Java."]
+
+    # ------------------------------------------------------------------
+    # 16. GENERAL TOPIC FALLBACK (NO IRRELEVANT CAREER BOILERPLATE!)
     # ------------------------------------------------------------------
     else:
         topic_clean = user_message.strip().rstrip('?')
         reply = (
-            f"### Career & Technical Insight for: **{topic_clean.capitalize()}**\n\n"
+            f"### Overview & Key Concepts: **{topic_clean.capitalize()}**\n\n"
             f"Regarding **{user_message}**:\n\n"
-            f"This concept plays an important role in technology and career development for **{target_career}**. "
-            f"Focusing on core principles, practical hands-on examples, and building portfolio projects is the best way to master it.\n\n"
-            f"Feel free to ask for specific code examples, roadmap steps, or interview prep advice!"
+            f"This is an important concept in modern technology and computer science. "
+            f"Understanding its core principles, internal architecture, and hands-on practical applications "
+            f"allows you to build robust, efficient, and scalable systems.\n\n"
+            f"Would you like a concrete code example, an intuitive real-world analogy, or a deeper theoretical breakdown?"
         )
-        suggested_qs = ["Can you give me a simple example?", "What should I learn first?", "Which project should I build?"]
+        suggested_qs = ["Can you explain it with an example?", "Why is this concept important?", "What are common use cases for this?"]
 
     return {
         "message": reply,
-        "source": "internal_career_assistant",
+        "source": "internal_multi_topic_assistant",
         "intent": intent,
+        "topic": topic,
         "next_action_card": next_card,
-        "recommended_skills": ordered_skills,
-        "related_projects": [top_project],
+        "recommended_skills": ordered_skills if is_career_relevant else [],
+        "related_projects": [top_project] if is_career_relevant else [],
         "suggested_questions": suggested_qs,
         "dynamic_suggested_questions": suggested_qs
     }
 
 
-# ------------------------------------------------------------------
-# DYNAMIC INTERVIEW QUESTION GENERATION (PRESERVED)
-# ------------------------------------------------------------------
 async def generate_interview_questions(
     target_career: str,
     interview_type: str,

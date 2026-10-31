@@ -121,7 +121,9 @@ async def chat_with_assistant(user_id: str, message: str) -> Dict[str, Any]:
         "session_id": "default",
         "role": "assistant",
         "message": assistant_message,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "intent": res.get("intent", "general"),
+        "topic": res.get("topic", "general")
     }
 
     if db.is_connected and db.db is not None:
@@ -137,6 +139,7 @@ async def chat_with_assistant(user_id: str, message: str) -> Dict[str, Any]:
         "message": assistant_message,
         "source": source,
         "intent": res.get("intent", "general"),
+        "topic": res.get("topic", "general"),
         "next_action_card": res.get("next_action_card"),
         "recommended_skills": res.get("recommended_skills", []),
         "related_projects": res.get("related_projects", []),
