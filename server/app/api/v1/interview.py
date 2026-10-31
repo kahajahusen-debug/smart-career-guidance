@@ -21,7 +21,7 @@ class StartInterviewRequest(BaseModel):
     total_questions: Optional[int] = Field(5, example=5)
 
 class AnswerSubmissionRequest(BaseModel):
-    answer: str = Field(..., example="SQL is a relational database management system using structured schemas...")
+    answer: Optional[str] = Field("", example="SQL is a relational database management system using structured schemas...")
 
 @router.post("/start", summary="Start a New Interview Preparation Session")
 async def start_session_endpoint(
@@ -78,7 +78,7 @@ async def submit_answer_endpoint(
     res = await submit_interview_answer(
         user_id=user_id,
         session_id=session_id,
-        answer=req.answer
+        answer=req.answer if req.answer is not None else ""
     )
     return res
 

@@ -2617,16 +2617,27 @@ async def generate_interview_questions(
     user_context: Dict[str, Any]
 ) -> List[Dict[str, Any]]:
     """Generate dynamic interview questions customized to target career, type, difficulty, and skill gaps."""
-    skill_gaps = user_context.get("skill_gaps", [])
-    current_skills = user_context.get("current_skills", [])
+    skill_gaps = user_context.get("skill_gaps", []) if user_context else []
+    current_skills = user_context.get("current_skills", []) if user_context else []
 
-    prompt = f"""Generate {count} interview questions for a candidate preparing for:
+    target_count = 5
+    if count in [5, 10, 15]:
+        target_count = count
+    elif count > 10:
+        target_count = 15
+    elif count > 5:
+        target_count = 10
+
+    prompt = f"""Generate {target_count} interview questions for a candidate preparing for:
 Target Career: {target_career}
 Interview Type: {interview_type} (Technical, HR, Behavioral, or Mixed)
 Difficulty Level: {difficulty} (Beginner, Intermediate, or Advanced)
-Candidate Skill Gaps: {', '.join(skill_gaps)}
+Candidate Skill Gaps: {', '.join(skill_gaps) if skill_gaps else 'Core fundamentals'}
 
-Return ONLY a JSON array of objects with keys: "question", "type" (technical, hr, behavioral).
+Return ONLY a valid JSON array of objects, each containing:
+- "question": string
+- "type": "technical" | "hr" | "behavioral"
+- "expected_answer": concise (2-3 sentences) ideal answer explanation
 """
     ai_text, _, _ = generate_llm_response(prompt)
     if ai_text:
@@ -2635,91 +2646,272 @@ Return ONLY a JSON array of objects with keys: "question", "type" (technical, hr
             end_idx = ai_text.rfind("]")
             if start_idx != -1 and end_idx != -1:
                 parsed = json.loads(ai_text[start_idx:end_idx+1])
-                if isinstance(parsed, list) and len(parsed) > 0:
+                if isinstance(parsed, list) and len(parsed) >= target_count:
                     questions = []
-                    for i, q in enumerate(parsed[:count]):
+                    for i, q in enumerate(parsed[:target_count]):
+                        exp = q.get("expected_answer") or f"A comprehensive answer for {target_career} explaining core mechanisms, practical application, and trade-offs."
                         questions.append({
                             "question_id": f"q_{i+1}",
-                            "question": q.get("question", f"Sample question {i+1}"),
+                            "question": q.get("question", f"Interview Question {i+1}"),
                             "type": q.get("type", interview_type.lower()),
                             "answer": None,
+                            "status": None,
                             "score": None,
                             "feedback": None,
+                            "missing_points": [],
+                            "expected_answer": exp,
+                            "model_answer": exp,
                             "strengths": [],
-                            "improvements": [],
-                            "model_answer": None
+                            "improvements": []
                         })
                     return questions
         except Exception as e:
             logger.warning(f"Failed to parse LLM interview question JSON: {e}")
 
-    questions: List[Dict[str, Any]] = []
-
+    # High-quality offline question banks
     tech_bank = [
-        ("Explain the core architectural components of a scalable modern application in the context of {career}.", "technical"),
-        ("How do you manage data persistence and state management in {career} projects?", "technical"),
-        ("What are the best practices for writing secure and optimized APIs or services for {career}?", "technical"),
-        ("Describe how you debug performance bottlenecks or unexpected exceptions when working with {skill_or_gap}.", "technical"),
-        ("How do you approach database schema design and querying efficiency for {career}?", "technical"),
-        ("Explain authentication mechanisms (such as JWT or OAuth2) commonly implemented in {career}.", "technical"),
-        ("What are the trade-offs between monolithic vs microservices architecture for a {career} solution?", "technical")
+        {
+            "template": "Explain the core architectural components of a scalable modern application in the context of {career}.",
+            "expected": "A scalable architecture separates presentation, application logic, and data layers. It utilizes load balancers, stateless application services, database read/write replicas, caching layers (like Redis), and asynchronous task queues to handle high concurrency.",
+            "key_concepts": ["architecture", "stateless", "load balance", "cache", "database", "replica", "scale", "concurrency", "queue"]
+        },
+        {
+            "template": "How do you manage data persistence and state management in {career} projects?",
+            "expected": "Data persistence is managed using relational or NoSQL databases with connection pooling and transactions. Application state is handled with centralized frontend stores and stateless JWTs or distributed caches on the backend.",
+            "key_concepts": ["database", "persist", "state", "redux", "cache", "token", "session", "transaction", "pool", "storage"]
+        },
+        {
+            "template": "What are the best practices for writing secure and optimized APIs or services for {career}?",
+            "expected": "Enforce authentication/authorization (JWT/OAuth2), TLS encryption, strict input validation, rate limiting, and parameterized queries. Optimize performance with database indexing, connection pooling, and response caching.",
+            "key_concepts": ["auth", "jwt", "tls", "rate limit", "validation", "sanitize", "index", "cache", "injection", "cors"]
+        },
+        {
+            "template": "Describe how you debug performance bottlenecks or unexpected exceptions when working with {career} applications.",
+            "expected": "Analyze application logs and APM metrics, profile memory and CPU usage, inspect database query execution plans using EXPLAIN, and reproduce the issue in an isolated staging environment.",
+            "key_concepts": ["log", "profile", "apm", "metric", "explain", "query", "bottleneck", "cpu", "memory", "reproduce", "trace"]
+        },
+        {
+            "template": "How do you approach database schema design and querying efficiency for {career}?",
+            "expected": "Normalize tables to eliminate redundancy while selectively denormalizing for read-heavy workloads. Create composite indexes for high-frequency queries and optimize query patterns to avoid N+1 issues.",
+            "key_concepts": ["schema", "normalize", "index", "foreign key", "table", "query", "n+1", "relation", "join", "acid"]
+        },
+        {
+            "template": "Explain authentication mechanisms (such as JWT or OAuth2) commonly implemented in {career}.",
+            "expected": "JWT provides stateless token-based authentication using signed headers, payloads, and signatures. OAuth2 is an authorization protocol that grants scoped access tokens to third-party clients.",
+            "key_concepts": ["jwt", "token", "header", "payload", "signature", "stateless", "oauth", "access token", "refresh", "auth"]
+        },
+        {
+            "template": "What are the trade-offs between monolithic vs microservices architecture for a {career} solution?",
+            "expected": "Monoliths offer simpler initial deployment and atomic transactions but can become deployment bottlenecks. Microservices enable independent scaling and deployment at the expense of distributed complexity and network overhead.",
+            "key_concepts": ["monolith", "microservice", "scale", "deploy", "independent", "distributed", "network", "latency", "trade-off"]
+        },
+        {
+            "template": "How do you handle asynchronous tasks and background workloads in {career} systems?",
+            "expected": "Use message brokers and task queues (like Celery, RabbitMQ, or Redis Streams) to offload heavy operations, ensuring idempotent workers, retry strategies, and non-blocking HTTP requests.",
+            "key_concepts": ["async", "queue", "worker", "broker", "rabbitmq", "redis", "celery", "background", "idempotent", "retry"]
+        },
+        {
+            "template": "What caching strategies (such as Redis or CDNs) do you use to accelerate {career} applications?",
+            "expected": "Implement Cache-Aside or write-through caching using Redis for database queries and session data, and use CDNs for static asset edge delivery with well-defined TTL expiration policies.",
+            "key_concepts": ["cache", "redis", "cdn", "ttl", "invalidation", "latency", "edge", "hit", "miss", "memory", "aside"]
+        },
+        {
+            "template": "Compare RESTful API design with GraphQL in terms of data fetching and network efficiency.",
+            "expected": "REST exposes structured resource endpoints with standard HTTP methods and caching, but risks over-fetching or under-fetching. GraphQL allows clients to request exact fields in a single query.",
+            "key_concepts": ["rest", "graphql", "endpoint", "over-fetch", "under-fetch", "query", "schema", "http", "method", "payload"]
+        },
+        {
+            "template": "How do you implement resilient error handling and fault tolerance in {career} systems?",
+            "expected": "Use centralized error middleware, meaningful HTTP status codes, structured error logging, circuit breakers, timeouts, and fallback responses to prevent cascading system failures.",
+            "key_concepts": ["circuit breaker", "timeout", "fallback", "middleware", "status code", "exception", "retry", "resilience"]
+        },
+        {
+            "template": "Describe your automated testing strategy across unit, integration, and end-to-end levels.",
+            "expected": "Follow the test pyramid: fast isolated unit tests for core logic, integration tests for APIs and databases, and end-to-end tests for critical user paths, automated via CI/CD pipelines.",
+            "key_concepts": ["unit", "integration", "e2e", "pyramid", "mock", "ci/cd", "pipeline", "coverage", "test", "automation"]
+        },
+        {
+            "template": "Explain ACID properties in database management and how they prevent data corruption.",
+            "expected": "ACID ensures Atomicity (all-or-nothing transactions), Consistency (invariants preserved), Isolation (concurrent operations do not clash), and Durability (committed transactions survive crashes).",
+            "key_concepts": ["atomicity", "consistency", "isolation", "durability", "transaction", "rollback", "commit", "acid"]
+        },
+        {
+            "template": "How do Docker containerization and CI/CD pipelines benefit modern {career} deployments?",
+            "expected": "Docker packages applications with dependencies into immutable containers, eliminating environment inconsistencies. CI/CD pipelines automate testing, building, and zero-downtime deployment.",
+            "key_concepts": ["docker", "container", "image", "ci/cd", "pipeline", "deploy", "build", "automate", "environment"]
+        },
+        {
+            "template": "How do you balance shipping features quickly with writing maintainable code and managing technical debt?",
+            "expected": "Apply modular design and SOLID principles, enforce code reviews and automated linting, write clear tests, and schedule dedicated refactoring sprints to manage technical debt pragmatically.",
+            "key_concepts": ["solid", "refactor", "debt", "code review", "maintainable", "clean code", "lint", "modular", "quality"]
+        }
     ]
 
     hr_bank = [
-        ("Why are you interested in pursuing a career as a {career}?", "hr"),
-        ("Where do you see yourself professionally in 3 to 5 years in the field of {career}?", "hr"),
-        ("What are your primary technical strengths, and what area are you actively working to improve?", "hr"),
-        ("Why should our organization hire you for this {career} role over other qualified candidates?", "hr"),
-        ("How do you stay up to date with rapid technological changes in {career}?", "hr")
+        {
+            "template": "Why are you interested in pursuing a career as a {career}?",
+            "expected": "A strong answer connects genuine enthusiasm for solving complex problems with specific domain achievements and long-term commitment to professional growth in this role.",
+            "key_concepts": ["passion", "growth", "career", "interest", "goal", "solve", "impact", "learning", "value"]
+        },
+        {
+            "template": "Where do you see yourself professionally in 3 to 5 years in the field of {career}?",
+            "expected": "The candidate outlines progressive milestones: mastering advanced system architecture, taking ownership of critical features, mentoring peers, and driving strategic business impact.",
+            "key_concepts": ["leadership", "mentor", "architecture", "growth", "milestone", "impact", "ownership", "senior"]
+        },
+        {
+            "template": "What are your primary technical strengths, and what area are you actively working to improve?",
+            "expected": "Demonstrates self-awareness by highlighting a proven technical strength with evidence, and discusses an active learning initiative (such as cloud certifications or distributed systems) to address a growth area.",
+            "key_concepts": ["strength", "improve", "learning", "growth", "self-aware", "course", "practice", "initiative"]
+        },
+        {
+            "template": "Why should our organization hire you for this {career} role over other qualified candidates?",
+            "expected": "Highlights a unique combination of technical competence, fast learning agility, collaborative communication, and a strong track record of delivering reliable projects.",
+            "key_concepts": ["hire", "value", "deliver", "track record", "collaborate", "skill", "problem solver", "dedication"]
+        },
+        {
+            "template": "How do you stay up to date with rapid technological changes in {career}?",
+            "expected": "Mentions regular learning habits such as reading official documentation, following reputable engineering blogs, contributing to open-source or pet projects, and exploring emerging industry tooling.",
+            "key_concepts": ["documentation", "blog", "open source", "podcast", "experiment", "learning", "newsletter", "community"]
+        },
+        {
+            "template": "How do you handle working under tight deadlines with competing priorities?",
+            "expected": "Explains a structured prioritization framework (e.g., Eisenhower matrix or MoSCoW), transparent communication with stakeholders, and breaking down deliverables into achievable iterations.",
+            "key_concepts": ["prioritize", "deadline", "communication", "stakeholder", "iterative", "focus", "manage", "deliver"]
+        },
+        {
+            "template": "Describe your ideal team environment and management style for maximum productivity.",
+            "expected": "Values open collaboration, psychological safety, clear objective key results (OKRs), constructive peer reviews, and autonomous problem-solving with supportive mentorship.",
+            "key_concepts": ["collaboration", "autonomy", "mentorship", "feedback", "supportive", "transparent", "teamwork"]
+        },
+        {
+            "template": "What motivated you to transition into or choose {career} as your professional focus?",
+            "expected": "Connects early curiosity or foundational project experiences with the tangible satisfaction of building functional, user-facing systems and continuous technological evolution.",
+            "key_concepts": ["motivation", "transition", "curiosity", "project", "build", "satisfaction", "passion"]
+        },
+        {
+            "template": "How do you handle critical feedback or code review suggestions from teammates?",
+            "expected": "Views feedback as an opportunity for continuous improvement, avoids personal defensiveness, seeks clarification when needed, and incorporates lessons into future development.",
+            "key_concepts": ["feedback", "code review", "constructive", "improve", "listen", "learn", "collaborative"]
+        },
+        {
+            "template": "What is the most significant professional achievement or personal project you are proud of?",
+            "expected": "Uses the STAR method to describe a meaningful project: the initial problem, technical architecture choices made, challenges overcome, and the measurable end result achieved.",
+            "key_concepts": ["achievement", "project", "star", "result", "impact", "delivered", "proud", "challenge"]
+        }
     ]
 
     behavioral_bank = [
-        ("Describe a challenging technical problem you encountered in a recent project and how you solved it.", "behavioral"),
-        ("Tell me about a time when you had to learn a new tool or technology ({skill_or_gap}) under a tight deadline.", "behavioral"),
-        ("Give an example of how you handled disagreement or conflicting requirements during team collaboration.", "behavioral"),
-        ("Describe a situation where a project requirement changed late in development. How did you adapt?", "behavioral"),
-        ("Walk me through a project from your portfolio: what was your role, and what impact did your work achieve?", "behavioral")
+        {
+            "template": "Describe a challenging technical problem you encountered in a recent project and how you solved it.",
+            "expected": "Follows the STAR framework: outlines the complex technical challenge, describes the methodical root-cause analysis and debugging steps, explains the implemented solution, and notes the measurable outcome.",
+            "key_concepts": ["star", "challenge", "problem", "solve", "debug", "solution", "result", "root cause", "outcome"]
+        },
+        {
+            "template": "Tell me about a time when you had to learn a new tool or technology under a tight deadline.",
+            "expected": "Explains a rapid learning strategy: diving into official documentation and tutorials, building a quick prototype, consulting experienced mentors, and delivering the requirement on schedule.",
+            "key_concepts": ["learn", "fast", "deadline", "prototype", "documentation", "adapt", "deliver", "tool"]
+        },
+        {
+            "template": "Give an example of how you handled disagreement or conflicting requirements during team collaboration.",
+            "expected": "Focuses on active listening, grounding arguments in empirical data and user requirements, evaluating technical trade-offs objectively, and committing fully to the team's unified decision.",
+            "key_concepts": ["disagreement", "conflict", "listen", "trade-off", "consensus", "objective", "compromise", "team"]
+        },
+        {
+            "template": "Describe a situation where a project requirement changed late in development. How did you adapt?",
+            "expected": "Shows adaptability: re-evaluating priorities with stakeholders, assessing architectural impact, communicating trade-offs, and iteratively adjusting the implementation plan without compromising code quality.",
+            "key_concepts": ["requirement", "change", "adapt", "flexibility", "stakeholder", "iterate", "communicate", "re-prioritize"]
+        },
+        {
+            "template": "Walk me through a project from your portfolio: what was your role, and what impact did your work achieve?",
+            "expected": "Clearly articulates the business/user problem, architectural stack, individual contributions, technical obstacles overcome, and quantifiable results achieved.",
+            "key_concepts": ["portfolio", "role", "contribution", "architecture", "impact", "metric", "user", "result"]
+        },
+        {
+            "template": "Describe a time when a production bug or unexpected outage occurred. How did you respond?",
+            "expected": "Demonstrates composure: quickly stabilizing the system or rolling back, identifying the root cause with logs and metrics, communicating status updates, and writing a blameless post-mortem with preventative tests.",
+            "key_concepts": ["outage", "bug", "production", "rollback", "post-mortem", "communicate", "fix", "prevent"]
+        },
+        {
+            "template": "Tell me about a time you had to explain a complex technical concept to a non-technical stakeholder.",
+            "expected": "Avoids jargon and uses relatable analogies, high-level business diagrams, and focused user outcomes to ensure clear mutual alignment.",
+            "key_concepts": ["stakeholder", "non-technical", "analogy", "jargon", "clarity", "communicate", "align"]
+        },
+        {
+            "template": "Give an example of a project where you took initiative beyond your assigned responsibilities.",
+            "expected": "Describes identifying a productivity bottleneck, automated a manual workflow or built an internal tool that benefited the broader team.",
+            "key_concepts": ["initiative", "automate", "proactive", "workflow", "ownership", "improve", "value"]
+        },
+        {
+            "template": "Tell me about a time you made a technical mistake or wrong architectural assumption. What did you learn?",
+            "expected": "Takes genuine accountability, describes taking swift corrective action to remediate the mistake, and details permanent processes (tests, safeguards) instituted to avoid repetition.",
+            "key_concepts": ["mistake", "accountability", "learn", "correct", "safeguard", "remediation", "humility"]
+        },
+        {
+            "template": "Describe how you prioritize technical quality and test coverage when faced with aggressive sprint deadlines.",
+            "expected": "Advocates for automated testing as a speed enhancer rather than a cost, writes critical unit and integration tests for core logic, and documents non-blocking technical debt for subsequent sprints.",
+            "key_concepts": ["quality", "test", "balance", "sprint", "deadline", "pragmatic", "velocity", "core"]
+        }
     ]
 
-    pool = []
     itype_lower = interview_type.lower()
+    selected_pool = []
     if itype_lower == "technical":
-        pool = tech_bank * 3
+        selected_pool = tech_bank
     elif itype_lower == "hr":
-        pool = hr_bank * 3
+        selected_pool = hr_bank
     elif itype_lower == "behavioral":
-        pool = behavioral_bank * 3
-    else:
-        pool = (tech_bank + hr_bank + behavioral_bank) * 2
+        selected_pool = behavioral_bank
+    else:  # Mixed
+        # Blend technical, behavioral, and hr
+        selected_pool = []
+        for i in range(max(len(tech_bank), len(hr_bank), len(behavioral_bank))):
+            if i < len(tech_bank):
+                selected_pool.append(tech_bank[i])
+            if i < len(behavioral_bank):
+                selected_pool.append(behavioral_bank[i])
+            if i < len(hr_bank):
+                selected_pool.append(hr_bank[i])
 
-    chosen_skill_or_gap = skill_gaps[0] if skill_gaps else (current_skills[0] if current_skills else "core tools")
+    questions: List[Dict[str, Any]] = []
+    for i in range(target_count):
+        item = selected_pool[i % len(selected_pool)]
+        formatted_q = item["template"].format(career=target_career)
 
-    for i in range(count):
-        raw_template, q_type = pool[i % len(pool)]
-        formatted_q = raw_template.format(career=target_career, skill_or_gap=chosen_skill_or_gap)
+        q_type = itype_lower if itype_lower in ["technical", "hr", "behavioral"] else "technical"
+        if item in hr_bank:
+            q_type = "hr"
+        elif item in behavioral_bank:
+            q_type = "behavioral"
+        elif item in tech_bank:
+            q_type = "technical"
 
         if difficulty.lower() == "advanced" and q_type == "technical":
             formatted_q = f"[Advanced System Design] {formatted_q}"
         elif difficulty.lower() == "beginner" and q_type == "technical":
             formatted_q = f"[Fundamentals] {formatted_q}"
 
+        expected_text = item["expected"].format(career=target_career) if "{career}" in item["expected"] else item["expected"]
+
         questions.append({
             "question_id": f"q_{i+1}",
             "question": formatted_q,
             "type": q_type,
             "answer": None,
+            "status": None,
             "score": None,
             "feedback": None,
+            "missing_points": [],
+            "expected_answer": expected_text,
+            "model_answer": expected_text,
             "strengths": [],
-            "improvements": [],
-            "model_answer": None
+            "improvements": []
         })
 
     return questions
 
 
 # ------------------------------------------------------------------
-# INTERVIEW ANSWER EVALUATION (PRESERVED)
+# INTERVIEW ANSWER EVALUATION (UPGRADED: RUBRIC 1 / 0.5 / 0)
 # ------------------------------------------------------------------
 async def evaluate_interview_answer(
     question: str,
@@ -2727,91 +2919,279 @@ async def evaluate_interview_answer(
     target_career: str,
     difficulty: str
 ) -> Dict[str, Any]:
-    """Evaluate candidate interview answer and return score (0-100), feedback, strengths, improvements, and model answer."""
-    if not user_answer or not user_answer.strip():
+    """
+    Evaluate candidate interview answer according to strict rubric:
+    - Correct = 1.0 point
+    - Partially Correct = 0.5 points
+    - Incorrect = 0.0 points
+    Evaluates semantic meaning and technical correctness, accepting diverse valid phrasings.
+    """
+    clean_answer = user_answer.strip() if user_answer else ""
+
+    # Helper: lookup concise expected answer for fallback
+    expected_answer = _lookup_expected_answer(question, target_career)
+
+    # 1. Handle empty answer
+    if not clean_answer:
         return {
-            "score": 0,
-            "feedback": "No answer was submitted.",
+            "status": "Incorrect",
+            "score": 0.0,
+            "feedback": "No answer was provided for this question.",
+            "missing_points": ["Provide a complete response explaining the core concept directly."],
+            "expected_answer": expected_answer,
+            "model_answer": expected_answer,
             "strengths": [],
-            "improvements": ["Provide a detailed response covering key concepts and examples."],
-            "model_answer": "A complete answer should address the core question directly using practical examples."
+            "improvements": ["Make sure to answer the question with technical definitions and examples."]
         }
 
-    prompt = f"""Target Role: {target_career} (Difficulty: {difficulty})
+    # 2. Try LLM Evaluation if configured
+    prompt = f"""You are an expert technical interviewer evaluating a candidate's answer.
+Target Role: {target_career} (Difficulty: {difficulty})
 Question: {question}
-Candidate Answer: {user_answer}
+Candidate Answer: {clean_answer}
 
-Evaluate the candidate's answer. Return ONLY a JSON object with:
-- "score": integer between 0 and 100
-- "feedback": constructive summary string
-- "strengths": list of string bullets (1-3 items)
-- "improvements": list of string bullets (1-3 items)
-- "model_answer": comprehensive ideal answer string
+Evaluation Instructions:
+1. Assess semantic meaning, technical correctness, and conceptual understanding. Do NOT require exact wording.
+2. Accept different correct ways of explaining the same concept.
+3. Strict scoring rubric:
+   - "Correct" (score: 1.0): The answer is technically accurate and addresses the core concept directly.
+   - "Partially Correct" (score: 0.5): The answer has valid points but misses important technical details, lacks precision, or has minor omissions.
+   - "Incorrect" (score: 0.0): The answer is factually wrong, completely irrelevant, nonsensical, or blank. Do NOT award marks for unsupported answers.
+4. Provide concise feedback (1-2 sentences).
+5. List specific missing points (if any). If Correct and comprehensive, this list can be empty [].
+6. Provide a concise expected answer (2-3 sentences explaining the ideal response).
+
+Return ONLY a valid JSON object in this format:
+{{
+  "status": "Correct" | "Partially Correct" | "Incorrect",
+  "score": 1.0 | 0.5 | 0.0,
+  "feedback": "Concise 1-2 sentence feedback.",
+  "missing_points": ["Point 1", "Point 2"],
+  "expected_answer": "Concise expected explanation."
+}}
 """
-
     ai_text, _, _ = generate_llm_response(prompt)
     if ai_text:
         try:
             start_idx = ai_text.find("{")
             end_idx = ai_text.rfind("}")
             if start_idx != -1 and end_idx != -1:
-                eval_res = json.loads(ai_text[start_idx:end_idx+1])
-                score = int(eval_res.get("score", 75))
-                score = max(0, min(100, score))
+                parsed = json.loads(ai_text[start_idx:end_idx+1])
+                raw_status = str(parsed.get("status", "")).strip().title()
+
+                if raw_status in ["Correct", "Partially Correct", "Incorrect"]:
+                    status_val = raw_status
+                else:
+                    raw_score = float(parsed.get("score", 0.5))
+                    if raw_score >= 0.8:
+                        status_val = "Correct"
+                    elif raw_score >= 0.3:
+                        status_val = "Partially Correct"
+                    else:
+                        status_val = "Incorrect"
+
+                if status_val == "Correct":
+                    score_val = 1.0
+                elif status_val == "Partially Correct":
+                    score_val = 0.5
+                else:
+                    score_val = 0.0
+
+                feedback_val = str(parsed.get("feedback", "")).strip() or "Evaluated candidate response."
+                missing_val = parsed.get("missing_points", [])
+                if not isinstance(missing_val, list):
+                    missing_val = [str(missing_val)] if missing_val else []
+                missing_val = [str(m).strip() for m in missing_val if str(m).strip()]
+
+                exp_val = str(parsed.get("expected_answer", "")).strip() or expected_answer
+
+                strengths_list = [f"Demonstrated good domain understanding for {target_career}."] if status_val in ["Correct", "Partially Correct"] else []
+                improvements_list = missing_val if missing_val else ([f"Elaborate with deeper architectural specifics for {target_career}."] if status_val != "Correct" else [])
+
                 return {
-                    "score": score,
-                    "feedback": eval_res.get("feedback", "Good explanation of key concepts."),
-                    "strengths": eval_res.get("strengths", ["Clear communication of main ideas."]),
-                    "improvements": eval_res.get("improvements", ["Elaborate with specific code or architecture examples."]),
-                    "model_answer": eval_res.get("model_answer", "An ideal answer covers definition, practical trade-offs, and real-world application.")
+                    "status": status_val,
+                    "score": score_val,
+                    "feedback": feedback_val,
+                    "missing_points": missing_val,
+                    "expected_answer": exp_val,
+                    "model_answer": exp_val,
+                    "strengths": strengths_list,
+                    "improvements": improvements_list
                 }
         except Exception as e:
             logger.warning(f"Failed to parse LLM interview evaluation JSON: {e}")
 
-    word_count = len(user_answer.split())
+    # 3. Fallback Semantic Evaluator
+    return _evaluate_interview_answer_semantically(question, clean_answer, target_career, difficulty, expected_answer)
+
+
+def _lookup_expected_answer(question: str, target_career: str) -> str:
+    """Find or construct a concise expected answer for a given interview question."""
+    q_low = question.lower()
+    if "monolithic" in q_low and "microservice" in q_low:
+        return "Monoliths offer unified deployments and straightforward transactions but can become scaling bottlenecks. Microservices decouple components for independent scaling and deployments, though they introduce distributed complexity and network latency."
+    if "jwt" in q_low or "oauth" in q_low or "authentication" in q_low:
+        return "JWT provides stateless, cryptographically signed token authentication (header, payload, signature) sent in Authorization headers. OAuth2 delegates scoped third-party authorization via bearer access tokens without sharing credentials."
+    if "persistence" in q_low or "state management" in q_low:
+        return "Data persistence uses relational or document databases with connection pooling and transactions. Application state is handled using centralized client-side stores (like Redux or Context) and stateless session tokens or distributed caches on the backend."
+    if "api" in q_low and ("secure" in q_low or "optimized" in q_low):
+        return "Best practices include enforcing HTTPS, JWT/OAuth2 authentication, rate limiting, and strict input validation. Optimization requires database indexing, connection pooling, caching, and payload pagination."
+    if "bottleneck" in q_low or "debug" in q_low or "exception" in q_low:
+        return "Isolate performance bottlenecks using structured APM logs, distributed tracing, and profilers. For database latency, inspect execution plans via EXPLAIN and optimize slow queries or memory leaks."
+    if "database schema" in q_low or "querying" in q_low:
+        return "Normalize schemas to minimize redundancy while selectively denormalizing for read-heavy operations. Index frequently queried foreign keys, avoid N+1 query patterns, and enforce foreign key constraints."
+    if "acid" in q_low:
+        return "ACID guarantees Atomicity (all-or-nothing transactions), Consistency (invariants preserved), Isolation (concurrent operations do not interfere), and Durability (committed transactions survive crashes)."
+    if "caching" in q_low or "redis" in q_low:
+        return "Apply Cache-Aside or write-through caching using Redis for expensive queries and session storage, and use CDNs for edge caching of static assets with clear TTL expiration policies."
+    if "rest" in q_low and "graphql" in q_low:
+        return "REST exposes structured resource-based endpoints with standard HTTP caching, but risks over-fetching or under-fetching. GraphQL allows clients to request exact fields in a single query via a typed schema."
+    if "test" in q_low or "pyramid" in q_low:
+        return "Follow the test pyramid: fast isolated unit tests for core logic, integration tests for APIs and databases, and focused end-to-end tests for critical user journeys automated in CI/CD pipelines."
+    if "docker" in q_low or "container" in q_low:
+        return "Docker containerizes applications with their dependencies into reproducible, immutable images, eliminating environment drift and enabling rapid autoscaling in modern CI/CD workflows."
+    if "why are you interested" in q_low or "why should" in q_low:
+        return f"A compelling answer connects genuine enthusiasm for {target_career} with concrete accomplishments, continuous learning, and clear alignment with the company's technical goals."
+    if "challenging" in q_low or "recent project" in q_low or "star" in q_low:
+        return "Use the STAR method: explain the specific technical Situation, the assigned Task, the concrete Actions and debugging methods you took, and the quantifiable Result achieved."
+
+    return f"A top-tier answer for {target_career} clearly explains core definitions, outlines practical technical trade-offs, and demonstrates real-world implementation experience."
+
+
+def _evaluate_interview_answer_semantically(
+    question: str,
+    user_answer: str,
+    target_career: str,
+    difficulty: str,
+    expected_answer: str
+) -> Dict[str, Any]:
+    """Semantic fallback evaluator when LLM is unavailable."""
+    words = re.findall(r"\b[a-zA-Z0-9_'-]+\b", user_answer.lower())
+    word_count = len(words)
     answer_lower = user_answer.lower()
+    q_lower = question.lower()
 
-    base_score = 60
-    if word_count > 15:
-        base_score += 15
-    if word_count > 40:
-        base_score += 10
-    if word_count > 80:
-        base_score += 5
+    # Generic or gibberish detection
+    stop_words = {"the", "a", "an", "is", "it", "to", "and", "in", "of", "for", "on", "with", "that", "this", "i", "my", "we", "you"}
+    content_words = [w for w in words if w not in stop_words]
 
-    key_terms = ["because", "example", "result", "system", "data", "process", "use", "implemented", "architecture", "method", "solution", "performance", "team", "project", "approach"]
-    matching_terms = [t for t in key_terms if t in answer_lower]
-    base_score += min(10, len(matching_terms) * 2)
+    if word_count < 4 or len(content_words) < 2:
+        return {
+            "status": "Incorrect",
+            "score": 0.0,
+            "feedback": "The answer is too brief or incomplete to demonstrate technical understanding.",
+            "missing_points": ["Provide a complete explanation addressing the core principles and mechanisms."],
+            "expected_answer": expected_answer,
+            "model_answer": expected_answer,
+            "strengths": [],
+            "improvements": ["Elaborate on core definitions, mechanisms, and practical examples."]
+        }
 
-    score = min(98, max(45, base_score))
+    # Irrelevant or nonsensical answer check
+    irrelevant_phrases = ["i don't know", "i dont know", "no idea", "not sure", "asdf", "test test", "pizza", "noodles", "weather is", "hello world"]
+    if any(phrase in answer_lower for phrase in irrelevant_phrases) and word_count < 10:
+        return {
+            "status": "Incorrect",
+            "score": 0.0,
+            "feedback": "The submitted response does not address the question.",
+            "missing_points": ["Explain the specific concepts and mechanisms asked in the question."],
+            "expected_answer": expected_answer,
+            "model_answer": expected_answer,
+            "strengths": [],
+            "improvements": ["Answer the question directly using relevant technical concepts."]
+        }
 
-    strengths = []
-    if word_count >= 20:
-        strengths.append("Detailed explanation provided with sufficient context.")
-    if len(matching_terms) >= 2:
-        strengths.append("Good technical terminology and problem-solving framework.")
-    if not strengths:
-        strengths.append("Directly addressed the question prompt.")
+    # Domain topic matching
+    topic_keywords = {
+        "architecture": ["architecture", "scale", "scalable", "layer", "stateless", "load balance", "balancer", "cache", "caching", "database", "queue", "replica", "concurrency", "distributed", "server", "component"],
+        "monolith_microservices": ["monolith", "microservice", "scale", "deploy", "independent", "distributed", "network", "latency", "service", "complexity", "decouple", "coupling", "database"],
+        "authentication": ["jwt", "token", "header", "payload", "signature", "stateless", "oauth", "access token", "refresh", "auth", "bearer", "cookie", "session", "authorize"],
+        "persistence_state": ["database", "persist", "persistence", "state", "redux", "cache", "caching", "token", "session", "transaction", "pool", "storage", "sql", "nosql", "store"],
+        "api_security": ["auth", "jwt", "tls", "rate limit", "validation", "validate", "sanitize", "index", "cache", "injection", "cors", "token", "https", "security", "api", "endpoint"],
+        "debugging": ["log", "logging", "profile", "profiling", "apm", "metric", "explain", "query", "bottleneck", "cpu", "memory", "reproduce", "trace", "debug", "error", "exception"],
+        "database_design": ["schema", "normalize", "normalization", "index", "indexing", "foreign key", "table", "query", "n+1", "relation", "join", "acid", "composite", "replica"],
+        "async_queues": ["async", "asynchronous", "queue", "worker", "broker", "rabbitmq", "redis", "celery", "background", "idempotent", "retry", "non-blocking", "event"],
+        "caching": ["cache", "caching", "redis", "cdn", "ttl", "invalidation", "latency", "edge", "hit", "miss", "memory", "aside"],
+        "rest_graphql": ["rest", "graphql", "endpoint", "over-fetch", "under-fetch", "query", "schema", "http", "method", "payload", "mutation"],
+        "resilience": ["circuit breaker", "timeout", "fallback", "middleware", "status code", "exception", "retry", "resilience", "fault tolerance"],
+        "testing": ["unit", "integration", "e2e", "pyramid", "mock", "mocking", "ci/cd", "pipeline", "coverage", "test", "automation"],
+        "acid": ["atomicity", "consistency", "isolation", "durability", "transaction", "rollback", "commit", "acid", "crash", "invariants", "concurrency"],
+        "devops": ["docker", "container", "containerization", "image", "ci/cd", "pipeline", "deploy", "deployment", "build", "automate", "environment", "kubernetes"],
+        "code_quality": ["solid", "refactor", "debt", "code review", "maintainable", "clean code", "lint", "modular", "quality"],
+        "general_tech": ["system", "data", "code", "architecture", "function", "method", "class", "design", "performance", "component", "process", "framework", "service"],
+        "hr_behavioral": ["team", "project", "situation", "task", "action", "result", "star", "learn", "challenge", "collaborate", "solve", "lead", "initiative", "stakeholder", "impact"]
+    }
 
-    improvements = []
-    if word_count < 30:
-        improvements.append("Elaborate further with specific real-world examples or code snippets.")
-    if "example" not in answer_lower and "instance" not in answer_lower:
-        improvements.append("Use concrete case studies or STAR methodology (Situation, Task, Action, Result) to strengthen impact.")
-    if not improvements:
-        improvements.append("Keep practicing concise delivery while preserving technical depth.")
+    # Determine matched topic
+    matched_topic = "general_tech"
+    if "monolithic" in q_lower or "microservice" in q_lower:
+        matched_topic = "monolith_microservices"
+    elif "architectural" in q_lower or "architecture" in q_lower or "scalable" in q_lower:
+        matched_topic = "architecture"
+    elif "jwt" in q_lower or "oauth" in q_lower or "authentication" in q_lower:
+        matched_topic = "authentication"
+    elif "persistence" in q_lower or "state management" in q_lower:
+        matched_topic = "persistence_state"
+    elif "secure" in q_lower or ("api" in q_lower and "optimized" in q_lower):
+        matched_topic = "api_security"
+    elif "bottleneck" in q_lower or "debug" in q_lower or "exception" in q_lower:
+        matched_topic = "debugging"
+    elif "database schema" in q_lower or "querying" in q_lower:
+        matched_topic = "database_design"
+    elif "asynchronous" in q_lower or "async" in q_lower or "background" in q_lower or "queue" in q_lower:
+        matched_topic = "async_queues"
+    elif "acid" in q_lower:
+        matched_topic = "acid"
+    elif "cache" in q_lower or "redis" in q_lower or "cdn" in q_lower:
+        matched_topic = "caching"
+    elif "graphql" in q_lower or "rest" in q_lower:
+        matched_topic = "rest_graphql"
+    elif "resilient" in q_lower or "resilience" in q_lower or "fault tolerance" in q_lower:
+        matched_topic = "resilience"
+    elif "test" in q_lower or "pyramid" in q_lower:
+        matched_topic = "testing"
+    elif "docker" in q_lower or "container" in q_lower:
+        matched_topic = "devops"
+    elif "maintainable" in q_lower or "technical debt" in q_lower or "solid" in q_lower:
+        matched_topic = "code_quality"
+    elif any(k in q_lower for k in ["why", "tell me", "describe", "give an example", "where do you see", "challenging"]):
+        matched_topic = "hr_behavioral"
 
-    model_answer = (
-        f"A top-tier answer for {target_career} should clearly define core terminology, explain architectural trade-offs, "
-        f"and illustrate practical application using a real-world scenario or project experience."
-    )
+    expected_kw = set(topic_keywords.get(matched_topic, topic_keywords["general_tech"]))
+    if expected_answer:
+        exp_terms = set(re.findall(r"[a-zA-Z]{4,}", expected_answer.lower())) - stop_words
+        expected_kw = expected_kw.union(exp_terms)
 
-    feedback = f"Solid response scoring {score}/100. You demonstrated good understanding of {target_career} concepts."
+    hits = [kw for kw in expected_kw if kw in answer_lower]
+
+    # Evaluate completeness
+    if len(hits) >= 2 and word_count >= 14:
+        status_val = "Correct"
+        score_val = 1.0
+        feedback_val = f"Accurate and well-articulated explanation. You covered key concepts including {', '.join(hits[:3])}."
+        missing_val = []
+    elif len(hits) >= 1 and word_count >= 4:
+        status_val = "Partially Correct"
+        score_val = 0.5
+        feedback_val = "Good foundational explanation, but it lacks key technical trade-offs and concrete mechanisms."
+        unhit = [k for k in expected_kw if k not in answer_lower][:2]
+        missing_val = [f"Mention {u} and practical trade-offs." for u in unhit]
+    else:
+        status_val = "Incorrect"
+        score_val = 0.0
+        feedback_val = "The answer does not sufficiently address the core technical concepts of the question."
+        missing_val = [f"Explain key concepts such as {', '.join(list(expected_kw)[:3])}."]
+
+    strengths = [f"Directly addressed the question topic ({matched_topic.replace('_', ' ')})."] if status_val in ["Correct", "Partially Correct"] else []
+    improvements = missing_val if missing_val else ([f"Include concrete code or architectural examples for {target_career}."] if status_val != "Correct" else [])
 
     return {
-        "score": score,
-        "feedback": feedback,
+        "status": status_val,
+        "score": score_val,
+        "feedback": feedback_val,
+        "missing_points": missing_val,
+        "expected_answer": expected_answer,
+        "model_answer": expected_answer,
         "strengths": strengths,
-        "improvements": improvements,
-        "model_answer": model_answer
+        "improvements": improvements
     }

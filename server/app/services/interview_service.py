@@ -53,6 +53,13 @@ async def start_interview_session(
         "total_questions": q_count,
         "current_question": 1,
         "questions": questions,
+        "total_score": 0,
+        "max_score": q_count,
+        "score_display": f"0/{q_count}",
+        "correct_count": 0,
+        "partially_correct_count": 0,
+        "incorrect_count": 0,
+        "percentage": 0.0,
         "overall_score": None,
         "status": "In Progress",
         "started_at": now_iso,
@@ -94,12 +101,6 @@ async def submit_interview_answer(user_id: str, session_id: str, answer: str) ->
     """Submit answer for current question in session, evaluate with AI, and advance session state."""
     session = await get_interview_session(user_id=user_id, session_id=session_id)
 
-    if not answer or not answer.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Answer text cannot be empty."
-        )
-
     if session.get("status") == "Completed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -116,77 +117,117 @@ async def submit_interview_answer(user_id: str, session_id: str, answer: str) ->
         )
 
     target_q = questions[curr_idx]
+    clean_answer = answer.strip() if answer else ""
 
     # Evaluate answer with AI service
     eval_res = await evaluate_interview_answer(
         question=target_q.get("question", ""),
-        user_answer=answer.strip(),
+        user_answer=clean_answer,
         target_career=session.get("target_career", ""),
         difficulty=session.get("difficulty", "")
     )
 
     # Update question data
-    target_q["answer"] = answer.strip()
-    target_q["score"] = eval_res.get("score")
-    target_q["feedback"] = eval_res.get("feedback")
+    target_q["answer"] = clean_answer
+    target_q["status"] = eval_res.get("status", "Partially Correct")
+    target_q["score"] = eval_res.get("score", 0.5)
+    target_q["feedback"] = eval_res.get("feedback", "")
+    target_q["missing_points"] = eval_res.get("missing_points", [])
+    target_q["expected_answer"] = eval_res.get("expected_answer", "")
+    target_q["model_answer"] = eval_res.get("expected_answer", "")
     target_q["strengths"] = eval_res.get("strengths", [])
-    target_q["improvements"] = eval_res.get("improvements", [])
-    target_q["model_answer"] = eval_res.get("model_answer")
+    target_q["improvements"] = eval_res.get("missing_points", [])
 
     questions[curr_idx] = target_q
     session["questions"] = questions
+
+    # Calculate dynamic scores across all answered questions
+    scored_q = [q for q in questions if q.get("score") is not None]
+    total_score = sum(q.get("score", 0.0) for q in scored_q)
+    clean_total = int(total_score) if total_score.is_integer() else round(total_score, 1)
+    max_score = session.get("total_questions", len(questions))
+
+    correct_count = sum(1 for q in scored_q if q.get("status") == "Correct")
+    partial_count = sum(1 for q in scored_q if q.get("status") == "Partially Correct")
+    incorrect_count = sum(1 for q in scored_q if q.get("status") == "Incorrect")
+    percentage = round((total_score / max_score) * 100, 1) if max_score > 0 else 0.0
+
+    session["total_score"] = clean_total
+    session["max_score"] = max_score
+    session["score_display"] = f"{clean_total}/{max_score}"
+    session["correct_count"] = correct_count
+    session["partially_correct_count"] = partial_count
+    session["incorrect_count"] = incorrect_count
+    session["percentage"] = percentage
+    session["overall_score"] = percentage
 
     # Advance current_question pointer
     next_question_num = session["current_question"] + 1
     session["current_question"] = next_question_num
 
     # Check if session completed
-    if next_question_num > session["total_questions"] or all(q.get("score") is not None for q in questions):
+    if next_question_num > session["total_questions"] or len(scored_q) >= session["total_questions"]:
         session["status"] = "Completed"
         session["completed_at"] = datetime.now(timezone.utc).isoformat()
 
-        # Calculate overall score
-        scores = [q.get("score", 0) for q in questions if q.get("score") is not None]
-        overall_score = round(sum(scores) / len(scores), 1) if scores else 0.0
-        session["overall_score"] = overall_score
-
-        # Performance summary & Phase 6 integration
-        user_ctx = await get_user_full_context(user_id)
-        skill_gaps = user_ctx.get("skill_gaps", [])
-
-        # Categorize strengths vs improvements across session
-        all_strengths = []
-        all_improvements = []
+        # Categorize areas to improve across session
+        areas_to_improve = []
         for q in questions:
-            all_strengths.extend(q.get("strengths", []))
-            all_improvements.extend(q.get("improvements", []))
+            if q.get("status") in ["Partially Correct", "Incorrect"]:
+                missing = q.get("missing_points", [])
+                for m in missing[:2]:
+                    if m and m not in areas_to_improve:
+                        areas_to_improve.append(m)
+        if not areas_to_improve:
+            areas_to_improve = ["Keep practicing advanced system design and real-world edge cases."]
 
-        unique_strengths = list(dict.fromkeys(all_strengths))[:3]
-        unique_improvements = list(dict.fromkeys(all_improvements))[:3]
-
-        rec_topics = skill_gaps[:2] if skill_gaps else ["System Architecture", "Best Practices"]
+        if percentage >= 80:
+            perf_tier = "Excellent"
+            overall_perf = f"Outstanding performance! You scored {clean_total}/{max_score} ({percentage}%). You demonstrated strong technical precision and clarity."
+        elif percentage >= 60:
+            perf_tier = "Good"
+            overall_perf = f"Solid performance! You scored {clean_total}/{max_score} ({percentage}%). Good conceptual understanding with minor areas to refine."
+        else:
+            perf_tier = "Needs Practice"
+            overall_perf = f"Practice recommended. You scored {clean_total}/{max_score} ({percentage}%). Focus on reviewing core definitions, syntax, and structured explanations."
 
         session["performance_summary"] = {
-            "overall_score": overall_score,
-            "performance_tier": "Excellent" if overall_score >= 85 else ("Good" if overall_score >= 70 else "Needs Practice"),
-            "questions_answered": len(scores),
-            "strengths": unique_strengths if unique_strengths else ["Clear articulation of concepts."],
-            "improvements": unique_improvements if unique_improvements else ["Include more concrete technical examples."],
-            "recommended_topics": rec_topics
+            "total_score": clean_total,
+            "max_score": max_score,
+            "score_display": f"{clean_total}/{max_score}",
+            "percentage": percentage,
+            "correct_count": correct_count,
+            "partially_correct_count": partial_count,
+            "incorrect_count": incorrect_count,
+            "performance_tier": perf_tier,
+            "overall_performance": overall_perf,
+            "areas_to_improve": areas_to_improve[:4],
+            "strengths": [f"Correctly answered {correct_count} question(s) with solid domain knowledge."] if correct_count > 0 else ["Completed the interview session practice."],
+            "improvements": areas_to_improve[:4],
+            "recommended_topics": areas_to_improve[:3]
         }
 
     # Save updated session
+    update_fields = {
+        "questions": session["questions"],
+        "current_question": session["current_question"],
+        "status": session["status"],
+        "total_score": session.get("total_score"),
+        "max_score": session.get("max_score"),
+        "score_display": session.get("score_display"),
+        "correct_count": session.get("correct_count"),
+        "partially_correct_count": session.get("partially_correct_count"),
+        "incorrect_count": session.get("incorrect_count"),
+        "percentage": session.get("percentage"),
+        "overall_score": session.get("overall_score"),
+        "completed_at": session.get("completed_at"),
+        "performance_summary": session.get("performance_summary")
+    }
+
     if db.is_connected and db.db is not None:
         await db.db.interview_sessions.update_one(
             {"session_id": session_id},
-            {"$set": {
-                "questions": session["questions"],
-                "current_question": session["current_question"],
-                "status": session["status"],
-                "completed_at": session.get("completed_at"),
-                "overall_score": session.get("overall_score"),
-                "performance_summary": session.get("performance_summary")
-            }}
+            {"$set": update_fields}
         )
     else:
         in_memory_store.setdefault("interview_sessions", {})
@@ -235,30 +276,60 @@ async def finish_interview_session(user_id: str, session_id: str) -> Dict[str, A
     session = await get_interview_session(user_id=user_id, session_id=session_id)
     if session.get("status") != "Completed":
         questions = session.get("questions", [])
-        scores = [q.get("score", 0) for q in questions if q.get("score") is not None]
-        overall_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+        scored_q = [q for q in questions if q.get("score") is not None]
+        total_score = sum(q.get("score", 0.0) for q in scored_q)
+        clean_total = int(total_score) if total_score.is_integer() else round(total_score, 1)
+        max_score = session.get("total_questions", len(questions))
+
+        correct_count = sum(1 for q in scored_q if q.get("status") == "Correct")
+        partial_count = sum(1 for q in scored_q if q.get("status") == "Partially Correct")
+        incorrect_count = sum(1 for q in scored_q if q.get("status") == "Incorrect")
+        percentage = round((total_score / max_score) * 100, 1) if max_score > 0 else 0.0
 
         session["status"] = "Completed"
         session["completed_at"] = datetime.now(timezone.utc).isoformat()
-        session["overall_score"] = overall_score
+        session["total_score"] = clean_total
+        session["max_score"] = max_score
+        session["score_display"] = f"{clean_total}/{max_score}"
+        session["correct_count"] = correct_count
+        session["partially_correct_count"] = partial_count
+        session["incorrect_count"] = incorrect_count
+        session["percentage"] = percentage
+        session["overall_score"] = percentage
         session["performance_summary"] = {
-            "overall_score": overall_score,
+            "total_score": clean_total,
+            "max_score": max_score,
+            "score_display": f"{clean_total}/{max_score}",
+            "percentage": percentage,
+            "correct_count": correct_count,
+            "partially_correct_count": partial_count,
+            "incorrect_count": incorrect_count,
             "performance_tier": "Completed Early",
-            "questions_answered": len(scores),
+            "overall_performance": f"Session concluded early with score {clean_total}/{max_score} ({percentage}%).",
             "strengths": ["Partial session practice completed."],
             "improvements": ["Complete all questions for comprehensive scoring."],
+            "areas_to_improve": ["Complete all interview questions for in-depth assessment."],
             "recommended_topics": ["General Interview Prep"]
+        }
+
+        update_fields = {
+            "status": session["status"],
+            "completed_at": session["completed_at"],
+            "total_score": session.get("total_score"),
+            "max_score": session.get("max_score"),
+            "score_display": session.get("score_display"),
+            "correct_count": session.get("correct_count"),
+            "partially_correct_count": session.get("partially_correct_count"),
+            "incorrect_count": session.get("incorrect_count"),
+            "percentage": session.get("percentage"),
+            "overall_score": session.get("overall_score"),
+            "performance_summary": session.get("performance_summary")
         }
 
         if db.is_connected and db.db is not None:
             await db.db.interview_sessions.update_one(
                 {"session_id": session_id},
-                {"$set": {
-                    "status": session["status"],
-                    "completed_at": session["completed_at"],
-                    "overall_score": session["overall_score"],
-                    "performance_summary": session["performance_summary"]
-                }}
+                {"$set": update_fields}
             )
         else:
             in_memory_store.setdefault("interview_sessions", {})

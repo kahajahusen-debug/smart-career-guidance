@@ -13,9 +13,11 @@ import {
   Award, 
   CheckCircle2, 
   AlertCircle, 
+  XCircle, 
   HelpCircle, 
   ArrowRight, 
   RotateCcw, 
+  LayoutDashboard,
   Bot, 
   Loader2, 
   Trash2, 
@@ -23,7 +25,9 @@ import {
   BookOpen, 
   BarChart2, 
   Target,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export default function InterviewPreparationPage({ onNavigate, preselectedCareer }) {
@@ -33,17 +37,19 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
 
   // Setup Form State
   const [targetCareer, setTargetCareer] = useState(preselectedCareer || 'Full Stack Software Engineer');
-  const [interviewType, setInterviewType] = useState('Technical');
   const [difficulty, setDifficulty] = useState('Intermediate');
   const [totalQuestions, setTotalQuestions] = useState(5);
+  const [interviewType, setInterviewType] = useState('Technical');
 
-  // Session Active State
+  // Active Session State
   const [session, setSession] = useState(null);
   const [currentAnswerText, setCurrentAnswerText] = useState('');
   const [currentEvaluation, setCurrentEvaluation] = useState(null);
+  const [reviewedQuestionIndex, setReviewedQuestionIndex] = useState(null);
+  const [showFinalReview, setShowFinalReview] = useState(false);
   const [history, setHistory] = useState([]);
   
-  // Status flags
+  // Status Flags
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -85,6 +91,8 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
       setError(null);
       setCurrentAnswerText('');
       setCurrentEvaluation(null);
+      setReviewedQuestionIndex(null);
+      setShowFinalReview(false);
 
       const res = await startInterviewSession({
         target_career: targetCareer,
@@ -107,10 +115,14 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
   };
 
   const handleSubmitAnswer = async () => {
-    if (!currentAnswerText.trim() || submitting || !session) return;
+    if (submitting || !session) return;
     try {
       setSubmitting(true);
       setError(null);
+
+      // Record which question index was just evaluated
+      const answeringIndex = session.current_question - 1;
+      setReviewedQuestionIndex(answeringIndex);
 
       const res = await submitInterviewAnswer(session.session_id, currentAnswerText.trim());
       if (res && res.success && res.evaluation && res.session) {
@@ -127,9 +139,20 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleContinue = () => {
+    // Clear evaluation and input to move to next question or final summary
+    setCurrentEvaluation(null);
+    setCurrentAnswerText('');
+    setReviewedQuestionIndex(null);
+  };
+
+  const handleRetakeInterview = () => {
+    setSession(null);
     setCurrentAnswerText('');
     setCurrentEvaluation(null);
+    setReviewedQuestionIndex(null);
+    setShowFinalReview(false);
+    setError(null);
   };
 
   const handleClearHistory = async () => {
@@ -153,13 +176,19 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
     );
   }
 
-  const isSessionActive = session && session.status === 'In Progress';
-  const isSessionCompleted = session && session.status === 'Completed';
+  // Session state checks
+  // If currentEvaluation is present, user is reviewing the question they just submitted.
+  // The session is only considered finished from the user's perspective once they click Continue on the last question.
+  const isReviewingSubmittedAnswer = currentEvaluation !== null;
+  const isSessionActive = session && (session.status === 'In Progress' || isReviewingSubmittedAnswer);
+  const isSessionCompleted = session && session.status === 'Completed' && !isReviewingSubmittedAnswer;
 
-  const currentQIndex = session ? session.current_question - 1 : 0;
-  // If evaluation was just done for question N, display that question details
-  const displayQIndex = currentEvaluation ? currentQIndex - 1 : currentQIndex;
-  const currentQuestionObj = session?.questions?.[displayQIndex] || null;
+  // Question index being shown
+  const currentQIndex = isReviewingSubmittedAnswer && reviewedQuestionIndex !== null
+    ? reviewedQuestionIndex
+    : (session ? session.current_question - 1 : 0);
+
+  const currentQuestionObj = session?.questions?.[currentQIndex] || null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -237,18 +266,23 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
         </div>
       )}
 
-      {/* VIEW MODE 1: SETUP FORM */}
+      {/* VIEW 1: INTERVIEW SETUP */}
       {activeTab === 'practice' && !isSessionActive && !isSessionCompleted && (
         <GlassCard style={{ padding: '32px' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#172554', marginBottom: 20 }}>
-            Configure Your Mock Interview
-          </h2>
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#172554', margin: 0 }}>
+              Start Interview Practice
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: '#64748B', marginTop: 4 }}>
+              Select your career track, difficulty, and question count to begin.
+            </p>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 28 }}>
-            {/* Target Career */}
+            {/* Target Career Selection */}
             <div>
               <label htmlFor="interview-target-career" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
-                Target Career Pathway
+                Target Career Role
               </label>
               <select
                 id="interview-target-career"
@@ -262,7 +296,9 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                   border: '1px solid #CBD5E1',
                   background: '#F8FAFC',
                   fontSize: '0.9rem',
-                  outline: 'none'
+                  outline: 'none',
+                  color: '#1E293B',
+                  fontWeight: 500
                 }}
               >
                 {careersList.length > 0 ? (
@@ -280,34 +316,7 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
               </select>
             </div>
 
-            {/* Interview Type */}
-            <div>
-              <label htmlFor="interview-type" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
-                Interview Type
-              </label>
-              <select
-                id="interview-type"
-                name="interviewType"
-                value={interviewType}
-                onChange={(e) => setInterviewType(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: 10,
-                  border: '1px solid #CBD5E1',
-                  background: '#F8FAFC',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }}
-              >
-                <option value="Technical">Technical Interview</option>
-                <option value="HR">HR Interview</option>
-                <option value="Behavioral">Behavioral Interview</option>
-                <option value="Mixed">Mixed Interview (Tech + HR + Behavioral)</option>
-              </select>
-            </div>
-
-            {/* Difficulty */}
+            {/* Difficulty Level */}
             <div>
               <label htmlFor="interview-difficulty" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
                 Difficulty Level
@@ -324,16 +333,18 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                   border: '1px solid #CBD5E1',
                   background: '#F8FAFC',
                   fontSize: '0.9rem',
-                  outline: 'none'
+                  outline: 'none',
+                  color: '#1E293B',
+                  fontWeight: 500
                 }}
               >
-                <option value="Beginner">Beginner (Foundations & Concepts)</option>
-                <option value="Intermediate">Intermediate (Standard Industry benchmark)</option>
-                <option value="Advanced">Advanced (System Design & In-depth Architecture)</option>
+                <option value="Beginner">Beginner (Foundations & Core Concepts)</option>
+                <option value="Intermediate">Intermediate (Standard Industry Interview)</option>
+                <option value="Advanced">Advanced (System Architecture & In-Depth)</option>
               </select>
             </div>
 
-            {/* Number of Questions */}
+            {/* Number of Questions Selection (5, 10, 15) */}
             <div>
               <label htmlFor="interview-total-questions" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
                 Number of Questions
@@ -350,12 +361,14 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                   border: '1px solid #CBD5E1',
                   background: '#F8FAFC',
                   fontSize: '0.9rem',
-                  outline: 'none'
+                  outline: 'none',
+                  color: '#1E293B',
+                  fontWeight: 600
                 }}
               >
-                <option value={5}>5 Questions (Quick Practice)</option>
-                <option value={10}>10 Questions (Standard Mock)</option>
-                <option value={15}>15 Questions (Full Assessment)</option>
+                <option value={5}>5 Questions — Final score out of 5</option>
+                <option value={10}>10 Questions — Final score out of 10</option>
+                <option value={15}>15 Questions — Final score out of 15</option>
               </select>
             </div>
           </div>
@@ -380,7 +393,7 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
             >
               {starting ? (
                 <>
-                  <Loader2 className="animate-spin" size={18} /> Generating Dynamic Questions...
+                  <Loader2 className="animate-spin" size={18} /> Preparing Questions...
                 </>
               ) : (
                 <>
@@ -392,29 +405,30 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
         </GlassCard>
       )}
 
-      {/* VIEW MODE 2: ACTIVE QUESTION SESSION */}
+      {/* VIEW 2: QUESTION & EVALUATION INTERFACE (ONE QUESTION AT A TIME) */}
       {activeTab === 'practice' && isSessionActive && currentQuestionObj && (
         <GlassCard style={{ padding: '32px' }}>
-          {/* Top Session Progress Bar */}
+          {/* Header Metadata & Progress Bar */}
           <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="glass-badge badge-it">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="glass-badge badge-it" style={{ fontWeight: 700 }}>
                   {session.target_career}
                 </span>
-                <span className="glass-badge badge-nonit">
-                  {session.interview_type} • {session.difficulty}
+                <span className="glass-badge badge-nonit" style={{ fontWeight: 700 }}>
+                  {session.difficulty}
                 </span>
               </div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#172554' }}>
-                Question {displayQIndex + 1} of {session.total_questions}
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#172554' }}>
+                Question {currentQIndex + 1} of {session.total_questions}
               </div>
             </div>
 
+            {/* Progress Bar */}
             <div style={{ width: '100%', height: 8, background: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
               <div style={{
                 height: '100%',
-                width: `${((displayQIndex + (currentEvaluation ? 1 : 0)) / session.total_questions) * 100}%`,
+                width: `${((currentQIndex + (isReviewingSubmittedAnswer ? 1 : 0)) / session.total_questions) * 100}%`,
                 background: 'linear-gradient(90deg, #172554 0%, #4F46E5 100%)',
                 transition: 'width 0.3s ease'
               }} />
@@ -429,101 +443,170 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
             borderRadius: 16,
             marginBottom: 24
           }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-              {currentQuestionObj.type?.toUpperCase()} QUESTION
+            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+              Interview Question
             </div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554', margin: 0, lineHeight: 1.4 }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#172554', margin: 0, lineHeight: 1.45 }}>
               "{currentQuestionObj.question}"
             </h3>
           </div>
 
-          {/* EVALUATION RESULT DISPLAY (IF SUBMITTED) */}
+          {/* STATE A: EVALUATION RESULT DISPLAY (AFTER SUBMISSION) */}
           {currentEvaluation ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 24 }}>
-              {/* Score Header */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Result Status & Score Banner */}
               <div style={{
-                background: 'rgba(79, 70, 229, 0.08)',
-                border: '1px solid rgba(79, 70, 229, 0.2)',
+                background: currentEvaluation.status === 'Correct'
+                  ? 'rgba(22, 163, 74, 0.08)'
+                  : currentEvaluation.status === 'Partially Correct'
+                  ? 'rgba(217, 119, 6, 0.08)'
+                  : 'rgba(220, 38, 38, 0.08)',
+                border: `1px solid ${
+                  currentEvaluation.status === 'Correct'
+                    ? '#BBF7D0'
+                    : currentEvaluation.status === 'Partially Correct'
+                    ? '#FDE68A'
+                    : '#FECACA'
+                }`,
                 borderRadius: 16,
-                padding: '20px',
+                padding: '20px 24px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 16
               }}>
-                <div>
-                  <div style={{ fontSize: '0.82rem', color: '#4F46E5', fontWeight: 700 }}>Your AI Answer Score</div>
-                  <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#172554' }}>
-                    {currentEvaluation.score} <span style={{ fontSize: '1.1rem', color: '#64748B', fontWeight: 600 }}>/ 100</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {currentEvaluation.status === 'Correct' ? (
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CheckCircle2 size={26} />
+                    </div>
+                  ) : currentEvaluation.status === 'Partially Correct' ? (
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <AlertCircle size={26} />
+                    </div>
+                  ) : (
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FEE2E2', color: '#B91C1C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <XCircle size={26} />
+                    </div>
+                  )}
+
+                  <div>
+                    <div style={{
+                      fontSize: '1.15rem',
+                      fontWeight: 800,
+                      color: currentEvaluation.status === 'Correct'
+                        ? '#15803D'
+                        : currentEvaluation.status === 'Partially Correct'
+                        ? '#B45309'
+                        : '#B91C1C'
+                    }}>
+                      {currentEvaluation.status}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 600 }}>
+                      Score earned: <strong>{currentEvaluation.score === 1 ? '1 point' : currentEvaluation.score === 0.5 ? '0.5 points' : '0 points'}</strong>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ flex: 1, marginLeft: 24 }}>
-                  <div style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 600 }}>Feedback:</div>
-                  <div style={{ fontSize: '0.92rem', color: '#1E293B', marginTop: 4 }}>
+                <div style={{
+                  fontSize: '1.4rem',
+                  fontWeight: 900,
+                  color: currentEvaluation.status === 'Correct'
+                    ? '#15803D'
+                    : currentEvaluation.status === 'Partially Correct'
+                    ? '#B45309'
+                    : '#B91C1C'
+                }}>
+                  +{currentEvaluation.score} pt
+                </div>
+              </div>
+
+              {/* Short, Relevant Feedback */}
+              {currentEvaluation.feedback && (
+                <div style={{
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 14,
+                  padding: '18px 20px'
+                }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4F46E5', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Feedback
+                  </div>
+                  <div style={{ fontSize: '0.92rem', color: '#1E293B', lineHeight: 1.5 }}>
                     {currentEvaluation.feedback}
-                  </div>
-                </div>
-              </div>
-
-              {/* Strengths & Improvements */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '16px 20px', borderRadius: 12 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#15803D', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={16} /> Strengths Demonstrated
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.88rem', color: '#166534' }}>
-                    {currentEvaluation.strengths?.map((s, idx) => (
-                      <li key={idx} style={{ marginBottom: 4 }}>{s}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: '16px 20px', borderRadius: 12 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#B91C1C', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <AlertCircle size={16} /> Areas to Improve
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.88rem', color: '#991B1B' }}>
-                    {currentEvaluation.improvements?.map((imp, idx) => (
-                      <li key={idx} style={{ marginBottom: 4 }}>{imp}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Model Answer Box */}
-              {currentEvaluation.model_answer && (
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '20px', borderRadius: 12 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', marginBottom: 6 }}>
-                    Recommended Model Answer Benchmark
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.5 }}>
-                    {currentEvaluation.model_answer}
                   </div>
                 </div>
               )}
 
-              <div style={{ textAlign: 'right', marginTop: 12 }}>
+              {/* Important Missing Points (if any) */}
+              {currentEvaluation.missing_points && currentEvaluation.missing_points.length > 0 && (
+                <div style={{
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: 14,
+                  padding: '18px 20px'
+                }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#B91C1C', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <AlertCircle size={15} /> Important Missing Points
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.9rem', color: '#991B1B', lineHeight: 1.5 }}>
+                    {currentEvaluation.missing_points.map((pt, idx) => (
+                      <li key={idx} style={{ marginBottom: 4 }}>{pt}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Concise Expected Answer */}
+              {(currentEvaluation.expected_answer || currentEvaluation.model_answer) && (
+                <div style={{
+                  background: '#F0FDF4',
+                  border: '1px solid #BBF7D0',
+                  borderRadius: 14,
+                  padding: '18px 20px'
+                }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#15803D', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle2 size={15} /> Concise Expected Answer
+                  </div>
+                  <div style={{ fontSize: '0.92rem', color: '#166534', lineHeight: 1.55 }}>
+                    {currentEvaluation.expected_answer || currentEvaluation.model_answer}
+                  </div>
+                </div>
+              )}
+
+              {/* Continue Button */}
+              <div style={{ textAlign: 'right', marginTop: 8 }}>
                 <button
-                  onClick={handleNextQuestion}
+                  onClick={handleContinue}
                   className="btn"
                   style={{
                     background: '#172554',
                     color: '#FFFFFF',
-                    padding: '12px 24px',
+                    padding: '12px 28px',
                     borderRadius: 12,
                     fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontSize: '0.95rem',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 8
+                    gap: 8,
+                    cursor: 'pointer'
                   }}
                 >
-                  {displayQIndex + 1 < session.total_questions ? 'Next Question' : 'View Final Summary'} <ArrowRight size={18} />
+                  {currentQIndex + 1 < session.total_questions ? (
+                    <>
+                      Continue to Next Question <ArrowRight size={18} />
+                    </>
+                  ) : (
+                    <>
+                      Continue to Final Score <ArrowRight size={18} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           ) : (
-            /* ANSWER INPUT FORM */
+            /* STATE B: ANSWER INPUT FORM (ONE QUESTION AT A TIME) */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <label htmlFor="interview-answer" style={{ fontSize: '0.88rem', fontWeight: 700, color: '#334155' }}>
                 Your Answer:
@@ -533,7 +616,7 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                 name="answer"
                 value={currentAnswerText}
                 onChange={(e) => setCurrentAnswerText(e.target.value)}
-                placeholder="Type your structured answer here... (Tip: Explain key definitions, trade-offs, and practical examples)"
+                placeholder="Type your answer here... Explain key concepts, definitions, and practical mechanisms directly."
                 rows={7}
                 style={{
                   width: '100%',
@@ -542,30 +625,32 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                   border: '1px solid #CBD5E1',
                   background: '#FFFFFF',
                   fontSize: '0.92rem',
-                  lineHeight: 1.5,
-                  outline: 'none'
+                  lineHeight: 1.55,
+                  outline: 'none',
+                  color: '#1E293B',
+                  boxSizing: 'border-box'
                 }}
               />
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
                   {currentAnswerText.split(/\s+/).filter(Boolean).length} words
                 </div>
                 <button
                   onClick={handleSubmitAnswer}
-                  disabled={submitting || !currentAnswerText.trim()}
+                  disabled={submitting}
                   className="btn"
                   style={{
-                    background: submitting || !currentAnswerText.trim() ? '#94A3B8' : '#172554',
+                    background: submitting ? '#94A3B8' : '#172554',
                     color: '#FFFFFF',
-                    padding: '12px 24px',
+                    padding: '12px 28px',
                     borderRadius: 12,
                     fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontSize: '0.92rem',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 8,
-                    cursor: submitting || !currentAnswerText.trim() ? 'not-allowed' : 'pointer'
+                    cursor: submitting ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {submitting ? (
@@ -582,105 +667,146 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
         </GlassCard>
       )}
 
-      {/* VIEW MODE 3: SESSION COMPLETED SUMMARY */}
+      {/* VIEW 3: FINAL SCORE & PERFORMANCE SUMMARY */}
       {activeTab === 'practice' && isSessionCompleted && (
-        <GlassCard style={{ padding: '32px' }}>
+        <GlassCard style={{ padding: '36px' }}>
+          {/* Header Completion Title */}
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <div style={{
-              width: 64,
-              height: 64,
-              borderRadius: 20,
+              width: 68,
+              height: 68,
+              borderRadius: 22,
               background: 'linear-gradient(135deg, #172554 0%, #4F46E5 100%)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 16px'
+              margin: '0 auto 16px',
+              boxShadow: '0 8px 20px rgba(79, 70, 229, 0.25)'
             }}>
-              <Award size={32} />
+              <Award size={34} />
             </div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#172554', margin: 0 }}>
-              Interview Complete!
+            <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#172554', margin: 0 }}>
+              Interview Completed!
             </h2>
             <p style={{ color: '#64748B', fontSize: '0.95rem', marginTop: 6 }}>
-              Great job finishing your mock interview for <strong>{session.target_career}</strong>.
+              Target Role: <strong>{session.target_career}</strong> • {session.difficulty}
             </p>
           </div>
 
-          {/* Overall Score Badge */}
+          {/* Dynamic Final Score Hero Display */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(23, 37, 84, 0.05) 0%, rgba(79, 70, 229, 0.08) 100%)',
+            background: 'linear-gradient(135deg, rgba(23, 37, 84, 0.04) 0%, rgba(79, 70, 229, 0.08) 100%)',
             border: '1px solid rgba(79, 70, 229, 0.2)',
             borderRadius: 20,
-            padding: '24px',
+            padding: '28px',
             textAlign: 'center',
             marginBottom: 28
           }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4F46E5', textTransform: 'uppercase' }}>
-              Overall Performance Score
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Final Score
             </div>
-            <div style={{ fontSize: '3.5rem', fontWeight: 900, color: '#172554', lineHeight: 1.1, marginTop: 4 }}>
-              {session.overall_score !== null ? `${session.overall_score}%` : 'N/A'}
+            <div style={{ fontSize: '3.6rem', fontWeight: 900, color: '#172554', lineHeight: 1.1, marginTop: 4 }}>
+              {session.total_score !== undefined ? session.total_score : session.overall_score}
+              <span style={{ fontSize: '1.8rem', color: '#64748B', fontWeight: 600 }}> / {session.total_questions}</span>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#047857', marginTop: 6 }}>
-              Performance Tier: {session.performance_summary?.performance_tier || 'Good'}
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#4F46E5', marginTop: 4 }}>
+              {session.percentage !== undefined ? `${session.percentage}%` : `${session.overall_score}%`}
             </div>
+            <div style={{
+              display: 'inline-block',
+              marginTop: 10,
+              padding: '6px 16px',
+              borderRadius: 20,
+              fontSize: '0.88rem',
+              fontWeight: 800,
+              background: (session.percentage || 0) >= 80 ? '#DCFCE7' : (session.percentage || 0) >= 60 ? '#FEF3C7' : '#FEE2E2',
+              color: (session.percentage || 0) >= 80 ? '#15803D' : (session.percentage || 0) >= 60 ? '#B45309' : '#B91C1C'
+            }}>
+              Overall Performance: {session.performance_summary?.performance_tier || 'Good'}
+            </div>
+            {session.performance_summary?.overall_performance && (
+              <p style={{ fontSize: '0.92rem', color: '#334155', maxWidth: 620, margin: '12px auto 0', lineHeight: 1.5 }}>
+                {session.performance_summary.overall_performance}
+              </p>
+            )}
           </div>
 
-          {/* Summary Breakdown Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 28 }}>
-            <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '20px', borderRadius: 16 }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#15803D', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle2 size={18} /> Top Demonstrated Strengths
-              </h3>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.9rem', color: '#166534' }}>
-                {session.performance_summary?.strengths?.map((s, i) => (
-                  <li key={i} style={{ marginBottom: 6 }}>{s}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: '20px', borderRadius: 16 }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#B91C1C', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <AlertCircle size={18} /> Priority Areas to Improve
-              </h3>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.9rem', color: '#991B1B' }}>
-                {session.performance_summary?.improvements?.map((imp, i) => (
-                  <li key={i} style={{ marginBottom: 6 }}>{imp}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Recommended Topics Connected to Phase 6 Skill Gaps */}
-          {session.performance_summary?.recommended_topics?.length > 0 && (
-            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '20px', borderRadius: 16, marginBottom: 28 }}>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#172554', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <BookOpen size={16} /> Recommended Focus Topics (Phase 6 Action Plan Integration)
-              </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {session.performance_summary.recommended_topics.map((topic, idx) => (
-                  <span key={idx} className="glass-badge badge-it">
-                    {topic}
-                  </span>
-                ))}
+          {/* Breakdown Stats Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 14, marginBottom: 28 }}>
+            <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '16px', borderRadius: 14, textAlign: 'center' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803D', textTransform: 'uppercase' }}>Correct</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#15803D', marginTop: 2 }}>
+                {session.correct_count ?? 0}
               </div>
+              <div style={{ fontSize: '0.75rem', color: '#166534' }}>1 pt each</div>
+            </div>
+
+            <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '16px', borderRadius: 14, textAlign: 'center' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#B45309', textTransform: 'uppercase' }}>Partially Correct</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#B45309', marginTop: 2 }}>
+                {session.partially_correct_count ?? 0}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#92400E' }}>0.5 pts each</div>
+            </div>
+
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: '16px', borderRadius: 14, textAlign: 'center' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase' }}>Incorrect</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#B91C1C', marginTop: 2 }}>
+                {session.incorrect_count ?? 0}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#991B1B' }}>0 pts each</div>
+            </div>
+
+            <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', padding: '16px', borderRadius: 14, textAlign: 'center' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4F46E5', textTransform: 'uppercase' }}>Total Score</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#172554', marginTop: 2 }}>
+                {session.score_display || `${session.total_score}/${session.total_questions}`}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#4338CA' }}>{session.percentage}%</div>
+            </div>
+          </div>
+
+          {/* Areas to Improve */}
+          {session.performance_summary?.areas_to_improve && session.performance_summary.areas_to_improve.length > 0 && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 16, padding: '20px 24px', marginBottom: 28 }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#B91C1C', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AlertCircle size={16} /> Key Areas to Improve
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.92rem', color: '#991B1B', lineHeight: 1.6 }}>
+                {session.performance_summary.areas_to_improve.map((area, idx) => (
+                  <li key={idx} style={{ marginBottom: 4 }}>{area}</li>
+                ))}
+              </ul>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+          {/* Action Buttons: Review Answers | Retake Interview | Back to Dashboard */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap', marginBottom: showFinalReview ? 28 : 0 }}>
             <button
-              onClick={() => {
-                setSession(null);
-                setCurrentAnswerText('');
-                setCurrentEvaluation(null);
+              onClick={() => setShowFinalReview(!showFinalReview)}
+              className="btn btn-outline"
+              style={{
+                padding: '12px 22px',
+                borderRadius: 12,
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8
               }}
+            >
+              <FileText size={16} /> {showFinalReview ? 'Hide Answer Review' : 'Review Answers'}
+              {showFinalReview ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            <button
+              onClick={handleRetakeInterview}
               className="btn"
               style={{
                 background: '#172554',
                 color: '#FFFFFF',
-                padding: '12px 24px',
+                padding: '12px 22px',
                 borderRadius: 12,
                 fontWeight: 700,
                 fontSize: '0.9rem',
@@ -689,13 +815,14 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                 gap: 8
               }}
             >
-              <RotateCcw size={16} /> Practice Again
+              <RotateCcw size={16} /> Retake Interview
             </button>
+
             <button
-              onClick={() => onNavigate('assistant')}
+              onClick={() => onNavigate && onNavigate('dashboard')}
               className="btn btn-outline"
               style={{
-                padding: '12px 24px',
+                padding: '12px 22px',
                 borderRadius: 12,
                 fontWeight: 700,
                 fontSize: '0.9rem',
@@ -704,13 +831,91 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                 gap: 8
               }}
             >
-              <Bot size={16} /> Back to AI Career Assistant
+              <LayoutDashboard size={16} /> Back to Dashboard
             </button>
           </div>
+
+          {/* REVIEW ANSWERS EXPANDABLE SECTION */}
+          {showFinalReview && (
+            <div style={{ marginTop: 24, borderTop: '1px solid #E2E8F0', paddingTop: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#172554', margin: '0 0 8px' }}>
+                Question-by-Question Review
+              </h3>
+              {session.questions?.map((q, idx) => (
+                <div
+                  key={q.question_id || idx}
+                  style={{
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 14,
+                    padding: '20px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase' }}>
+                      Question {idx + 1} of {session.total_questions}
+                    </div>
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      background: q.status === 'Correct' ? '#DCFCE7' : q.status === 'Partially Correct' ? '#FEF3C7' : '#FEE2E2',
+                      color: q.status === 'Correct' ? '#15803D' : q.status === 'Partially Correct' ? '#B45309' : '#B91C1C'
+                    }}>
+                      {q.status || 'Scored'} • {q.score !== null ? `${q.score} pt` : '0 pt'}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#172554', marginBottom: 12 }}>
+                    "{q.question}"
+                  </div>
+
+                  {/* Submitted Answer */}
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', marginBottom: 2 }}>
+                    Your Answer:
+                  </div>
+                  <div style={{
+                    fontSize: '0.9rem',
+                    color: q.answer ? '#1E293B' : '#94A3B8',
+                    fontStyle: q.answer ? 'normal' : 'italic',
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 8,
+                    padding: '10px 14px',
+                    marginBottom: 10
+                  }}>
+                    {q.answer || '(No answer provided)'}
+                  </div>
+
+                  {/* Feedback */}
+                  {q.feedback && (
+                    <div style={{ fontSize: '0.88rem', color: '#334155', marginBottom: 8 }}>
+                      <strong>Feedback:</strong> {q.feedback}
+                    </div>
+                  )}
+
+                  {/* Missing points if any */}
+                  {q.missing_points && q.missing_points.length > 0 && (
+                    <div style={{ fontSize: '0.85rem', color: '#B91C1C', marginBottom: 8 }}>
+                      <strong>Missing Points:</strong> {q.missing_points.join('; ')}
+                    </div>
+                  )}
+
+                  {/* Expected Answer */}
+                  {(q.expected_answer || q.model_answer) && (
+                    <div style={{ fontSize: '0.86rem', color: '#166534', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '8px 12px' }}>
+                      <strong>Expected Answer:</strong> {q.expected_answer || q.model_answer}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </GlassCard>
       )}
 
-      {/* VIEW MODE 4: INTERVIEW HISTORY TAB */}
+      {/* VIEW 4: INTERVIEW HISTORY TAB */}
       {activeTab === 'history' && (
         <GlassCard style={{ padding: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -741,7 +946,7 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
 
           {history.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
-              <FileText size={40} style={{ color: '#CBD5E1', marginBottom: 12 }} />
+              <FileText size={40} style={{ color: '#CBD5E1', margin: '0 auto 12px' }} />
               <div style={{ fontWeight: 700, fontSize: '1rem', color: '#334155' }}>No interview history found</div>
               <p style={{ fontSize: '0.88rem', marginTop: 4 }}>Complete a mock interview session to view your progress analytics here.</p>
               <button
@@ -780,7 +985,7 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                       <span className="glass-badge badge-it">{hSess.target_career}</span>
-                      <span className="glass-badge badge-nonit">{hSess.interview_type} • {hSess.difficulty}</span>
+                      <span className="glass-badge badge-nonit">{hSess.difficulty}</span>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: 4 }}>
                       Started: {new Date(hSess.started_at).toLocaleDateString()} • {hSess.total_questions} Questions
@@ -789,15 +994,18 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Overall Score</div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#172554' }}>
-                        {hSess.overall_score !== null ? `${hSess.overall_score}%` : 'In Progress'}
+                      <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Score</div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#172554' }}>
+                        {hSess.score_display || (hSess.total_score !== undefined ? `${hSess.total_score}/${hSess.total_questions}` : `${hSess.overall_score}%`)}
                       </div>
                     </div>
 
                     <button
                       onClick={() => {
                         setSession(hSess);
+                        setCurrentEvaluation(null);
+                        setReviewedQuestionIndex(null);
+                        setShowFinalReview(true);
                         setActiveTab('practice');
                       }}
                       className="btn btn-outline"
@@ -808,7 +1016,7 @@ export default function InterviewPreparationPage({ onNavigate, preselectedCareer
                         fontWeight: 700
                       }}
                     >
-                      View Details
+                      Review
                     </button>
                   </div>
                 </div>
